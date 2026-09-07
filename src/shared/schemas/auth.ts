@@ -59,6 +59,7 @@ export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
 
 /** Tokens are read-only by design: monitoring integrations must not be able to mutate. */
 export const tokenScopeSchema = z.enum(['read']);
+export type TokenScope = z.infer<typeof tokenScopeSchema>;
 
 export const apiTokenSchema = z.object({
   id: entityIdSchema,
