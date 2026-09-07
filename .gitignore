@@ -39,3 +39,6 @@ Thumbs.db
 
 # Project-specific
 *.log
+
+# Development documentation (local only)
+CLAUDE.md
