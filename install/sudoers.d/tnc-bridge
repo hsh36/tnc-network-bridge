@@ -1,0 +1,42 @@
+# TNC Network Bridge — privilege separation rule
+#
+# Install as /etc/sudoers.d/tnc-bridge, owned root:root, mode 0440.
+# Validate before installing:  visudo -cf install/sudoers.d/tnc-bridge
+#
+# The service account `tncbridge` runs the Node process and owns nothing privileged.
+# This rule is the ONLY path from that account to root, and it grants exactly one
+# binary.
+#
+# The empty string after the command path is load-bearing sudoers syntax: it means
+# "this command may be run with NO arguments at all". Any invocation that passes an
+# argument does not match this rule and is refused by sudo.
+#
+# That is why the helper reads its request as JSON on stdin. The alternative —
+# allowing arguments and constraining them with sudoers wildcards — fails twice
+# over: sudo's globbing cannot express "a share name but never a path", and every
+# argument would land in world-readable /proc/<pid>/cmdline, which is where the AD
+# service-account password would then live.
+
+Cmnd_Alias TNC_BRIDGE_HELPER = /usr/local/lib/tnc-bridge/helper ""
+
+# NOPASSWD is required, not a shortcut: the caller is a system service with no TTY
+# and no human to type a password. The security boundary is the helper's own
+# argument validation, not an interactive prompt that can never be answered.
+%tncbridge ALL=(root) NOPASSWD: TNC_BRIDGE_HELPER
+
+# Strip the caller's environment. A root process that inherits LD_PRELOAD,
+# LD_LIBRARY_PATH or PATH from a possibly-compromised web tier is not privilege
+# separation, it is a longer way of writing setuid. env_reset is sudo's default; it
+# is restated here so a global override elsewhere in sudoers cannot quietly relax it.
+Defaults!TNC_BRIDGE_HELPER env_reset
+
+# Keep only what the helper legitimately needs. SUDO_USER is preserved by sudo itself
+# and is recorded in the helper's audit trail as the invoking account.
+Defaults!TNC_BRIDGE_HELPER env_keep = "LANG LC_ALL"
+
+# No TTY is required — the service is started by systemd and has none.
+Defaults!TNC_BRIDGE_HELPER !requiretty
+
+# Log every invocation on the sudo side as well. The helper keeps its own audit log,
+# but a helper that has been replaced cannot be trusted to log its own replacement.
+Defaults!TNC_BRIDGE_HELPER log_year, logfile="/var/log/tnc-bridge/sudo.log"
