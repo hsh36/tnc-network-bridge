@@ -100,7 +100,10 @@ export class Db {
    */
   static open(options: DbOptions): Db {
     const logger = options.logger ?? NOOP_LOGGER;
-    const raw = new BetterSqlite3(options.path, options.readonly === true ? { readonly: true } : {});
+    const raw = new BetterSqlite3(
+      options.path,
+      options.readonly === true ? { readonly: true } : {},
+    );
     const db = new Db(raw, logger);
 
     const inMemory = options.path === ':memory:' || options.path === '';

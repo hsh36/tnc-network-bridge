@@ -5,7 +5,14 @@ module.exports = {
   testMatch: ['**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json', isolatedModules: false }],
+    // Transpile-only. Type errors are not silently ignored — `npm run type-check`
+    // compiles tsconfig.jest.json, which covers every test file, and CI runs it
+    // alongside the suite. Doing the work twice made the suite several times slower
+    // for no extra safety.
+    '^.+\\.ts$': [
+      'ts-jest',
+      { tsconfig: '<rootDir>/tsconfig.jest.json', isolatedModules: true },
+    ],
   },
   clearMocks: true,
   restoreMocks: true,

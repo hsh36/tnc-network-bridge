@@ -204,7 +204,11 @@ describe('runMigrations', () => {
       const dir = brokenSet();
       expect(() => runMigrations(db, { directory: dir })).toThrow();
 
-      writeFileSync(join(dir, '002_broken.sql'), 'CREATE TABLE b (id INTEGER PRIMARY KEY);', 'utf8');
+      writeFileSync(
+        join(dir, '002_broken.sql'),
+        'CREATE TABLE b (id INTEGER PRIMARY KEY);',
+        'utf8',
+      );
       const result = runMigrations(db, { directory: dir });
       expect(result.applied.map((a) => a.version)).toEqual([2]);
       expect(db.userVersion).toBe(2);

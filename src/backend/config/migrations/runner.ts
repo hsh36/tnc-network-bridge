@@ -246,10 +246,9 @@ function verifyAppliedChecksums(
     return;
   }
   const ledger = new Map(
-    db.all<LedgerRow>('SELECT version, name, checksum FROM schema_migrations').map((row) => [
-      row.version,
-      row,
-    ]),
+    db
+      .all<LedgerRow>('SELECT version, name, checksum FROM schema_migrations')
+      .map((row) => [row.version, row]),
   );
 
   for (const migration of migrations) {

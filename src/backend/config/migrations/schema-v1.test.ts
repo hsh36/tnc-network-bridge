@@ -91,7 +91,9 @@ describe('migration application', () => {
 
   it('creates the indexes the sync engine depends on', () => {
     const indexes = db
-      .all<{ name: string }>("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
+      .all<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'",
+      )
       .map((r) => r.name);
     for (const index of [
       'idx_fi_state',
@@ -111,9 +113,9 @@ describe('migration application', () => {
   });
 
   it('seeds the install-scoped config rows', () => {
-    expect(db.get<{ value: string }>("SELECT value FROM config WHERE key='setup.completed'")).toEqual(
-      { value: 'false' },
-    );
+    expect(
+      db.get<{ value: string }>("SELECT value FROM config WHERE key='setup.completed'"),
+    ).toEqual({ value: 'false' });
     expect(db.pluck<number>("SELECT count(*) FROM config WHERE key='install.created_at'")).toBe(1);
   });
 });
@@ -173,9 +175,10 @@ describe('shares constraints', () => {
       max_file_size_mb: number;
       status: string;
       enabled: number;
-    }>('SELECT conflict_mode, smb_version, max_file_size_mb, status, enabled FROM shares WHERE id=?', [
-      id,
-    ]);
+    }>(
+      'SELECT conflict_mode, smb_version, max_file_size_mb, status, enabled FROM shares WHERE id=?',
+      [id],
+    );
     expect(row).toEqual({
       conflict_mode: 'last_write_wins',
       smb_version: '3.1.1',
@@ -388,9 +391,15 @@ describe('metrics_samples', () => {
 
   it('rejects a duplicate sample for the same instant, metric and share', () => {
     const params = { ts: now, m: 'queue.depth', v: 3 };
-    db.run('INSERT INTO metrics_samples (ts, metric, share_id, value) VALUES (@ts, @m, 0, @v)', params);
+    db.run(
+      'INSERT INTO metrics_samples (ts, metric, share_id, value) VALUES (@ts, @m, 0, @v)',
+      params,
+    );
     expectConstraintViolation(() =>
-      db.run('INSERT INTO metrics_samples (ts, metric, share_id, value) VALUES (@ts, @m, 0, @v)', params),
+      db.run(
+        'INSERT INTO metrics_samples (ts, metric, share_id, value) VALUES (@ts, @m, 0, @v)',
+        params,
+      ),
     );
   });
 });
@@ -434,26 +443,34 @@ describe('other enumerations', () => {
 
   it('rejects an unknown log level and source', () => {
     expectConstraintViolation(() =>
-      db.run("INSERT INTO log_entries (ts, level, source, message) VALUES (@ts, 'shout', 'app', 'x')", {
-        ts: now,
-      }),
+      db.run(
+        "INSERT INTO log_entries (ts, level, source, message) VALUES (@ts, 'shout', 'app', 'x')",
+        {
+          ts: now,
+        },
+      ),
     );
     expectConstraintViolation(() =>
-      db.run("INSERT INTO log_entries (ts, level, source, message) VALUES (@ts, 'info', 'nowhere', 'x')", {
-        ts: now,
-      }),
+      db.run(
+        "INSERT INTO log_entries (ts, level, source, message) VALUES (@ts, 'info', 'nowhere', 'x')",
+        {
+          ts: now,
+        },
+      ),
     );
   });
 
   it('enforces a unique token hash', () => {
-    db.run(
-      "INSERT INTO api_tokens (name, token_hash, created_at) VALUES ('a', 'deadbeef', @ts)",
-      { ts: now },
-    );
+    db.run("INSERT INTO api_tokens (name, token_hash, created_at) VALUES ('a', 'deadbeef', @ts)", {
+      ts: now,
+    });
     expectConstraintViolation(() =>
-      db.run("INSERT INTO api_tokens (name, token_hash, created_at) VALUES ('b', 'deadbeef', @ts)", {
-        ts: now,
-      }),
+      db.run(
+        "INSERT INTO api_tokens (name, token_hash, created_at) VALUES ('b', 'deadbeef', @ts)",
+        {
+          ts: now,
+        },
+      ),
     );
   });
 });
