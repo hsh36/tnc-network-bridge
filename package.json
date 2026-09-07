@@ -30,7 +30,7 @@
     "dev:frontend": "vite",
     "build": "npm run build:shared && npm run build:backend && npm run build:frontend",
     "build:shared": "tsc -b src/shared/tsconfig.json",
-    "build:backend": "npm run build:shared && tsc -p src/backend/tsconfig.json",
+    "build:backend": "npm run build:shared && tsc -p src/backend/tsconfig.json && node scripts/copy-assets.mjs",
     "build:frontend": "npm run build:shared && vite build",
     "type-check": "npm run build:shared && tsc -p src/backend/tsconfig.json --noEmit && tsc -p src/frontend/tsconfig.json --noEmit && tsc -p tsconfig.jest.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "lint": "eslint .",

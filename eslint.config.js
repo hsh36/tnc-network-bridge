@@ -14,6 +14,8 @@ module.exports = tseslint.config(
       '*.config.js',
       'jest.config.js',
       'eslint.config.js',
+      // Build-time Node scripts, checked by their own JSDoc types rather than a tsconfig.
+      'scripts/**',
     ],
   },
 
