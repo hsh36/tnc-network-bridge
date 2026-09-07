@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { createSHA256, createXXHash64 } from 'hash-wasm';
+import { createSHA256, createXXHash64, type IHasher } from 'hash-wasm';
 import pLimit from 'p-limit';
 
 /**
@@ -98,12 +98,24 @@ export type ByteSource = AsyncIterable<Uint8Array> | Iterable<Uint8Array>;
  * Exported on its own because it is the honest unit of the memory guarantee: it takes a
  * source it cannot rewind, so there is nowhere for a whole-file buffer to hide.
  */
+/**
+ * An initialised incremental hasher.
+ *
+ * Exported so the transfer executor can hash the bytes it is already copying instead of
+ * reading the source a second time, without having to know which library provides the
+ * algorithm or how it is spelled.
+ */
+export async function createHasher(algorithm: HashAlgorithm): Promise<IHasher> {
+  const hasher = algorithm === 'sha256' ? await createSHA256() : await createXXHash64();
+  hasher.init();
+  return hasher;
+}
+
 export async function hashStream(
   source: ByteSource,
   algorithm: HashAlgorithm,
 ): Promise<{ digest: string; bytesRead: number }> {
-  const hasher = algorithm === 'sha256' ? await createSHA256() : await createXXHash64();
-  hasher.init();
+  const hasher = await createHasher(algorithm);
 
   let bytesRead = 0;
   for await (const chunk of source) {
