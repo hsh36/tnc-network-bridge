@@ -302,7 +302,11 @@ function unmountShare(
  * its connection die because an unrelated share was edited. Restart is offered because
  * some settings (`interfaces`, `bind interfaces only`) genuinely require it.
  */
-function reloadSamba(request: ReloadSambaRequest, deps: HandlerDeps, log: CommandLog): HandlerResult {
+function reloadSamba(
+  request: ReloadSambaRequest,
+  deps: HandlerDeps,
+  log: CommandLog,
+): HandlerResult {
   if (request.mode === 'reload') {
     log.exec([deps.resolve('smbcontrol'), 'all', 'reload-config']);
   } else {
@@ -333,10 +337,9 @@ function writeSambaConfig(
   deps.fs.writeSecret(candidate, request.content, 0o644);
 
   try {
-    const check = log.exec(
-      [deps.resolve('testparm'), '-s', '--suppress-prompt', candidate],
-      { allowFailure: true },
-    );
+    const check = log.exec([deps.resolve('testparm'), '-s', '--suppress-prompt', candidate], {
+      allowFailure: true,
+    });
     if (check.status !== 0) {
       throw new PrivilegedExecutionError(
         'write-samba-config',
@@ -428,11 +431,23 @@ export function parseConnectionName(stdout: string): string | undefined {
  * broke the network is not a rollback. Confirming means calling `apply-network` again
  * with `revertAfterSeconds: 0`, which stops the timer and drops the clone.
  */
-function applyNetwork(request: ApplyNetworkRequest, deps: HandlerDeps, log: CommandLog): HandlerResult {
+function applyNetwork(
+  request: ApplyNetworkRequest,
+  deps: HandlerDeps,
+  log: CommandLog,
+): HandlerResult {
   const nmcli = deps.resolve('nmcli');
   const systemctl = deps.resolve('systemctl');
 
-  const shown = log.exec([nmcli, '-t', '-f', 'GENERAL.CONNECTION', 'device', 'show', request.interface]);
+  const shown = log.exec([
+    nmcli,
+    '-t',
+    '-f',
+    'GENERAL.CONNECTION',
+    'device',
+    'show',
+    request.interface,
+  ]);
   const connection = parseConnectionName(shown.stdout);
   if (connection === undefined) {
     throw new PrivilegedExecutionError(
@@ -543,7 +558,11 @@ function fail2banUnban(
   log: CommandLog,
 ): HandlerResult {
   log.exec([deps.resolve('fail2banClient'), 'set', request.jail, 'unbanip', request.ip]);
-  return { verb: 'fail2ban-unban', commands: log.entries, detail: { jail: request.jail, ip: request.ip } };
+  return {
+    verb: 'fail2ban-unban',
+    commands: log.entries,
+    detail: { jail: request.jail, ip: request.ip },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -555,7 +574,11 @@ function fail2banUnban(
  * HTTPS, and nothing else on the box should. The certificate and chain are public by
  * definition and stay 0644.
  */
-function installCert(request: InstallCertRequest, deps: HandlerDeps, log: CommandLog): HandlerResult {
+function installCert(
+  request: InstallCertRequest,
+  deps: HandlerDeps,
+  log: CommandLog,
+): HandlerResult {
   deps.fs.mkdirp(ROOTS.tls, 0o750);
 
   const certPath = join(ROOTS.tls, 'server.crt');
@@ -622,7 +645,10 @@ export function parseChecksumManifest(text: string): { path: string; digest: str
     // A manifest that can name `../../etc/systemd/system/x.service` turns a checksum
     // file into an arbitrary-read primitive; relative escapes are refused outright.
     if (path.includes('..') || path.startsWith('/')) {
-      throw new PrivilegedExecutionError('apply-update', `manifest path escapes the release: ${path}`);
+      throw new PrivilegedExecutionError(
+        'apply-update',
+        `manifest path escapes the release: ${path}`,
+      );
     }
     entries.push({ digest: digest.toLowerCase(), path });
   }
@@ -641,9 +667,16 @@ export function parseChecksumManifest(text: string): { path: string; digest: str
  * is activated, and `ln -sfn` makes the swap a single atomic rename rather than an
  * rm-then-link window in which `current` points at nothing.
  */
-function applyUpdate(request: ApplyUpdateRequest, deps: HandlerDeps, log: CommandLog): HandlerResult {
+function applyUpdate(
+  request: ApplyUpdateRequest,
+  deps: HandlerDeps,
+  log: CommandLog,
+): HandlerResult {
   if (!deps.fs.isDirectory(request.releaseDir)) {
-    throw new PrivilegedExecutionError('apply-update', `release directory ${request.releaseDir} not found`);
+    throw new PrivilegedExecutionError(
+      'apply-update',
+      `release directory ${request.releaseDir} not found`,
+    );
   }
 
   const manifestPath = join(request.releaseDir, CHECKSUM_MANIFEST);
@@ -702,7 +735,10 @@ function applyUpdate(request: ApplyUpdateRequest, deps: HandlerDeps, log: Comman
  * (`switch-exhaustiveness-check`), so a twelfth verb cannot be added to `verbs.ts`
  * without the compiler demanding a handler for it.
  */
-export function execute(request: PrivilegedRequest, deps: HandlerDeps = defaultDeps): HandlerResult {
+export function execute(
+  request: PrivilegedRequest,
+  deps: HandlerDeps = defaultDeps,
+): HandlerResult {
   const log = new CommandLog(deps);
 
   switch (request.verb) {

@@ -1,12 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import {
-  type AuditSink,
-  buildRecord,
-  FileAuditSink,
-  redactArgs,
-  redactArgv,
-} from './audit';
+import { type AuditSink, buildRecord, FileAuditSink, redactArgs, redactArgv } from './audit';
 import { CommandError } from './exec';
 import { defaultDeps, type HandlerDeps, execute, PrivilegedExecutionError } from './handlers';
 import { PRIVILEGED_VERBS, PrivilegedValidationError, validateRequest } from './verbs';
@@ -78,7 +72,11 @@ Options:
   --list-verbs    print the permitted verbs, one per line
 `;
 
-export function runHelper(io: HelperIo = defaultIo, deps: HandlerDeps = defaultDeps, sink?: AuditSink): number {
+export function runHelper(
+  io: HelperIo = defaultIo,
+  deps: HandlerDeps = defaultDeps,
+  sink?: AuditSink,
+): number {
   const auditSink = sink ?? new FileAuditSink();
   const started = io.now();
 

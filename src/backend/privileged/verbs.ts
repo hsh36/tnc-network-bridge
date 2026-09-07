@@ -88,8 +88,7 @@ const SHARE_NAME = /^[a-zA-Z0-9_-]{1,32}$/;
 const INTERFACE_NAME = /^[A-Za-z0-9._-]{1,15}$/;
 const SERVICE_NAME = /^[A-Za-z0-9._@-]{1,64}$/;
 const VERSION = /^v?\d{1,4}(\.\d{1,4}){0,3}(-[A-Za-z0-9.]{1,32})?$/;
-const IPV4 =
-  /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
 const IPV6 = /^[0-9a-fA-F:]{2,45}$/;
 const UNC = /^\/\/[A-Za-z0-9._-]{1,253}\/[A-Za-z0-9._$ -]{1,255}(\/[A-Za-z0-9._$ -]{1,255})*$/;
 
@@ -404,7 +403,11 @@ function requireInteger(
   max: number,
 ): number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
-    throw new PrivilegedValidationError(verb, field, `must be an integer between ${min} and ${max}`);
+    throw new PrivilegedValidationError(
+      verb,
+      field,
+      `must be an integer between ${min} and ${max}`,
+    );
   }
   return value;
 }
@@ -593,7 +596,11 @@ function validateCidr(verb: string, field: string, value: unknown): string {
   }
   const [address = '', prefix = ''] = value.split('/');
   if (!IPV4.test(address) || !/^(?:3[0-2]|[12]?\d)$/.test(prefix)) {
-    throw new PrivilegedValidationError(verb, field, 'must be an IPv4 address with a prefix length');
+    throw new PrivilegedValidationError(
+      verb,
+      field,
+      'must be an IPv4 address with a prefix length',
+    );
   }
   return value;
 }

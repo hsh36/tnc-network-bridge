@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22.x'
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # A tag that disagrees with package.json produces a release that reports the
+      # wrong version at runtime, which is unfixable after the fact without another tag.
+      - name: Assert the tag matches package.json
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag v$tag does not match package.json version $pkg"
+            exit 1
+          fi
+
+      - name: Verify before publishing
+        run: |
+          npm run lint
+          npm run type-check
+          npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      # ---------------------------------------------------------------------
+      # The tarball ships `dist/` prebuilt. The Pi has 8 GB of RAM and an SD card;
+      # compiling the frontend there takes minutes and can exhaust memory, so the
+      # release is the last point at which anything is compiled.
+      # ---------------------------------------------------------------------
+      - name: Stage the release tree
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          stage="stage/${version}"
+          mkdir -p "$stage"
+
+          cp -r dist "$stage/"
+          cp -r install "$stage/"
+          cp package.json package-lock.json LICENSE README.md "$stage/"
+
+          # Production dependencies only. devDependencies include the whole toolchain
+          # and would roughly triple the download for no runtime benefit.
+          npm ci --omit=dev --prefix "$stage" --ignore-scripts
+          echo "STAGE=$stage" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------------------------
+      # The manifest the privileged helper re-verifies before it swaps the `current`
+      # symlink (T7 apply-update). Format is exactly what `parseChecksumManifest`
+      # accepts: "<64 hex>  <path relative to the release root>", no `..`, no
+      # absolute paths. `%P` strips the leading `./` that plain `find` would emit.
+      # ---------------------------------------------------------------------
+      - name: Generate the SHA256 manifest
+        run: |
+          set -euo pipefail
+          cd "$STAGE"
+          find . -type f -not -name SHA256SUMS -printf '%P\n' \
+            | LC_ALL=C sort \
+            | xargs -d '\n' sha256sum > SHA256SUMS
+          echo "manifest covers $(wc -l < SHA256SUMS) files"
+
+      - name: Verify the manifest against the tree it describes
+        run: |
+          set -euo pipefail
+          cd "$STAGE"
+          # If this cannot pass here, the helper will refuse the update on the Pi —
+          # better to fail the release than to publish one that cannot be installed.
+          sha256sum -c --quiet SHA256SUMS
+
+      - name: Create the tarball
+        run: |
+          set -euo pipefail
+          tarball="tnc-network-bridge-${VERSION}.tar.gz"
+          # Deterministic ordering and no owner metadata, so an identical tree yields
+          # an identical archive and the checksum is meaningful.
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+              -czf "$tarball" -C stage "$VERSION"
+          sha256sum "$tarball" > "$tarball.sha256"
+          cp "$STAGE/SHA256SUMS" "SHA256SUMS-${VERSION}"
+          echo "TARBALL=$tarball" >> "$GITHUB_ENV"
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.TARBALL }}
+            ${{ env.TARBALL }}.sha256
+            SHA256SUMS-${{ env.VERSION }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true

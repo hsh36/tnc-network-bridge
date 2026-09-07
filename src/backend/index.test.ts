@@ -188,9 +188,9 @@ describe('graceful shutdown', () => {
     // And the value is genuinely readable through a fresh handle.
     const reopened = Db.open({ path: dbPath, readonly: true });
     try {
-      expect(reopened.get<{ value: string }>("SELECT value FROM config WHERE key = 'probe.key'")).toEqual(
-        { value: '1' },
-      );
+      expect(
+        reopened.get<{ value: string }>("SELECT value FROM config WHERE key = 'probe.key'"),
+      ).toEqual({ value: '1' });
     } finally {
       reopened.close();
     }

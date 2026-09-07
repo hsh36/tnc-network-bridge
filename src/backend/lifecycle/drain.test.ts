@@ -163,7 +163,9 @@ describe('refusing new work once shutting down', () => {
   it('rejects tracked work after closing too', async () => {
     const registry = new DrainRegistry();
     await registry.drain(10);
-    await expect(registry.track('late', () => Promise.resolve())).rejects.toThrow(RegistryClosedError);
+    await expect(registry.track('late', () => Promise.resolve())).rejects.toThrow(
+      RegistryClosedError,
+    );
   });
 
   it('reopens on reset, for --check and tests', async () => {

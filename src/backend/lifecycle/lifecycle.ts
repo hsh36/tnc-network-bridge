@@ -191,16 +191,12 @@ export class Lifecycle {
       }
       const budget = stage.stopTimeoutMs ?? this.defaultStopTimeoutMs;
       try {
-        const finished = await withTimeout(
-          Promise.resolve(stage.stop()),
-          budget,
-          () => {
-            this.logger.warn('subsystem did not stop within its budget', {
-              stage: stage.name,
-              timeoutMs: budget,
-            });
-          },
-        );
+        const finished = await withTimeout(Promise.resolve(stage.stop()), budget, () => {
+          this.logger.warn('subsystem did not stop within its budget', {
+            stage: stage.name,
+            timeoutMs: budget,
+          });
+        });
         reports.push({ stage: stage.name, outcome: finished ? 'stopped' : 'timeout' });
       } catch (error) {
         // One subsystem failing to stop must not strand the ones after it — a hung

@@ -71,7 +71,10 @@ export class BinaryNotFoundError extends Error {
   }
 }
 
-export function resolveBinary(name: BinaryName, exists: (p: string) => boolean = existsSync): string {
+export function resolveBinary(
+  name: BinaryName,
+  exists: (p: string) => boolean = existsSync,
+): string {
   for (const candidate of BINARIES[name]) {
     if (exists(candidate)) {
       return candidate;
@@ -121,7 +124,8 @@ export const runCommand: CommandRunner = (argv, options = {}) => {
     status: spawned.status ?? -1,
     stdout: spawned.stdout ?? '',
     stderr: spawned.stderr ?? '',
-    timedOut: spawned.error !== undefined && 'code' in spawned.error && spawned.error.code === 'ETIMEDOUT',
+    timedOut:
+      spawned.error !== undefined && 'code' in spawned.error && spawned.error.code === 'ETIMEDOUT',
   };
 
   if (result.status !== 0 && options.allowFailure !== true) {

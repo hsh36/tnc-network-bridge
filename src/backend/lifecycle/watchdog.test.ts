@@ -36,7 +36,9 @@ describe('createNotifier', () => {
   });
 
   it('is a no-op when systemd-notify is not installed', () => {
-    expect(createNotifier({ NOTIFY_SOCKET: '/run/systemd/notify' }, () => false).enabled).toBe(false);
+    expect(createNotifier({ NOTIFY_SOCKET: '/run/systemd/notify' }, () => false).enabled).toBe(
+      false,
+    );
   });
 
   it('notifies systemd when the socket and the tool are both present', () => {
@@ -90,7 +92,7 @@ describe('SystemdNotifier', () => {
   ])('sends %s as %s', (method, message) => {
     const spawn = fakeSpawn();
     const notifier = new SystemdNotifier('/usr/bin/systemd-notify', true, spawn.fn as never);
-    (notifier[method as 'ready' | 'watchdog' | 'stopping'])();
+    notifier[method as 'ready' | 'watchdog' | 'stopping']();
     expect(spawn.calls[0]![1]).toEqual([message]);
   });
 

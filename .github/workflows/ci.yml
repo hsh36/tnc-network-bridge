@@ -3,47 +3,190 @@ name: CI
 on:
   push:
     branches: [main, develop]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'package.json'
-      - 'tsconfig.json'
-      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main, develop]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+# A superseded push should not keep burning runners; the newest commit is the one
+# whose result anybody acts on.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
+permissions:
+  contents: read
+
+env:
+  # package.json requires >=22. Testing on 18 or 20, as this workflow used to, proved
+  # nothing about the runtime the Pi actually ships.
+  NODE_VERSION: '22.x'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Static analysis and the test suite. Nothing here may be advisory: a check that
+  # cannot fail the build is a check nobody reads.
+  # ---------------------------------------------------------------------------
+  verify:
+    name: Lint, types and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npm run type-check
-        continue-on-error: true
+      - name: Formatting
+        run: npm run format:check
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
-      - name: Run tests
-        run: npm test
-        continue-on-error: true
+      - name: Type check
+        run: npm run type-check
 
-      - name: Build
+      # The thresholds live in jest.config.js, so the gate is identical locally and here.
+      - name: Unit and API tests with coverage
+        run: npm run test:coverage
+
+      - name: Frontend tests
+        run: npm run test:frontend
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # The build must produce a complete dist/, because the release tarball ships it
+  # prebuilt — the Pi must never compile the frontend.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build backend and frontend
         run: npm run build
-        continue-on-error: true
+
+      - name: Assert the build emitted what a release needs
+        run: |
+          set -euo pipefail
+          test -f dist/backend/index.js || { echo "missing backend entrypoint"; exit 1; }
+          test -f dist/backend/privileged/main.js || { echo "missing privileged helper"; exit 1; }
+          # Migration SQL is copied, not compiled; a release without it fails on the Pi
+          # at first boot rather than here.
+          ls dist/backend/config/migrations/*.sql >/dev/null
+
+      - name: Self-test starts and reports cleanly
+        run: |
+          set -euo pipefail
+          # No secret key exists on a runner, so --check must fail with a diagnosis
+          # rather than crash. Exit 1 with a readable line is the correct outcome.
+          output=$(node dist/backend/index.js --check || true)
+          echo "$output"
+          echo "$output" | grep -q 'secret' || { echo "unexpected --check output"; exit 1; }
+
+  # ---------------------------------------------------------------------------
+  # The security boundary from T7. Both checks are cheap and catch the two ways this
+  # can silently break: an unparseable sudoers file (which sudo ignores wholesale,
+  # leaving the service unable to reach root at all), and a shell creeping back in.
+  # ---------------------------------------------------------------------------
+  privileged-helper:
+    name: Privilege boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the sudoers rule
+        run: |
+          set -euo pipefail
+          # visudo refuses to check a file with loose permissions, which is itself part
+          # of what we are asserting: this file is installed 0440 root:root.
+          install -m 0440 -o root -g root install/sudoers.d/tnc-bridge /tmp/tnc-bridge-sudoers
+          sudo visudo -cf /tmp/tnc-bridge-sudoers
+
+      - name: Assert the helper never reaches a shell
+        run: |
+          set -euo pipefail
+          # `shell: true`, exec/execSync, and any direct interpreter path are all
+          # disqualifying. Test files are included: a test that shells out would be
+          # asserting behaviour the product does not have.
+          if grep -rnE "shell:\s*true|\bexecSync\(|child_process\.exec\(|/bin/(ba)?sh\b" \
+               src/backend/privileged/; then
+            echo "::error::a shell invocation reached the privileged helper"
+            exit 1
+          fi
+
+      - name: Assert only the two sanctioned spawn sites exist
+        run: |
+          set -euo pipefail
+          sites=$(grep -rln "spawnSync" src/backend/privileged/ --include='*.ts' \
+                  | grep -v '\.test\.ts' | sort)
+          expected=$'src/backend/privileged/client.ts\nsrc/backend/privileged/exec.ts'
+          if [ "$sites" != "$expected" ]; then
+            echo "::error::unexpected process spawn sites:"; echo "$sites"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Guards R14: the Pi is arm64 and better-sqlite3 is a native module. A release that
+  # builds only on x64 fails at install time on the target, which is the worst place
+  # to discover it.
+  # ---------------------------------------------------------------------------
+  arm64-native:
+    name: arm64 native modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable arm64 emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build and load native modules under arm64
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD":/workspace -w /workspace \
+            node:22-bookworm bash -eux -c '
+              apt-get update
+              apt-get install -y --no-install-recommends python3 make g++
+              # --ignore-scripts first so the native build is a step we can attribute.
+              npm ci --ignore-scripts
+              npm rebuild better-sqlite3
+              # Loading it is the real assertion; a compiled .node that will not load
+              # under the target ABI is not a successful build.
+              node -e "
+                const Database = require(\"better-sqlite3\");
+                const db = new Database(\":memory:\");
+                db.exec(\"CREATE TABLE t (x INTEGER)\");
+                db.prepare(\"INSERT INTO t VALUES (?)\").run(42);
+                if (db.prepare(\"SELECT x FROM t\").get().x !== 42) process.exit(1);
+                console.log(\"better-sqlite3 ok on\", process.arch);
+              "
+            '

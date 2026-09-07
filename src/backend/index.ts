@@ -9,11 +9,7 @@ import { runMigrations } from './config/migrations/runner';
 import { DEFAULT_SECRET_KEY_PATH, loadSecretKey } from './config/secrets';
 import { createLogging, type LoggingSystem } from './logging/logger';
 import { DrainRegistry } from './lifecycle/drain';
-import {
-  Lifecycle,
-  type LifecycleLogger,
-  silentLogger,
-} from './lifecycle/lifecycle';
+import { Lifecycle, type LifecycleLogger, silentLogger } from './lifecycle/lifecycle';
 import {
   createNotifier,
   type Notifier,
@@ -338,7 +334,9 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   if (argv.includes('--check')) {
     const result = await selfCheck();
     for (const check of result.checks) {
-      process.stdout.write(`${result.ok && check.ok ? 'ok  ' : 'FAIL'} ${check.name}: ${check.detail}\n`);
+      process.stdout.write(
+        `${result.ok && check.ok ? 'ok  ' : 'FAIL'} ${check.name}: ${check.detail}\n`,
+      );
     }
     return result.ok ? 0 : 1;
   }

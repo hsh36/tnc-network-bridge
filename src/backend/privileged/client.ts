@@ -37,10 +37,7 @@ export interface InvokeOptions {
   readonly helperPath?: string;
 }
 
-export type HelperInvoker = (
-  request: PrivilegedRequest,
-  options?: InvokeOptions,
-) => HelperResponse;
+export type HelperInvoker = (request: PrivilegedRequest, options?: InvokeOptions) => HelperResponse;
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 

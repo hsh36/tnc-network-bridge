@@ -94,8 +94,10 @@ interface Harness {
 function harness(stdoutFor: (argv: readonly string[]) => string = () => ''): Harness {
   const fs = new FakeFs();
   const calls: string[][] = [];
-  const failures: { predicate: (argv: readonly string[]) => boolean; result: Partial<CommandResult> }[] =
-    [];
+  const failures: {
+    predicate: (argv: readonly string[]) => boolean;
+    result: Partial<CommandResult>;
+  }[] = [];
 
   const deps: HandlerDeps = {
     // Binary resolution is `exec.ts`'s job and is tested there; here it is the identity
@@ -275,7 +277,10 @@ describe('unmount-share', () => {
   it('escalates to a lazy unmount when a forced unmount fails', () => {
     const h = harness();
     h.failWhen((argv) => argv.includes('-f'));
-    const result = execute(build({ verb: 'unmount-share', shareName: 'werkstatt', force: true }), h.deps);
+    const result = execute(
+      build({ verb: 'unmount-share', shareName: 'werkstatt', force: true }),
+      h.deps,
+    );
     expect(h.calls).toHaveLength(2);
     expect(h.calls[1]).toContain('-l');
     expect(result.detail).toMatchObject({ lazy: true });
@@ -671,10 +676,10 @@ describe('service-restart', () => {
 });
 
 describe('apply-update', () => {
-  const releaseDir = validateRequest({ verb: 'apply-update', version: 'v0.2.0' }, OPTIONS) as Extract<
-    PrivilegedRequest,
-    { verb: 'apply-update' }
-  >;
+  const releaseDir = validateRequest(
+    { verb: 'apply-update', version: 'v0.2.0' },
+    OPTIONS,
+  ) as Extract<PrivilegedRequest, { verb: 'apply-update' }>;
 
   function stageRelease(h: Harness, files: Record<string, string>): void {
     h.fs.directories.add(releaseDir.releaseDir);
@@ -716,7 +721,9 @@ describe('apply-update', () => {
   it.each(['../../etc/passwd', '/etc/passwd', 'dist/../../escape'])(
     'rejects the escaping manifest path %p',
     (path) => {
-      expect(() => parseChecksumManifest(`${'c'.repeat(64)}  ${path}\n`)).toThrow(/escapes the release/);
+      expect(() => parseChecksumManifest(`${'c'.repeat(64)}  ${path}\n`)).toThrow(
+        /escapes the release/,
+      );
     },
   );
 

@@ -25,11 +25,7 @@ function recordingLogger(): LifecycleLogger & { lines: string[] } {
 }
 
 /** A stage that appends to a shared trace on start and stop. */
-function tracer(
-  trace: string[],
-  name: string,
-  overrides: Partial<Stage> = {},
-): Stage {
+function tracer(trace: string[], name: string, overrides: Partial<Stage> = {}): Stage {
   return {
     name,
     start: () => {
@@ -46,7 +42,10 @@ describe('startup ordering', () => {
   it('starts stages in registration order', async () => {
     const trace: string[] = [];
     const lifecycle = new Lifecycle();
-    lifecycle.register(tracer(trace, 'db')).register(tracer(trace, 'logging')).register(tracer(trace, 'web'));
+    lifecycle
+      .register(tracer(trace, 'db'))
+      .register(tracer(trace, 'logging'))
+      .register(tracer(trace, 'web'));
 
     await lifecycle.start();
     expect(trace).toEqual(['start:db', 'start:logging', 'start:web']);
@@ -102,7 +101,10 @@ describe('shutdown ordering', () => {
   it('stops in the reverse of the start order', async () => {
     const trace: string[] = [];
     const lifecycle = new Lifecycle();
-    lifecycle.register(tracer(trace, 'db')).register(tracer(trace, 'logging')).register(tracer(trace, 'web'));
+    lifecycle
+      .register(tracer(trace, 'db'))
+      .register(tracer(trace, 'logging'))
+      .register(tracer(trace, 'web'));
 
     await lifecycle.start();
     trace.length = 0;
@@ -278,7 +280,10 @@ describe('failed startup unwinds', () => {
 
   it('rejects a stage that fails asynchronously', async () => {
     const lifecycle = new Lifecycle();
-    lifecycle.register({ name: 'async-boom', start: () => Promise.reject(new Error('async nope')) });
+    lifecycle.register({
+      name: 'async-boom',
+      start: () => Promise.reject(new Error('async nope')),
+    });
     await expect(lifecycle.start()).rejects.toThrow(/async nope/);
   });
 
@@ -311,7 +316,9 @@ describe('withTimeout', () => {
   });
 
   it('propagates a rejection rather than swallowing it', async () => {
-    await expect(withTimeout(Promise.reject(new Error('boom')), 100, jest.fn())).rejects.toThrow('boom');
+    await expect(withTimeout(Promise.reject(new Error('boom')), 100, jest.fn())).rejects.toThrow(
+      'boom',
+    );
   });
 });
 

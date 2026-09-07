@@ -1,11 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import {
-  HELPER_PATH,
-  invokePrivileged,
-  PrivilegedCallError,
-  SUDO_PATH,
-} from './client';
+import { HELPER_PATH, invokePrivileged, PrivilegedCallError, SUDO_PATH } from './client';
 
 jest.mock('node:child_process', () => ({ spawnSync: jest.fn() }));
 
@@ -65,9 +60,9 @@ describe('invokePrivileged', () => {
   /** Validating locally saves a sudo round-trip and gives the caller a usable message. */
   it('rejects a malformed request before spawning anything', () => {
     reply('{"ok":true}');
-    expect(() =>
-      invokePrivileged({ verb: 'service-restart', service: 'sshd' } as never),
-    ).toThrow(/is not an allowed unit/);
+    expect(() => invokePrivileged({ verb: 'service-restart', service: 'sshd' } as never)).toThrow(
+      /is not an allowed unit/,
+    );
     expect(spawnSyncMock).not.toHaveBeenCalled();
   });
 
@@ -89,7 +84,12 @@ describe('invokePrivileged', () => {
   });
 
   it('reports an unavailable helper when sudo cannot be started', () => {
-    spawnSyncMock.mockReturnValue({ error: new Error('ENOENT'), stdout: '', stderr: '', status: null });
+    spawnSyncMock.mockReturnValue({
+      error: new Error('ENOENT'),
+      stdout: '',
+      stderr: '',
+      status: null,
+    });
     expect(() => invokePrivileged(REQUEST)).toThrow(/could not invoke the privileged helper/);
   });
 

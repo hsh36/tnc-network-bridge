@@ -12,14 +12,20 @@ import {
 } from './audit';
 
 describe('redactArgs', () => {
-  it.each(['password', 'passwd', 'secret', 'keyPem', 'certPem', 'chainPem', 'credentials', 'token'])(
-    'replaces the %s field wholesale',
-    (field) => {
-      expect(redactArgs({ [field]: 'super secret value' })).toEqual({
-        [field]: REDACTION_PLACEHOLDER,
-      });
-    },
-  );
+  it.each([
+    'password',
+    'passwd',
+    'secret',
+    'keyPem',
+    'certPem',
+    'chainPem',
+    'credentials',
+    'token',
+  ])('replaces the %s field wholesale', (field) => {
+    expect(redactArgs({ [field]: 'super secret value' })).toEqual({
+      [field]: REDACTION_PLACEHOLDER,
+    });
+  });
 
   it('keeps ordinary fields so the audit entry is still useful', () => {
     expect(redactArgs({ verb: 'mount-share', shareName: 'werkstatt', uid: 1000 })).toEqual({
@@ -81,7 +87,10 @@ describe('buildRecord', () => {
   });
 
   it('omits the invoker when the helper was run directly as root', () => {
-    const record = buildRecord({ uid: 0, gid: 0 }, { verb: 'reload-samba', outcome: 'ok', durationMs: 1 });
+    const record = buildRecord(
+      { uid: 0, gid: 0 },
+      { verb: 'reload-samba', outcome: 'ok', durationMs: 1 },
+    );
     expect(record).not.toHaveProperty('invoker');
   });
 });
@@ -109,8 +118,12 @@ describe('FileAuditSink', () => {
   it('appends one JSON object per line', () => {
     const path = join(directory, 'audit.log');
     const sink = new FileAuditSink(path);
-    sink.write(buildRecord({ uid: 0, gid: 0 }, { verb: 'mount-share', outcome: 'ok', durationMs: 4 }));
-    sink.write(buildRecord({ uid: 0, gid: 0 }, { verb: 'unmount-share', outcome: 'failed', durationMs: 5 }));
+    sink.write(
+      buildRecord({ uid: 0, gid: 0 }, { verb: 'mount-share', outcome: 'ok', durationMs: 4 }),
+    );
+    sink.write(
+      buildRecord({ uid: 0, gid: 0 }, { verb: 'unmount-share', outcome: 'failed', durationMs: 5 }),
+    );
 
     const lines = readFileSync(path, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
