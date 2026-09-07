@@ -224,6 +224,7 @@ export const versioningConfigSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const tlsVersionSchema = z.enum(['TLSv1.2', 'TLSv1.3']);
+export type TlsVersion = z.infer<typeof tlsVersionSchema>;
 
 export const securityConfigSchema = z.object({
   sessionIdleMin: z.number().int().min(1).max(1440).default(30),
