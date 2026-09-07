@@ -213,6 +213,16 @@ export class AuthManager {
     this.revokeAllSessions();
   }
 
+  /** Verifies the current password, then replaces it. Throws `InvalidCredentialsError`
+   * if `currentPassword` is wrong — the schema-level "must differ from current" rule
+   * is enforced by `changePasswordRequestSchema` before this is ever called. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    if (!(await this.verifyPassword(currentPassword))) {
+      throw new InvalidCredentialsError();
+    }
+    await this.setPassword(newPassword);
+  }
+
   private async verifyPassword(password: string): Promise<boolean> {
     const stored = this.config.getFlag<string | null>(PASSWORD_HASH_FLAG, null);
     if (stored === null) {

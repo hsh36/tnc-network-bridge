@@ -63,6 +63,7 @@ export const fieldErrorSchema = z.object({
   path: z.string(),
   message: z.string(),
 });
+export type FieldError = z.infer<typeof fieldErrorSchema>;
 
 export const apiErrorSchema = z.object({
   ok: z.literal(false),
