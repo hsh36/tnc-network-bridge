@@ -7,6 +7,7 @@ import {
   HashService,
   hashStream,
   identityOf,
+  quantizeMtimeMs,
   sameIdentity,
   type FileIdentity,
 } from './hasher';
@@ -203,8 +204,23 @@ describe('identity', () => {
     expect(result.dev).toBe(stats.dev);
   });
 
-  it('truncates sub-millisecond mtime noise', () => {
-    expect(identityOf({ size: 1, mtimeMs: 1_000.75, dev: 1, ino: 1 }).mtimeMs).toBe(1_000);
+  it('rounds sub-millisecond mtime noise rather than truncating it', () => {
+    expect(identityOf({ size: 1, mtimeMs: 1_000.75, dev: 1, ino: 1 }).mtimeMs).toBe(1_001);
+    expect(identityOf({ size: 1, mtimeMs: 1_000.25, dev: 1, ino: 1 }).mtimeMs).toBe(1_000);
+  });
+
+  it('absorbs the error a utimes round-trip actually introduces', () => {
+    // `utimes` carries the timestamp as floating-point seconds, so a faithfully
+    // preserved mtime can read back a few ten-thousandths of a millisecond low.
+    // Truncating would turn that into a whole millisecond of spurious difference.
+    // Written as arithmetic rather than a literal: at this magnitude a decimal literal
+    // of that precision cannot be represented, which is the same fact under test.
+    const exact = 1_788_813_484_185;
+    expect(quantizeMtimeMs(exact)).toBe(exact);
+    expect(quantizeMtimeMs(exact - 0.0002)).toBe(exact);
+    expect(quantizeMtimeMs(exact + 0.0002)).toBe(exact);
+    // And a real difference still reads as one.
+    expect(quantizeMtimeMs(exact + 1)).toBe(exact + 1);
   });
 
   it('treats identical tuples as the same file', () => {

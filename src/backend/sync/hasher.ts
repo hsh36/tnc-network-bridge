@@ -126,6 +126,23 @@ export async function hashStream(
   return { digest: hasher.digest('hex'), bytesRead };
 }
 
+/**
+ * Normalises a raw `stat` mtime to a whole millisecond.
+ *
+ * **Round, never truncate.** `utimes` takes its timestamp as a floating-point number of
+ * seconds, so a copy that faithfully preserves an mtime can still read back a few
+ * ten-thousandths of a millisecond below the value it was given. Truncating turns that
+ * invisible error into a whole millisecond of difference whenever it happens to straddle
+ * an integer — which makes a file that was just copied look *changed*, and a
+ * bidirectional sync that believes it copies the file back. Rounding absorbs an error
+ * five thousand times larger than the one that actually occurs.
+ *
+ * Both sides of a comparison must pass through this, or the normalisation proves nothing.
+ */
+export function quantizeMtimeMs(mtimeMs: number): number {
+  return Math.round(mtimeMs);
+}
+
 /** The identity a `stat` implies. Separated so callers that already have one can reuse it. */
 export function identityOf(stats: {
   size: number;
@@ -135,10 +152,7 @@ export function identityOf(stats: {
 }): FileIdentity {
   return {
     size: stats.size,
-    // mtimeMs carries sub-millisecond noise on some filesystems and none on others.
-    // Truncating makes the key stable across the two, at the cost of a granularity the
-    // dev/ino pair already covers.
-    mtimeMs: Math.floor(stats.mtimeMs),
+    mtimeMs: quantizeMtimeMs(stats.mtimeMs),
     dev: stats.dev,
     ino: stats.ino,
   };
