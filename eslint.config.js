@@ -92,6 +92,30 @@ module.exports = tseslint.config(
     },
   },
 
+  // Runtime CommonJS modules (the T15 scan worker). These are loaded by `worker_threads`
+  // rather than compiled by `tsc`, so they belong to no tsconfig and cannot be linted
+  // with the type-aware rules — but they are still real, shipped code, so they are linted.
+  {
+    files: ['**/*.cjs'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        module: 'writable',
+        process: 'readonly',
+        require: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+
   // Tests may reach for the pragmatic escape hatches.
   {
     files: ['**/*.test.ts', '**/*.test.tsx', 'tests/**/*.ts'],

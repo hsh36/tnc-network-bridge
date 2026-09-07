@@ -16,7 +16,10 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = join(projectRoot, 'src', 'backend');
 const targetRoot = join(projectRoot, 'dist', 'backend');
 
-const ASSET_EXTENSIONS = ['.sql', '.hbs', '.conf', '.local', '.service', '.template'];
+// `.cjs` is here because the scan worker (T15) is a runtime module loaded by
+// `worker_threads`, not something `tsc` compiles — without this it would be missing from
+// `dist` and every server scan would fail at first boot on the Pi.
+const ASSET_EXTENSIONS = ['.sql', '.hbs', '.conf', '.local', '.service', '.template', '.cjs'];
 
 /** @param {string} dir @returns {string[]} */
 function collect(dir) {
