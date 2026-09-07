@@ -3,7 +3,10 @@
     "allow": [
       "Bash(git config *)",
       "Bash(git add *)",
-      "Bash(git commit -m 'Update project documentation and configuration *)"
+      "Bash(git commit -m 'Update project documentation and configuration *)",
+      "Bash(npm --version)",
+      "Bash(grep -n \"^#\\\\{1,3\\\\} \" docs/IMPLEMENTATION_PLAN.md)",
+      "Bash(grep -n \"^#\\\\{1,4\\\\} \" docs/ARCHITECTURE.md)"
     ]
   }
 }

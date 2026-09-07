@@ -1,0 +1,12 @@
+{
+  "//": "Used by ts-jest only. Compiles shared + backend + tests as one flat program (no project references), so tests can import source directly without a build step.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "types": ["node", "jest"]
+  },
+  "include": ["src/shared/**/*.ts", "src/backend/**/*.ts", "tests/**/*.ts"]
+}

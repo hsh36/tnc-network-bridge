@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
       - 'src/**'
       - 'tests/**'
@@ -10,7 +10,7 @@ on:
       - 'tsconfig.json'
       - '.github/workflows/ci.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
@@ -21,29 +21,29 @@ jobs:
         node-version: [18.x, 20.x]
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Type check
-      run: npm run type-check
-      continue-on-error: true
+      - name: Type check
+        run: npm run type-check
+        continue-on-error: true
 
-    - name: Lint
-      run: npm run lint
-      continue-on-error: true
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
 
-    - name: Run tests
-      run: npm test
-      continue-on-error: true
+      - name: Run tests
+        run: npm test
+        continue-on-error: true
 
-    - name: Build
-      run: npm run build
-      continue-on-error: true
+      - name: Build
+        run: npm run build
+        continue-on-error: true

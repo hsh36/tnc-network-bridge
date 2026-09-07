@@ -1,0 +1,11 @@
+# This project is developed on Windows and deployed on Raspberry Pi OS.
+# Everything in the repository is committed and checked out with LF endings:
+# shell scripts, sudoers fragments, systemd units and Samba configs are all
+# broken or silently rejected by CRLF.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../dist/backend",
+    "types": ["node"]
+  },
+  "//imports": "Shared code is imported by relative path (`../../shared/...`). `dist/backend` and `dist/shared` sit at the same depth as `src/backend` and `src/shared`, so the emitted specifier resolves correctly at runtime with no alias rewriting.",
+  "references": [{ "path": "../shared" }],
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/__tests__/**"]
+}
