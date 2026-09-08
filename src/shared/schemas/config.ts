@@ -169,6 +169,94 @@ export const smbConfigSchema = z
 export const conflictModeSchema = z.enum(['tnc_wins', 'server_wins', 'last_write_wins']);
 export type ConflictMode = z.infer<typeof conflictModeSchema>;
 
+// ---------------------------------------------------------------------------
+// Advanced sync policies (T40)
+// ---------------------------------------------------------------------------
+
+/** `HH:MM`, 24-hour, in the host's local zone — the zone the operator's shift runs in. */
+export const timeOfDaySchema = z
+  .string()
+  .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, 'Expected a 24-hour time such as "22:00"');
+
+/** 0 = Sunday, matching `Date.getDay()`. */
+export const weekdaySchema = z.number().int().min(0).max(6);
+
+/**
+ * A bandwidth ceiling that applies during a recurring daily window.
+ *
+ * `from`/`to` may wrap past midnight (`22:00`–`06:00`), which is the common case for a
+ * night-shift allowance and the one a naive `from <= now && now < to` comparison gets
+ * silently wrong.
+ */
+export const bandwidthWindowSchema = z
+  .object({
+    label: z.string().max(64).default(''),
+    /** Days the window applies to. Empty means every day. */
+    days: z.array(weekdaySchema).max(7).default([]),
+    from: timeOfDaySchema,
+    to: timeOfDaySchema,
+    /** `null` means "no limit during this window" — an explicit override, not "unset". */
+    limitKbps: z.number().int().positive().nullable(),
+  })
+  .strict();
+
+export type BandwidthWindow = z.infer<typeof bandwidthWindowSchema>;
+
+/**
+ * A path rule. Exactly one of `glob` or `regex` — a rule that tried to be both would
+ * have no defensible precedence between them.
+ */
+export const pathRuleSchema = z
+  .object({
+    glob: globPatternSchema.optional(),
+    regex: z.string().max(512).optional(),
+  })
+  .strict()
+  .refine(
+    (rule) => (rule.glob === undefined) !== (rule.regex === undefined),
+    'Give exactly one of "glob" or "regex"',
+  );
+
+export type PathRule = z.infer<typeof pathRuleSchema>;
+
+/** A path rule carrying a priority. Lower sorts first, like `nice`. */
+export const priorityRuleSchema = z
+  .object({
+    glob: globPatternSchema.optional(),
+    regex: z.string().max(512).optional(),
+    priority: z.number().int().min(0).max(1000).default(50),
+  })
+  .strict()
+  .refine(
+    (rule) => (rule.glob === undefined) !== (rule.regex === undefined),
+    'Give exactly one of "glob" or "regex"',
+  );
+
+export type PriorityRule = z.infer<typeof priorityRuleSchema>;
+
+export const syncPoliciesSchema = z.object({
+  /**
+   * Evaluated top to bottom, first match wins.
+   *
+   * Ordered rather than "most restrictive wins" so an operator can write a broad limit
+   * and then an override above it ("unlimited 02:00–04:00 for the nightly bulk copy").
+   * Most-restrictive-wins would make that override impossible to express.
+   */
+  bandwidthWindows: z.array(bandwidthWindowSchema).max(24).default([]),
+  /** Files matching these sync before anything else. */
+  priorityRules: z.array(priorityRuleSchema).max(50).default([]),
+  /** Regex exclusions, complementing `sync.excludePatterns`' globs. */
+  excludeRules: z.array(pathRuleSchema).max(50).default([]),
+  /**
+   * Paths that only ever travel server → TNC. A local edit to one of these is reverted
+   * on the next pass rather than pushed, which is what makes a reference directory
+   * genuinely read-only rather than merely conventionally so.
+   */
+  readOnlyRules: z.array(pathRuleSchema).max(50).default([]),
+});
+
+export type SyncPolicies = z.infer<typeof syncPoliciesSchema>;
+
 export const syncConfigSchema = z.object({
   conflictMode: conflictModeSchema.default('last_write_wins'),
   /**
@@ -188,6 +276,13 @@ export const syncConfigSchema = z.object({
   /** Drop the TNC share to read-only when the server is unreachable (ARCHITECTURE §3.4). */
   failoverReadOnly: z.boolean().default(true),
   maxFileSizeMb: z.number().int().min(1).max(102_400).default(512),
+  /** Time-aware throttling, priority and path rules (T40). Empty on a fresh install. */
+  policies: syncPoliciesSchema.default({
+    bandwidthWindows: [],
+    priorityRules: [],
+    excludeRules: [],
+    readOnlyRules: [],
+  }),
 });
 
 // ---------------------------------------------------------------------------

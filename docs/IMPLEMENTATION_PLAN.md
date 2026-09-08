@@ -422,6 +422,7 @@ sync.scan_interval_ms        15000       sync.concurrency            4
 sync.bandwidth_limit_kbps    null        sync.protect_deletes        true
 sync.exclude_patterns        ["**/.DS_Store","**/Thumbs.db","**/~$*","**/.tnc-tmp-*"]
 sync.failover_read_only      true        sync.max_file_size_mb       512
+sync.policies                {"bandwidthWindows":[],"priorityRules":[],"excludeRules":[],"readOnlyRules":[]}
 
 locking.enabled              true        locking.server_projection   sidecar
 locking.tnc_lock_ttl_s       900         locking.release_linger_s    5

@@ -27,6 +27,14 @@ describe('configuration defaults', () => {
       excludePatterns: ['**/.DS_Store', '**/Thumbs.db', '**/~$*', '**/.tnc-tmp-*'],
       failoverReadOnly: true,
       maxFileSizeMb: 512,
+      // T40's advanced policies. Empty on a fresh install: every one of these changes
+      // what syncs or how fast, so none of them may be on by default.
+      policies: {
+        bandwidthWindows: [],
+        priorityRules: [],
+        excludeRules: [],
+        readOnlyRules: [],
+      },
     });
   });
 
