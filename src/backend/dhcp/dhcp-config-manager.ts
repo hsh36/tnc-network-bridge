@@ -164,17 +164,18 @@ export class DHCPConfigManager {
    */
   private getStaticReservations(): StaticReservation[] {
     try {
-      const rows = this.db.all<{ mac_address: string; reserved_ip: string; name: string }>(
-        `SELECT mac_address, reserved_ip, name FROM tnc_clients
-         WHERE mac_address IS NOT NULL AND reserved_ip IS NOT NULL AND dhcp_reserved = 1`,
+      // Try new column names first (post-migration)
+      const rows = this.db.all<{ mac_address?: string; reserved_ip?: string; name: string }>(
+        `SELECT COALESCE(mac_address, mac) as mac_address, reserved_ip, name FROM tnc_clients
+         WHERE (mac_address IS NOT NULL OR mac IS NOT NULL) AND reserved_ip IS NOT NULL AND dhcp_reserved = 1`,
       );
 
       return rows
         .filter((row) => row.mac_address && row.reserved_ip)
         .map((row) => ({
-          mac: row.mac_address,
-          ip: row.reserved_ip,
-          hostname: row.name || row.mac_address.replace(/:/g, '-'),
+          mac: row.mac_address!,
+          ip: row.reserved_ip!,
+          hostname: row.name || row.mac_address!.replace(/:/g, '-'),
         }));
     } catch {
       // Table may not exist yet or column names differ

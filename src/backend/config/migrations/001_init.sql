@@ -231,37 +231,13 @@ CREATE INDEX idx_metrics_metric ON metrics_samples(metric, ts);
 -- ---------------------------------------------------------------------------
 CREATE TABLE tnc_clients (
   id            INTEGER PRIMARY KEY,
-  name          TEXT,
-  mac_address   TEXT UNIQUE,
-  ip_address    TEXT,
+  name          TEXT, mac TEXT UNIQUE, ip TEXT,
   model         TEXT CHECK (model IS NULL
                             OR model IN ('iTNC530', 'TNC620', 'TNC640', 'other')),
-  dhcp_reserved INTEGER NOT NULL DEFAULT 0 CHECK (dhcp_reserved IN (0, 1)),
-  reserved_ip   TEXT,
-  first_seen_at INTEGER,
-  last_seen_at  INTEGER,
-  created_at    INTEGER,
-  updated_at    INTEGER,
+  dhcp_static   INTEGER NOT NULL DEFAULT 0 CHECK (dhcp_static IN (0, 1)),
+  first_seen_at INTEGER, last_seen_at INTEGER,
   notes         TEXT
 );
-CREATE UNIQUE INDEX idx_tnc_mac ON tnc_clients(mac_address) WHERE mac_address IS NOT NULL;
-
--- ---------------------------------------------------------------------------
--- discovered_machines — machines discovered on the TNC network
--- ---------------------------------------------------------------------------
-CREATE TABLE discovered_machines (
-  id            INTEGER PRIMARY KEY,
-  mac_address   TEXT UNIQUE NOT NULL,
-  ip_address    TEXT,
-  hostname      TEXT,
-  is_online     INTEGER NOT NULL DEFAULT 1 CHECK (is_online IN (0, 1)),
-  dhcp_leased   INTEGER NOT NULL DEFAULT 0 CHECK (dhcp_leased IN (0, 1)),
-  last_seen     INTEGER NOT NULL,
-  created_at    INTEGER NOT NULL,
-  updated_at    INTEGER NOT NULL
-);
-CREATE INDEX idx_machines_online ON discovered_machines(is_online);
-CREATE INDEX idx_machines_last_seen ON discovered_machines(last_seen DESC);
 
 -- ---------------------------------------------------------------------------
 -- audit_log

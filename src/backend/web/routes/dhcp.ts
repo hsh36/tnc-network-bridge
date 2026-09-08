@@ -162,9 +162,9 @@ export function dhcpRoutes(ctx: AppContext): Router {
         const now = Math.floor(Date.now() / 1000);
 
         ctx.db.transaction(() => {
-          // Check if this MAC already exists
+          // Check if this MAC already exists (using COALESCE to handle both old and new column names)
           const existing = ctx.db.get<{ id: number }>(
-            `SELECT id FROM tnc_clients WHERE mac_address = @mac`,
+            `SELECT id FROM tnc_clients WHERE mac_address = @mac OR mac = @mac`,
             { mac },
           );
 
@@ -172,8 +172,8 @@ export function dhcpRoutes(ctx: AppContext): Router {
             // Update existing reservation
             ctx.db.run(
               `UPDATE tnc_clients
-             SET reserved_ip = @ip, name = @hostname, dhcp_reserved = 1, updated_at = @now
-             WHERE mac_address = @mac`,
+             SET mac_address = @mac, reserved_ip = @ip, name = @hostname, dhcp_reserved = 1, updated_at = @now
+             WHERE mac_address = @mac OR mac = @mac`,
               {
                 mac,
                 ip,
@@ -182,10 +182,10 @@ export function dhcpRoutes(ctx: AppContext): Router {
               },
             );
           } else {
-            // Create new reservation
+            // Create new reservation (insert with both old and new columns for compatibility)
             ctx.db.run(
-              `INSERT INTO tnc_clients (mac_address, reserved_ip, name, dhcp_reserved, created_at, updated_at)
-             VALUES (@mac, @ip, @hostname, 1, @now, @now)`,
+              `INSERT INTO tnc_clients (mac, mac_address, reserved_ip, name, dhcp_reserved, created_at, updated_at)
+             VALUES (@mac, @mac, @ip, @hostname, 1, @now, @now)`,
               {
                 mac,
                 ip,
@@ -229,7 +229,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
         ctx.db.run(
           `UPDATE tnc_clients
          SET reserved_ip = NULL, dhcp_reserved = 0, updated_at = @now
-         WHERE mac_address = @mac`,
+         WHERE mac_address = @mac OR mac = @mac`,
           {
             mac,
             now: Math.floor(Date.now() / 1000),
