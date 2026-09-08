@@ -11,7 +11,7 @@ export interface DhcpLease {
   readonly timestamp: number;
   readonly mac: string;
   readonly ip: string;
-  readonly hostname: string;
+  readonly hostname: string | undefined;
 }
 
 /**

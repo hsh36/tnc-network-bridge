@@ -101,7 +101,7 @@ export function renderDnsmasqConf(
 export interface DHCPConfigManagerOptions {
   readonly db: Db;
   readonly config: ConfigManager;
-  readonly logger?: DbLogger;
+  readonly logger: DbLogger | undefined;
 }
 
 export class DHCPConfigManager {
@@ -232,7 +232,7 @@ export class DHCPConfigManager {
              WHERE mac_address = @mac`,
             {
               ip: lease.ip,
-              hostname: lease.hostname,
+              hostname: lease.hostname ?? '',
               now,
               mac: lease.mac,
             },
@@ -244,7 +244,7 @@ export class DHCPConfigManager {
             {
               mac: lease.mac,
               ip: lease.ip,
-              hostname: lease.hostname,
+              hostname: lease.hostname ?? '',
               now,
             },
           );

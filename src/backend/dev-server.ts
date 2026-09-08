@@ -110,7 +110,6 @@ async function main(): Promise<void> {
     locks,
     scheduler: schedules,
     logger: service.logging.logger,
-    audit,
   });
 
   const metrics = createBridgeMetrics();

@@ -1,9 +1,7 @@
-import { type ScheduleTarget } from '../../shared';
 import { type Db, type DbLogger } from '../config/db';
 import { type LockManager } from './lock-manager';
 import { type Scheduler } from '../scheduling/scheduler';
 import { type JobContext, type JobOutcome } from '../scheduling/jobs';
-import { type AuditLog } from '../security/audit-log';
 import picomatch from 'picomatch';
 
 /**
@@ -23,20 +21,17 @@ export interface ScheduleLockWindowManagerOptions {
   readonly locks: LockManager;
   readonly scheduler: Scheduler;
   readonly logger?: DbLogger;
-  readonly audit?: AuditLog;
 }
 
 export class ScheduleLockWindowManager {
   private readonly db: Db;
   private readonly locks: LockManager;
   private readonly logger: DbLogger | undefined;
-  private readonly audit: AuditLog | undefined;
 
   constructor(options: ScheduleLockWindowManagerOptions) {
     this.db = options.db;
     this.locks = options.locks;
     this.logger = options.logger;
-    this.audit = options.audit;
 
     // Register the job handlers with the scheduler's registry
     options.scheduler.jobs.register('lock', (ctx) => this.handleLockWindow(ctx));

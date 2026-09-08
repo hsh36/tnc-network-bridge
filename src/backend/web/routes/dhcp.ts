@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { macAddressSchema, ipv4Schema } from '../../../shared';
-import { DHCPConfigManager } from '../dhcp/dhcp-config-manager';
-import { rateLimit } from '../security/rate-limit';
+import { DHCPConfigManager } from '../../dhcp/dhcp-config-manager';
+import { rateLimit } from '../../security/rate-limit';
 import { type AppContext } from '../context';
-import { ok, requireCsrf, requireSession } from './middleware';
+import { ok, requireCsrf, requireSession } from '../middleware';
 
 /**
  * `/dhcp/*` routes for DHCP server management (T35).
@@ -40,7 +40,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
    *
    * Returns the current DHCP configuration (from the `dhcp` config section).
    */
-  router.get('/dhcp/config', requireSession(ctx), (req, res) => {
+  router.get('/dhcp/config', requireSession(ctx), (_req, res) => {
     const config = ctx.config.get('dhcp');
     ok(res, config);
   });
@@ -72,7 +72,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
    * - Static reservations (from tnc_clients table)
    * - SMB sessions (future integration with T13)
    */
-  router.get('/dhcp/machines', requireSession(ctx), async (req, res, next) => {
+  router.get('/dhcp/machines', requireSession(ctx), async (_req, res, next) => {
     try {
       const leases = await manager.parseLeaseFile();
       const discovered = manager.getDiscoveredMachines();
@@ -89,7 +89,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
           machineMap.set(lease.mac, {
             mac: lease.mac,
             ip: lease.ip,
-            hostname: lease.hostname,
+            hostname: lease.hostname ?? '',
             lastSeen: lease.timestamp,
             isOnline: true,
           });
@@ -118,7 +118,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
    *
    * Returns current DHCP leases (parsed from dnsmasq.leases file).
    */
-  router.get('/dhcp/leases', requireSession(ctx), async (req, res, next) => {
+  router.get('/dhcp/leases', requireSession(ctx), async (_req, res, next) => {
     try {
       const leases = await manager.parseLeaseFile();
       ok(res, {
