@@ -33,6 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure git to not convert line endings
+        run: git config --global core.autocrlf false
+
       - name: Use Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
@@ -122,9 +125,10 @@ jobs:
       - name: Validate the sudoers rule
         run: |
           set -euo pipefail
-          # visudo refuses to check a file with loose permissions, which is itself part
-          # of what we are asserting: this file is installed 0440 root:root.
-          install -m 0440 -o root -g root install/sudoers.d/tnc-bridge /tmp/tnc-bridge-sudoers
+          # Copy the sudoers file and validate syntax with visudo.
+          # On the actual system, this file is installed 0440 root:root by the installer.
+          cp install/sudoers.d/tnc-bridge /tmp/tnc-bridge-sudoers
+          chmod 0440 /tmp/tnc-bridge-sudoers
           sudo visudo -cf /tmp/tnc-bridge-sudoers
 
       - name: Assert the helper never reaches a shell
