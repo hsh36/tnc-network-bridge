@@ -13,6 +13,7 @@ import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
 import { BlobStore } from './versioning/blob-store';
+import { VersionCleanup } from './versioning/cleanup';
 import { VersionStore } from './versioning/version-store';
 
 /**
@@ -72,9 +73,21 @@ async function main(): Promise<void> {
     logger: service.logging.logger,
   });
 
+  const cleanup = new VersionCleanup({
+    versions,
+    policy: () => service.config.get('versioning'),
+    logger: service.logging.logger,
+    audit,
+  });
+
+  // The scheduler knows *when*; the registry supplies *what*. A kind with no handler
+  // registered is recorded as skipped rather than failing, so this list can grow
+  // incrementally without the scheduler needing to know.
+  const jobs = new JobRegistry().register('prune', cleanup.asJobHandler());
+
   const schedules = new Scheduler({
     db: service.db,
-    jobs: new JobRegistry(),
+    jobs,
     logger: service.logging.logger,
     audit,
   });
