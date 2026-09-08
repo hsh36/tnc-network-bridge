@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { PRODUCT_NAME } from '../../shared';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from './ui/Button';
+import { LanguagePickerButtons } from './LanguagePicker';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { cn } from './ui/cn';
 
@@ -57,17 +58,20 @@ export function Layout({ children }: { readonly children: ReactNode }): JSX.Elem
             </NavLink>
           ))}
         </nav>
-        <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 dark:border-border-dark">
+        <div className="space-y-2 border-t border-border px-4 py-3 dark:border-border-dark">
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-slate-700 dark:text-slate-300">
               {session?.username ?? '—'}
             </p>
           </div>
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              Log out
-            </Button>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Log out
+              </Button>
+            </div>
+            <LanguagePickerButtons />
           </div>
         </div>
       </aside>
