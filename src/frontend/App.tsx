@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Locks } from './pages/Locks';
 import { Login } from './pages/Login';
 import { Logs } from './pages/Logs';
+import { Scheduling } from './pages/Scheduling';
 import { Versions } from './pages/Versions';
 
 /** Redirects to `/login` when there is no session, preserving the intended route (T32's AC). */
@@ -52,6 +53,14 @@ function AppRoutes(): JSX.Element {
         element={
           <RequireAuth>
             <Versions />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/scheduling"
+        element={
+          <RequireAuth>
+            <Scheduling />
           </RequireAuth>
         }
       />
