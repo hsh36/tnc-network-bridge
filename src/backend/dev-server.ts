@@ -8,6 +8,10 @@ import { EventBus } from './web/event-bus';
 import { ensureCertificate, HttpsServerManager } from './web/https-setup';
 import { ConflictResolver } from './locking/conflict-resolver';
 import { LockManager } from './locking/lock-manager';
+import { createShareCacheRootResolver } from './config/share-paths';
+import { AuditLog, installAuditGuards } from './security/audit-log';
+import { BlobStore } from './versioning/blob-store';
+import { VersionStore } from './versioning/version-store';
 
 /**
  * Development/standalone entrypoint.
@@ -38,8 +42,16 @@ async function main(): Promise<void> {
     secretKeyPath: join(DEV_ROOT, 'secret.key'),
   });
 
-  const auth = new AuthManager({ db: service.db, config: service.config, logger: service.logging.logger });
-  const locks = new LockManager({ db: service.db, config: service.config, logger: service.logging.logger });
+  const auth = new AuthManager({
+    db: service.db,
+    config: service.config,
+    logger: service.logging.logger,
+  });
+  const locks = new LockManager({
+    db: service.db,
+    config: service.config,
+    logger: service.logging.logger,
+  });
   const conflicts = new ConflictResolver(service.db, service.logging.logger);
   const events = new EventBus();
 
@@ -50,6 +62,14 @@ async function main(): Promise<void> {
   const certDir = join(DEV_ROOT, 'tls');
   const material = ensureCertificate(certDir);
 
+  installAuditGuards(service.db);
+  const audit = new AuditLog(service.db, service.logging.logger);
+  const versions = new VersionStore({
+    db: service.db,
+    blobs: new BlobStore({ root: join(DEV_ROOT, 'versions') }),
+    logger: service.logging.logger,
+  });
+
   const ctx: AppContext = {
     db: service.db,
     config: service.config,
@@ -57,6 +77,9 @@ async function main(): Promise<void> {
     locks,
     conflicts,
     events,
+    versions,
+    audit,
+    shareCacheRoot: createShareCacheRootResolver(service.db),
     logger: service.logging.logger,
     certDir,
     version: process.env.npm_package_version ?? '0.0.0-dev',
@@ -65,7 +88,10 @@ async function main(): Promise<void> {
   };
 
   const app = createApp(ctx);
-  const https = HttpsServerManager.create(app, { material, tlsMin: service.config.get('security').tlsMin });
+  const https = HttpsServerManager.create(app, {
+    material,
+    tlsMin: service.config.get('security').tlsMin,
+  });
   ctx.httpsManager = https;
 
   const heartbeat = setInterval(() => {

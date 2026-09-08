@@ -26,7 +26,8 @@ export function statusRoutes(ctx: AppContext): Router {
       ctx.db.pluck<number>('SELECT count(*) FROM locks WHERE released_at IS NULL') ?? 0;
     const unacknowledgedConflicts =
       ctx.db.pluck<number>('SELECT count(*) FROM conflicts WHERE acknowledged = 0') ?? 0;
-    const sharesEnabled = ctx.db.pluck<number>('SELECT count(*) FROM shares WHERE enabled = 1') ?? 0;
+    const sharesEnabled =
+      ctx.db.pluck<number>('SELECT count(*) FROM shares WHERE enabled = 1') ?? 0;
 
     const status: Status = {
       version: ctx.version,
@@ -78,10 +79,7 @@ export function statusRoutes(ctx: AppContext): Router {
       data: {
         status: allOk ? ('ok' as const) : ('degraded' as const),
         version: ctx.version,
-        uptimeSeconds: Math.max(
-          0,
-          Math.floor(ctx.now() / 1000) - Math.floor(ctx.startedAt / 1000),
-        ),
+        uptimeSeconds: Math.max(0, Math.floor(ctx.now() / 1000) - Math.floor(ctx.startedAt / 1000)),
         checks: { database, migrations, httpServer, samba },
       },
     });

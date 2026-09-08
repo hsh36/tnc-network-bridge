@@ -23,7 +23,8 @@ export function eventsRoutes(ctx: AppContext): Router {
   router.get('/events/stream', requireSession(ctx), (req, res) => {
     const query = eventStreamQuerySchema.parse({
       ...req.query,
-      lastEventId: req.header('last-event-id') ?? (req.query as Record<string, unknown>).lastEventId,
+      lastEventId:
+        req.header('last-event-id') ?? (req.query as Record<string, unknown>).lastEventId,
     });
 
     if (activeClients >= MAX_CLIENTS) {

@@ -8,6 +8,10 @@ import { generateSecretKey } from '../config/secrets';
 import { AuthLogWriter } from '../logging/auth-log';
 import { ConflictResolver } from '../locking/conflict-resolver';
 import { LockManager } from '../locking/lock-manager';
+import { createShareCacheRootResolver } from '../config/share-paths';
+import { AuditLog, installAuditGuards } from '../security/audit-log';
+import { BlobStore } from '../versioning/blob-store';
+import { VersionStore } from '../versioning/version-store';
 import { createApp } from './app';
 import { AuthManager } from './auth';
 import { type AppContext } from './context';
@@ -34,6 +38,7 @@ function buildContext(): AppContext {
   });
   const locks = new LockManager({ db, config });
   const conflicts = new ConflictResolver(db);
+  installAuditGuards(db);
   return {
     db,
     config,
@@ -41,6 +46,9 @@ function buildContext(): AppContext {
     locks,
     conflicts,
     events: new EventBus(),
+    versions: new VersionStore({ db, blobs: new BlobStore({ root: `${tmpDir()}/versions` }) }),
+    audit: new AuditLog(db),
+    shareCacheRoot: createShareCacheRootResolver(db),
     certDir: tmpDir(),
     version: '0.0.0-test',
     startedAt: Date.now() - 1000,

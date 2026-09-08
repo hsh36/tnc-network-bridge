@@ -23,7 +23,17 @@ function toCsv(rows: readonly LogEntry[]): string {
   const header = ['id', 'ts', 'level', 'source', 'message', 'requestId', 'shareId'];
   const escape = (v: string | number): string => `"${String(v).replace(/"/g, '""')}"`;
   const lines = rows.map((r) =>
-    [r.id, new Date(r.ts).toISOString(), r.level, r.source, r.message, r.requestId ?? '', r.shareId ?? ''].map(escape).join(','),
+    [
+      r.id,
+      new Date(r.ts).toISOString(),
+      r.level,
+      r.source,
+      r.message,
+      r.requestId ?? '',
+      r.shareId ?? '',
+    ]
+      .map(escape)
+      .join(','),
   );
   return [header.join(','), ...lines].join('\n');
 }
@@ -55,13 +65,25 @@ export function Logs(): JSX.Element {
     [level, source, q, limit],
   );
 
-  const logs = useApiQuery('logs.list', { query }, { pollMs: 10_000, deps: [level, source, q, limit] });
+  const logs = useApiQuery(
+    'logs.list',
+    { query },
+    { pollMs: 10_000, deps: [level, source, q, limit] },
+  );
 
   const columns: readonly Column<LogEntry>[] = [
     { key: 'ts', header: 'Time', render: (l) => new Date(l.ts).toLocaleString() },
-    { key: 'level', header: 'Level', render: (l) => <Badge tone={levelTone[l.level]}>{l.level}</Badge> },
+    {
+      key: 'level',
+      header: 'Level',
+      render: (l) => <Badge tone={levelTone[l.level]}>{l.level}</Badge>,
+    },
     { key: 'source', header: 'Source', render: (l) => l.source },
-    { key: 'message', header: 'Message', render: (l) => <span className="break-words">{l.message}</span> },
+    {
+      key: 'message',
+      header: 'Message',
+      render: (l) => <span className="break-words">{l.message}</span>,
+    },
   ];
 
   return (
@@ -69,7 +91,9 @@ export function Logs(): JSX.Element {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Logs</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Filter, search and export sync/error/audit logs.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Filter, search and export sync/error/audit logs.
+          </p>
         </div>
         <Button
           variant="secondary"
@@ -112,8 +136,21 @@ export function Logs(): JSX.Element {
               </option>
             ))}
           </Select>
-          <Input id="q" label="Search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Message contains…" className="min-w-[14rem] flex-1" />
-          <Select id="limit" label="Rows" value={String(limit)} onChange={(e) => setLimit(Number(e.target.value))} className="w-24">
+          <Input
+            id="q"
+            label="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Message contains…"
+            className="min-w-[14rem] flex-1"
+          />
+          <Select
+            id="limit"
+            label="Rows"
+            value={String(limit)}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            className="w-24"
+          >
             {[50, 100, 250, 500].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -126,7 +163,10 @@ export function Logs(): JSX.Element {
       <Card>
         <CardHeader title="Entries" subtitle={`${logs.data?.total ?? 0} matching`} />
         {logs.data?.items.length === 0 ? (
-          <EmptyState title="No log entries" description="Nothing matches the current filters yet." />
+          <EmptyState
+            title="No log entries"
+            description="Nothing matches the current filters yet."
+          />
         ) : (
           <Table columns={columns} rows={logs.data?.items ?? []} rowKey={(l) => l.id} />
         )}

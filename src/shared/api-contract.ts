@@ -432,6 +432,15 @@ export const apiContract = {
     response: fileVersionSchema,
     mutates: true,
   },
+  'versions.delete': {
+    method: 'DELETE',
+    path: '/versions/:id',
+    summary: 'Delete one version. Its blob is removed only if no other version shares it.',
+    auth: 'session',
+    params: idParams,
+    response: acknowledgedSchema,
+    mutates: true,
+  },
 
   // -------------------------------------------------------------------------
   // Logs and event streams

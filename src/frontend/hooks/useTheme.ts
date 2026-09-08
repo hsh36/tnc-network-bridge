@@ -24,7 +24,9 @@ function applyTheme(theme: Theme): void {
 
 /** Per-viewer preference only — never sent to the server, never shared across devices. */
 export function useTheme(): { theme: Theme; toggle: () => void } {
-  const [theme, setTheme] = useState<Theme>(() => readStored() ?? (systemPrefersDark() ? 'dark' : 'light'));
+  const [theme, setTheme] = useState<Theme>(
+    () => readStored() ?? (systemPrefersDark() ? 'dark' : 'light'),
+  );
 
   useEffect(() => {
     applyTheme(theme);

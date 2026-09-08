@@ -45,7 +45,9 @@ export class UnauthenticatedError extends ApiError {}
 // the latter carries an implicit `[x: string]: never` index signature, which would
 // force every property contributed by the *other* branches (e.g. `body`) down to
 // `never` too once intersected. `{}` imposes no such constraint.
-type CallArgs<K extends EndpointId> = (HasParams<K> extends true ? { params: PathParams<K> } : object) &
+type CallArgs<K extends EndpointId> = (HasParams<K> extends true
+  ? { params: PathParams<K> }
+  : object) &
   (HasQuery<K> extends true ? { query: RequestQuery<K> } : object) &
   (HasBody<K> extends true ? { body: RequestBody<K> } : object);
 
@@ -91,8 +93,13 @@ export async function api<K extends EndpointId>(
   args: CallArgs<K> = {} as CallArgs<K>,
 ): Promise<ResponseData<K>> {
   const def: EndpointDefinition = apiContract[endpoint];
-  const a = args as { params?: Record<string, string | number>; query?: Record<string, unknown>; body?: unknown };
-  const path = def.params !== undefined ? buildPath(endpoint, a.params ?? {}) : `${API_BASE_PATH}${def.path}`;
+  const a = args as {
+    params?: Record<string, string | number>;
+    query?: Record<string, unknown>;
+    body?: unknown;
+  };
+  const path =
+    def.params !== undefined ? buildPath(endpoint, a.params ?? {}) : `${API_BASE_PATH}${def.path}`;
   const url = `${path}${toQueryString(a.query)}`;
 
   const headers: Record<string, string> = {};
@@ -119,12 +126,21 @@ export async function api<K extends EndpointId>(
 
   const json = (await res.json().catch(() => undefined)) as
     | { ok: true; data: ResponseData<K> }
-    | { ok: false; error: { code: ApiErrorCode; message: string; details?: { path: string; message: string }[]; retryAfterSeconds?: number } }
+    | {
+        ok: false;
+        error: {
+          code: ApiErrorCode;
+          message: string;
+          details?: { path: string; message: string }[];
+          retryAfterSeconds?: number;
+        };
+      }
     | undefined;
 
   if (json?.ok !== true) {
     const code = json?.ok === false ? json.error.code : 'INTERNAL_ERROR';
-    const message = json?.ok === false ? json.error.message : `Request failed with status ${res.status}`;
+    const message =
+      json?.ok === false ? json.error.message : `Request failed with status ${res.status}`;
     const details = json?.ok === false ? json.error.details : undefined;
     const retryAfterSeconds = json?.ok === false ? json.error.retryAfterSeconds : undefined;
     const ErrorClass = res.status === 401 ? UnauthenticatedError : ApiError;

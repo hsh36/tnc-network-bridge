@@ -26,7 +26,9 @@ export function Locks(): JSX.Element {
         setRelPath('');
         locks.refresh();
       })
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : 'Could not create the lock'))
+      .catch((err: unknown) =>
+        setError(err instanceof ApiError ? err.message : 'Could not create the lock'),
+      )
       .finally(() => setBusy(false));
   };
 
@@ -38,17 +40,39 @@ export function Locks(): JSX.Element {
   };
 
   const columns: readonly Column<Lock>[] = [
-    { key: 'path', header: 'Path', render: (l) => <span className="font-mono text-xs">{l.relPath}</span> },
+    {
+      key: 'path',
+      header: 'Path',
+      render: (l) => <span className="font-mono text-xs">{l.relPath}</span>,
+    },
     { key: 'share', header: 'Share', render: (l) => l.shareId },
-    { key: 'origin', header: 'Origin', render: (l) => <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge> },
+    {
+      key: 'origin',
+      header: 'Origin',
+      render: (l) => <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge>,
+    },
     { key: 'owner', header: 'Owner', render: (l) => l.ownerLabel ?? l.tncIp ?? '—' },
-    { key: 'acquired', header: 'Acquired', render: (l) => new Date(l.acquiredAt * 1000).toLocaleString() },
-    { key: 'expires', header: 'Expires', render: (l) => (l.expiresAt !== null ? new Date(l.expiresAt * 1000).toLocaleString() : 'Never') },
+    {
+      key: 'acquired',
+      header: 'Acquired',
+      render: (l) => new Date(l.acquiredAt * 1000).toLocaleString(),
+    },
+    {
+      key: 'expires',
+      header: 'Expires',
+      render: (l) =>
+        l.expiresAt !== null ? new Date(l.expiresAt * 1000).toLocaleString() : 'Never',
+    },
     {
       key: 'actions',
       header: '',
       render: (l) => (
-        <Button size="sm" variant="danger" loading={releasingId === l.id} onClick={() => handleRelease(l.id)}>
+        <Button
+          size="sm"
+          variant="danger"
+          loading={releasingId === l.id}
+          onClick={() => handleRelease(l.id)}
+        >
           Release
         </Button>
       ),
@@ -68,7 +92,13 @@ export function Locks(): JSX.Element {
         <CardHeader title="Take a manual lock" />
         <CardBody>
           <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
-            <Input id="shareId" label="Share ID" value={shareId} onChange={(e) => setShareId(e.target.value)} className="w-24" />
+            <Input
+              id="shareId"
+              label="Share ID"
+              value={shareId}
+              onChange={(e) => setShareId(e.target.value)}
+              className="w-24"
+            />
             <Input
               id="relPath"
               label="Path"

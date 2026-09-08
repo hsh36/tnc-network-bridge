@@ -385,7 +385,7 @@ All bodies validated by shared Zod schemas; the same schemas type the frontend c
 | GET | `/files?share=&path=&state=&q=` | Index browser (paginated) |
 | GET/POST | `/locks` · DELETE `/locks/:id` | List / manual lock / force release |
 | GET | `/conflicts` · POST `/conflicts/:id/{resolve,acknowledge}` | Conflict review |
-| GET | `/versions?share=&path=` · GET `/versions/:id/download` · POST `/versions/:id/{restore,pin}` | Version history |
+| GET | `/versions?share=&path=` · GET `/versions/:id/download` · POST `/versions/:id/{restore,pin}` · DELETE `/versions/:id` | Version history |
 | GET | `/logs?source=&level=&since=&q=&limit=` | Log query |
 | GET | `/logs/stream` · `/events/stream` | **SSE** — log tail, live status/sync/lock events |
 | GET | `/system` | Disk, CPU, memory, SoC temp, uptime, interfaces, throttling flags |

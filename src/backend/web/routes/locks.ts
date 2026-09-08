@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { createLockRequestSchema, listLocksQuerySchema, releaseLockQuerySchema } from '../../../shared';
+import {
+  createLockRequestSchema,
+  listLocksQuerySchema,
+  releaseLockQuerySchema,
+} from '../../../shared';
 import { type AppContext } from '../context';
 import { HttpError } from '../envelope';
 import { ok, requireCsrf, requireSession, requireSessionOrToken } from '../middleware';
@@ -30,7 +34,10 @@ export function locksRoutes(ctx: AppContext): Router {
   router.delete('/locks/:id', requireSession(ctx), requireCsrf(ctx), (req, res) => {
     const id = idParam(req.params.id);
     const query = releaseLockQuerySchema.parse(req.query);
-    ctx.locks.release(id, { forced: true, ...(query.reason !== undefined ? { reason: query.reason } : {}) });
+    ctx.locks.release(id, {
+      forced: true,
+      ...(query.reason !== undefined ? { reason: query.reason } : {}),
+    });
     ok(res, { acknowledged: true as const });
   });
 

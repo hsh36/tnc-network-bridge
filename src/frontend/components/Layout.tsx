@@ -28,7 +28,9 @@ export function Layout({ children }: { readonly children: ReactNode }): JSX.Elem
           <span className="text-lg" aria-hidden="true">
             🌉
           </span>
-          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{PRODUCT_NAME}</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {PRODUCT_NAME}
+          </span>
         </div>
         <nav className="flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible">
           {NAV_ITEMS.map((item) => (

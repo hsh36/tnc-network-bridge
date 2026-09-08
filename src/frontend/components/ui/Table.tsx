@@ -16,14 +16,22 @@ export interface TableProps<T> {
 }
 
 /** A plain, virtualisation-free table — fine up to a few hundred rows; `Logs.tsx` paginates past that. */
-export function Table<T>({ columns, rows, rowKey, emptyMessage = 'No data' }: TableProps<T>): JSX.Element {
+export function Table<T>({
+  columns,
+  rows,
+  rowKey,
+  emptyMessage = 'No data',
+}: TableProps<T>): JSX.Element {
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-slate-500 dark:border-border-dark dark:text-slate-400">
             {columns.map((col) => (
-              <th key={col.key} className={cn('whitespace-nowrap px-3 py-2 font-medium', col.className)}>
+              <th
+                key={col.key}
+                className={cn('whitespace-nowrap px-3 py-2 font-medium', col.className)}
+              >
                 {col.header}
               </th>
             ))}
@@ -32,7 +40,10 @@ export function Table<T>({ columns, rows, rowKey, emptyMessage = 'No data' }: Ta
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+              <td
+                colSpan={columns.length}
+                className="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400"
+              >
                 {emptyMessage}
               </td>
             </tr>

@@ -47,8 +47,12 @@ export function Login(): JSX.Element {
             <span className="text-3xl" aria-hidden="true">
               🌉
             </span>
-            <h1 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{PRODUCT_NAME}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Sign in to manage this bridge</p>
+            <h1 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {PRODUCT_NAME}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Sign in to manage this bridge
+            </p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Input

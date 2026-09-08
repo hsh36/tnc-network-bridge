@@ -20,7 +20,9 @@ describe('useTheme', () => {
     act(() => result.current.toggle());
 
     expect(result.current.theme).not.toBe(initial);
-    expect(document.documentElement.classList.contains('dark')).toBe(result.current.theme === 'dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(
+      result.current.theme === 'dark',
+    );
     expect(localStorage.getItem('tnc.theme')).toBe(result.current.theme);
   });
 

@@ -26,14 +26,26 @@ describe('api()', () => {
 
   it('returns the unwrapped data on a successful envelope', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ ok: true, data: { username: 'admin', csrfToken: 'x', createdAt: 0, expiresAt: 0, ip: null, setupRequired: false } }),
+      jsonResponse({
+        ok: true,
+        data: {
+          username: 'admin',
+          csrfToken: 'x',
+          createdAt: 0,
+          expiresAt: 0,
+          ip: null,
+          setupRequired: false,
+        },
+      }),
     );
     const data = await api('auth.session');
     expect(data.username).toBe('admin');
   });
 
   it('builds path params and query strings into the URL', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ ok: true, data: { items: [], total: 0, limit: 50, offset: 0 } }));
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ ok: true, data: { items: [], total: 0, limit: 50, offset: 0 } }),
+    );
     await api('locks.list', { query: { limit: 50, offset: 0, includeReleased: true } });
     const calledUrl = vi.mocked(fetch).mock.calls[0]?.[0] as string;
     expect(calledUrl).toContain('/api/v1/locks');
@@ -51,7 +63,9 @@ describe('api()', () => {
 
   it('omits the CSRF header for a non-mutating endpoint', async () => {
     setCsrfToken('csrf-value');
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ ok: true, data: { items: [], total: 0, limit: 50, offset: 0 } }));
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ ok: true, data: { items: [], total: 0, limit: 50, offset: 0 } }),
+    );
     await api('locks.list', { query: {} });
     const init = vi.mocked(fetch).mock.calls[0]![1]!;
     const headers = init.headers as Record<string, string>;
@@ -62,10 +76,12 @@ describe('api()', () => {
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse({ ok: false, error: { code: 'VALIDATION_FAILED', message: 'bad input' } }, 400),
     );
-    await expect(api('auth.login', { body: { username: '', password: '' } })).rejects.toMatchObject({
-      code: 'VALIDATION_FAILED',
-      message: 'bad input',
-    });
+    await expect(api('auth.login', { body: { username: '', password: '' } })).rejects.toMatchObject(
+      {
+        code: 'VALIDATION_FAILED',
+        message: 'bad input',
+      },
+    );
   });
 
   it('throws UnauthenticatedError specifically on a 401', async () => {

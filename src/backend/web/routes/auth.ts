@@ -102,7 +102,12 @@ function assertSetupOpen(ctx: AppContext): void {
   }
 }
 
-function setSessionCookie(req: Request, res: Response, value: string, expiresAtSeconds: number): void {
+function setSessionCookie(
+  req: Request,
+  res: Response,
+  value: string,
+  expiresAtSeconds: number,
+): void {
   res.cookie(SESSION_COOKIE_NAME, value, {
     httpOnly: true,
     // `req.secure` reflects the real connection: true behind the real HTTPS listener

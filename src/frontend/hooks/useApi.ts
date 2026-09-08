@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type EndpointId, type HasParams, type HasQuery, type PathParams, type RequestQuery, type ResponseData } from '../../shared';
+import {
+  type EndpointId,
+  type HasParams,
+  type HasQuery,
+  type PathParams,
+  type RequestQuery,
+  type ResponseData,
+} from '../../shared';
 import { api, ApiError } from '../lib/api-client';
 
 export interface QueryState<T> {
@@ -11,7 +18,9 @@ export interface QueryState<T> {
 
 // `object`, not `Record<string, never>`, in the "absent" branches — see the comment on
 // `CallArgs` in `lib/api-client.ts` for why the latter breaks the intersection.
-type QueryArgs<K extends EndpointId> = (HasParams<K> extends true ? { params: PathParams<K> } : object) &
+type QueryArgs<K extends EndpointId> = (HasParams<K> extends true
+  ? { params: PathParams<K> }
+  : object) &
   (HasQuery<K> extends true ? { query: RequestQuery<K> } : object);
 
 /**
@@ -22,7 +31,11 @@ type QueryArgs<K extends EndpointId> = (HasParams<K> extends true ? { params: Pa
 export function useApiQuery<K extends EndpointId>(
   endpoint: K,
   args: QueryArgs<K>,
-  options: { readonly pollMs?: number; readonly deps?: readonly unknown[]; readonly enabled?: boolean } = {},
+  options: {
+    readonly pollMs?: number;
+    readonly deps?: readonly unknown[];
+    readonly enabled?: boolean;
+  } = {},
 ): QueryState<ResponseData<K>> {
   const { pollMs, deps = [], enabled = true } = options;
   const [data, setData] = useState<ResponseData<K>>();

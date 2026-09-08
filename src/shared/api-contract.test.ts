@@ -49,6 +49,7 @@ const SPEC_ENDPOINTS = [
   'GET /versions/:id/download',
   'POST /versions/:id/restore',
   'POST /versions/:id/pin',
+  'DELETE /versions/:id',
   'GET /logs',
   'GET /logs/stream',
   'GET /events/stream',

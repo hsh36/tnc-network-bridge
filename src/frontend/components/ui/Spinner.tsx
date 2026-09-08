@@ -1,6 +1,12 @@
 import { cn } from './cn';
 
-export function Spinner({ className, label = 'Loading' }: { readonly className?: string; readonly label?: string }): JSX.Element {
+export function Spinner({
+  className,
+  label = 'Loading',
+}: {
+  readonly className?: string;
+  readonly label?: string;
+}): JSX.Element {
   return (
     <span
       role="status"

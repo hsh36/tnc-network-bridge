@@ -19,7 +19,9 @@ function RequireAuth({ children }: { readonly children: ReactNode }): JSX.Elemen
     return <FullPageSpinner />;
   }
   if (session === undefined) {
-    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+    return (
+      <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+    );
   }
   return <Layout>{children}</Layout>;
 }

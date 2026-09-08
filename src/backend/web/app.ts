@@ -11,6 +11,7 @@ import { locksRoutes } from './routes/locks';
 import { logsRoutes } from './routes/logs';
 import { statusRoutes } from './routes/status';
 import { systemRoutes } from './routes/system';
+import { versionsRoutes } from './routes/versions';
 
 /**
  * Assembles the Express app (T29/T30): security headers, body parsing, every route
@@ -54,6 +55,7 @@ export function createApp(ctx: AppContext): Express {
   router.use(locksRoutes(ctx));
   router.use(logsRoutes(ctx));
   router.use(systemRoutes(ctx));
+  router.use(versionsRoutes(ctx));
   router.use(eventsRoutes(ctx));
   app.use(API_BASE_PATH, router);
 

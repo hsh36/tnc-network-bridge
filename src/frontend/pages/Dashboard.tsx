@@ -25,13 +25,15 @@ function connectionTone(state: string): BadgeTone {
 }
 
 const lockColumns: readonly Column<Lock>[] = [
-  { key: 'path', header: 'Path', render: (l) => <span className="font-mono text-xs">{l.relPath}</span> },
+  {
+    key: 'path',
+    header: 'Path',
+    render: (l) => <span className="font-mono text-xs">{l.relPath}</span>,
+  },
   {
     key: 'origin',
     header: 'Origin',
-    render: (l) => (
-      <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge>
-    ),
+    render: (l) => <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge>,
   },
   { key: 'owner', header: 'Owner', render: (l) => l.ownerLabel ?? l.tncIp ?? '—' },
   {
@@ -64,14 +66,20 @@ export function Dashboard(): JSX.Element {
           </p>
         </div>
         <Badge tone={connectionTone(sse.state)}>
-          {sse.state === 'open' ? 'Live' : sse.state === 'connecting' ? 'Connecting…' : 'Disconnected'}
+          {sse.state === 'open'
+            ? 'Live'
+            : sse.state === 'connecting'
+              ? 'Connecting…'
+              : 'Disconnected'}
         </Badge>
       </div>
 
       {status.error !== undefined && (
         <Card className="border-status-error/40">
           <CardBody>
-            <p className="text-sm text-status-error">Could not load status: {status.error.message}</p>
+            <p className="text-sm text-status-error">
+              Could not load status: {status.error.message}
+            </p>
           </CardBody>
         </Card>
       )}
@@ -86,7 +94,11 @@ export function Dashboard(): JSX.Element {
               hint={data.serverLink.dialect ?? undefined}
             />
             <StatCard label="Shares enabled" value={data.totals.sharesEnabled} />
-            <StatCard label="Files indexed" value={data.totals.filesIndexed} hint={`${data.totals.filesPending} pending`} />
+            <StatCard
+              label="Files indexed"
+              value={data.totals.filesIndexed}
+              hint={`${data.totals.filesPending} pending`}
+            />
             <StatCard
               label="Active locks"
               value={data.totals.activeLocks}
@@ -100,8 +112,14 @@ export function Dashboard(): JSX.Element {
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard label="Throughput in" value={`${bytesToHuman(data.totals.bytesInPerSec)}/s`} />
-            <StatCard label="Throughput out" value={`${bytesToHuman(data.totals.bytesOutPerSec)}/s`} />
+            <StatCard
+              label="Throughput in"
+              value={`${bytesToHuman(data.totals.bytesInPerSec)}/s`}
+            />
+            <StatCard
+              label="Throughput out"
+              value={`${bytesToHuman(data.totals.bytesOutPerSec)}/s`}
+            />
             <StatCard
               label="Disk used"
               value={disk !== undefined ? `${disk.usedPct}%` : '—'}
@@ -127,7 +145,10 @@ export function Dashboard(): JSX.Element {
       <Card>
         <CardHeader title="Active locks" subtitle={`${locks.data?.total ?? 0} currently held`} />
         {locks.data?.items.length === 0 ? (
-          <EmptyState title="No active locks" description="Files locked by a TNC or an operator appear here." />
+          <EmptyState
+            title="No active locks"
+            description="Files locked by a TNC or an operator appear here."
+          />
         ) : (
           <Table columns={lockColumns} rows={locks.data?.items ?? []} rowKey={(l) => l.id} />
         )}
@@ -137,12 +158,20 @@ export function Dashboard(): JSX.Element {
         <CardHeader title="Recent events" subtitle="Live from the bridge's event bus" />
         <CardBody className="max-h-72 overflow-y-auto p-0">
           {sse.events.length === 0 ? (
-            <EmptyState title="No events yet" description="Sync, lock and status events will appear here as they happen." />
+            <EmptyState
+              title="No events yet"
+              description="Sync, lock and status events will appear here as they happen."
+            />
           ) : (
             <ul className="divide-y divide-border text-sm dark:divide-border-dark">
               {[...sse.events].reverse().map((event, i) => (
-                <li key={`${event.type}-${event.ts}-${i}`} className="flex items-center justify-between gap-3 px-4 py-2">
-                  <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{event.type}</span>
+                <li
+                  key={`${event.type}-${event.ts}-${i}`}
+                  className="flex items-center justify-between gap-3 px-4 py-2"
+                >
+                  <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                    {event.type}
+                  </span>
                   <span className="text-xs text-slate-400 dark:text-slate-500">
                     {new Date(event.ts).toLocaleTimeString()}
                   </span>

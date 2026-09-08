@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { type ConflictMode, type NetworkConfig, type SecurityConfig, type SyncConfig } from '../../shared';
+import {
+  type ConflictMode,
+  type NetworkConfig,
+  type SecurityConfig,
+  type SyncConfig,
+} from '../../shared';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Checkbox, Input, Select } from '../components/ui/Input';
@@ -27,10 +32,15 @@ function useSaveBanner(): {
   return {
     banner:
       message === undefined ? null : (
-        <p className={message.tone === 'ok' ? 'text-sm text-status-ok' : 'text-sm text-status-error'}>{message.text}</p>
+        <p
+          className={message.tone === 'ok' ? 'text-sm text-status-ok' : 'text-sm text-status-error'}
+        >
+          {message.text}
+        </p>
       ),
     onSaved: () => setMessage({ text: 'Saved.', tone: 'ok' }),
-    onError: (err) => setMessage({ text: err instanceof ApiError ? err.message : 'Could not save', tone: 'error' }),
+    onError: (err) =>
+      setMessage({ text: err instanceof ApiError ? err.message : 'Could not save', tone: 'error' }),
   };
 }
 
@@ -40,7 +50,9 @@ function SyncSection(): JSX.Element {
   const { banner, onSaved, onError } = useSaveBanner();
 
   useEffect(() => {
-    void api('config.get', { params: { section: 'sync' } }).then((data) => setForm(data as SyncConfig));
+    void api('config.get', { params: { section: 'sync' } }).then((data) =>
+      setForm(data as SyncConfig),
+    );
   }, []);
 
   if (form === undefined) return <FullPageSpinner />;
@@ -74,7 +86,12 @@ function SyncSection(): JSX.Element {
         label="Bandwidth limit (kbps, empty = unlimited)"
         type="number"
         value={form.bandwidthLimitKbps ?? ''}
-        onChange={(e) => setForm({ ...form, bandwidthLimitKbps: e.target.value === '' ? null : Number(e.target.value) })}
+        onChange={(e) =>
+          setForm({
+            ...form,
+            bandwidthLimitKbps: e.target.value === '' ? null : Number(e.target.value),
+          })
+        }
         className="w-64"
       />
       <Input
@@ -90,7 +107,13 @@ function SyncSection(): JSX.Element {
         label="Exclude patterns (comma-separated)"
         value={form.excludePatterns.join(', ')}
         onChange={(e) =>
-          setForm({ ...form, excludePatterns: e.target.value.split(',').map((p) => p.trim()).filter((p) => p.length > 0) })
+          setForm({
+            ...form,
+            excludePatterns: e.target.value
+              .split(',')
+              .map((p) => p.trim())
+              .filter((p) => p.length > 0),
+          })
         }
       />
       <Checkbox
@@ -121,7 +144,9 @@ function SecuritySection(): JSX.Element {
   const { banner, onSaved, onError } = useSaveBanner();
 
   useEffect(() => {
-    void api('config.get', { params: { section: 'security' } }).then((data) => setForm(data as SecurityConfig));
+    void api('config.get', { params: { section: 'security' } }).then((data) =>
+      setForm(data as SecurityConfig),
+    );
   }, []);
 
   if (form === undefined) return <FullPageSpinner />;
@@ -195,7 +220,9 @@ function NetworkSection(): JSX.Element {
   const { banner, onSaved, onError } = useSaveBanner();
 
   useEffect(() => {
-    void api('config.get', { params: { section: 'network' } }).then((data) => setForm(data as NetworkConfig));
+    void api('config.get', { params: { section: 'network' } }).then((data) =>
+      setForm(data as NetworkConfig),
+    );
   }, []);
 
   if (form === undefined) return <FullPageSpinner />;
@@ -231,7 +258,9 @@ function NetworkSection(): JSX.Element {
         id="lanMethod"
         label="LAN addressing"
         value={form.lan.method}
-        onChange={(e) => setForm({ ...form, lan: { ...form.lan, method: e.target.value as 'dhcp' | 'static' } })}
+        onChange={(e) =>
+          setForm({ ...form, lan: { ...form.lan, method: e.target.value as 'dhcp' | 'static' } })
+        }
         className="w-40"
       >
         <option value="dhcp">DHCP</option>

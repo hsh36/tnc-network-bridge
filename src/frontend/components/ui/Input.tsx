@@ -42,9 +42,7 @@ const fieldClasses = (error: string | undefined) =>
     'h-9 rounded-md border bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition-colors',
     'focus:border-accent focus:ring-1 focus:ring-accent',
     'dark:bg-surface-dark dark:text-slate-100',
-    error !== undefined
-      ? 'border-status-error'
-      : 'border-border dark:border-border-dark',
+    error !== undefined ? 'border-status-error' : 'border-border dark:border-border-dark',
   );
 
 export type InputProps = FieldProps & InputHTMLAttributes<HTMLInputElement>;
@@ -89,7 +87,13 @@ export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export function Checkbox({ label, id, className, ...rest }: CheckboxProps): JSX.Element {
   return (
-    <label htmlFor={id} className={cn('flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300', className)}>
+    <label
+      htmlFor={id}
+      className={cn(
+        'flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300',
+        className,
+      )}
+    >
       <input
         id={id}
         type="checkbox"

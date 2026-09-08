@@ -17,7 +17,13 @@ const toneText: Record<NonNullable<StatCardProps['tone']>, string> = {
   error: 'text-status-error',
 };
 
-export function StatCard({ label, value, hint, tone = 'default', icon }: StatCardProps): JSX.Element {
+export function StatCard({
+  label,
+  value,
+  hint,
+  tone = 'default',
+  icon,
+}: StatCardProps): JSX.Element {
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between">
@@ -27,7 +33,9 @@ export function StatCard({ label, value, hint, tone = 'default', icon }: StatCar
         {icon}
       </div>
       <p className={cn('mt-1 text-2xl font-semibold tabular-nums', toneText[tone])}>{value}</p>
-      {hint !== undefined && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
+      {hint !== undefined && (
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>
+      )}
     </Card>
   );
 }

@@ -8,7 +8,13 @@ import { Login } from './Login';
 const loginMock = vi.fn();
 
 vi.mock('../hooks/useAuth', () => ({
-  useAuth: () => ({ login: loginMock, session: undefined, loading: false, logout: vi.fn(), refresh: vi.fn() }),
+  useAuth: () => ({
+    login: loginMock,
+    session: undefined,
+    loading: false,
+    logout: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
 describe('Login', () => {
@@ -33,7 +39,9 @@ describe('Login', () => {
   });
 
   it('shows the server error message when login fails', async () => {
-    loginMock.mockRejectedValue(new ApiError('INVALID_CREDENTIALS', 'Invalid username or password', 401));
+    loginMock.mockRejectedValue(
+      new ApiError('INVALID_CREDENTIALS', 'Invalid username or password', 401),
+    );
     render(
       <MemoryRouter>
         <Login />

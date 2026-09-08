@@ -30,7 +30,10 @@ declare module 'express-serve-static-core' {
 /** Assigns a per-request correlation id and keeps every log line inside the handler tagged with it. */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
   const incoming = req.header('x-request-id');
-  const id = incoming !== undefined && incoming.length > 0 && incoming.length <= 128 ? incoming : newRequestId();
+  const id =
+    incoming !== undefined && incoming.length > 0 && incoming.length <= 128
+      ? incoming
+      : newRequestId();
   req.requestId = id;
   res.setHeader('x-request-id', id);
   withCorrelationId(id, next);

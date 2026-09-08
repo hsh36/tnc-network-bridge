@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_BASE_PATH, BRIDGE_EVENT_TYPES, type BridgeEvent, type BridgeEventType } from '../../shared';
+import {
+  API_BASE_PATH,
+  BRIDGE_EVENT_TYPES,
+  type BridgeEvent,
+  type BridgeEventType,
+} from '../../shared';
 
 /**
  * Subscribes to `/events/stream` (T31/T33).
@@ -52,7 +57,10 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEResult {
       return;
     }
     setState('connecting');
-    const url = buildUrl({ ...(types !== undefined ? { types } : {}), ...(share !== undefined ? { share } : {}) });
+    const url = buildUrl({
+      ...(types !== undefined ? { types } : {}),
+      ...(share !== undefined ? { share } : {}),
+    });
     const source = new EventSource(url, { withCredentials: true });
     sourceRef.current = source;
 
