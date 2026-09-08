@@ -519,6 +519,8 @@ export class ServerScanner extends EventEmitter {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
   private stopped = true;
+  /** The scan a timer started and has not finished, so `stop()` can wait for it. */
+  private inFlight: Promise<unknown> | null = null;
   /** Consecutive completed scans that found nothing. Drives the back-off. */
   private quietScans = 0;
 
@@ -671,13 +673,25 @@ export class ServerScanner extends EventEmitter {
     this.schedule(0);
   }
 
-  /** Stops scanning and releases the walker. Safe to call twice. */
+  /**
+   * Stops scanning and releases the walker. Safe to call twice.
+   *
+   * Waits for a scan that is already running rather than abandoning it. Cancelling the
+   * timer only prevents the *next* scan; a scan already in flight would otherwise go on to
+   * emit its `scan` and `change` events after this method had resolved, into an
+   * orchestrator entitled to believe that a stopped scanner is finished with it. Worse,
+   * closing the walker underneath a live walk would fail that scan for no reason other
+   * than that we asked it to stop. So the in-flight scan is awaited first, and only then
+   * is the walker released.
+   */
   async stop(): Promise<void> {
     this.stopped = true;
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
     }
+    // `tick` swallows scan failures, so this settles regardless of how the scan went.
+    await this.inFlight;
     await this.walker.close();
   }
 
@@ -704,10 +718,14 @@ export class ServerScanner extends EventEmitter {
       return;
     }
 
+    const scan = this.scanOnce();
+    this.inFlight = scan;
     try {
-      await this.scanOnce();
+      await scan;
     } catch {
       /* scanOnce already reported it; a timer callback must never reject */
+    } finally {
+      this.inFlight = null;
     }
 
     this.schedule(this.intervalMs);

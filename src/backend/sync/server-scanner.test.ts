@@ -554,6 +554,37 @@ describe('the scanner', () => {
       expect(scans.length).toBe(seen);
     });
 
+    it('emits nothing once stop() has resolved, even mid-scan', async () => {
+      file('a.h');
+      const scanner = make({ minIntervalMs: 1, maxIntervalMs: 2 });
+      const after: string[] = [];
+      let stopped = false;
+
+      // Regression: stop() used to cancel only the *next* scan. A scan already in flight
+      // went on to emit into an orchestrator that had been told the scanner was finished
+      // — and had, on that assurance, already torn down the handlers those events land in.
+      scanner.on('scan', () => {
+        if (stopped) {
+          after.push('scan');
+        }
+      });
+      scanner.on('change', () => {
+        if (stopped) {
+          after.push('change');
+        }
+      });
+
+      scanner.start();
+      // Stop without waiting for a quiet moment, so the odds of landing mid-scan are high.
+      await new Promise((resolve) => setTimeout(resolve, 12));
+      await scanner.stop();
+      stopped = true;
+
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(after).toEqual([]);
+      expect(scanner.isScanning).toBe(false);
+    });
+
     it('keeps scanning after a scan fails', async () => {
       let calls = 0;
       const scanner = make({
