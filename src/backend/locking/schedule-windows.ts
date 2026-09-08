@@ -47,7 +47,7 @@ export class ScheduleLockWindowManager {
    *
    * Returns a summary of how many were locked and how many were skipped due to conflicts.
    */
-  private handleLockWindow(ctx: JobContext): JobOutcome | void {
+  handleLockWindow(ctx: JobContext): JobOutcome | void {
     const target = ctx.target;
     if (target?.shareId === undefined || target?.pathGlob === undefined) {
       return { skipped: true, detail: 'no target or path glob specified' };
@@ -135,7 +135,7 @@ export class ScheduleLockWindowManager {
    * are already identified by origin='schedule'. The glob is only used to decide which
    * paths to lock in the first place.
    */
-  private handleUnlockWindow(ctx: JobContext): JobOutcome | void {
+  handleUnlockWindow(ctx: JobContext): JobOutcome | void {
     const target = ctx.target;
     if (target?.shareId === undefined) {
       return { skipped: true, detail: 'no target share specified' };

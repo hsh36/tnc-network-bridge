@@ -28,10 +28,9 @@ export function MachineDetails({
   }, [machine.data]);
 
   useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(false), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
   }, [success]);
 
   if (machine.loading && form === undefined) {

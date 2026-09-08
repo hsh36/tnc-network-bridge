@@ -22,12 +22,12 @@ function statusTone(status: string): BadgeTone {
     case 'offline':
       return 'idle';
     default:
-      return 'default';
+      return 'idle';
   }
 }
 
 export function SharesSection(): JSX.Element {
-  const shares = useApiQuery('shares.list', {}, { pollMs: 15_000 });
+  const shares = useApiQuery('shares.list', { query: {} }, { pollMs: 15_000 });
   const [editingId, setEditingId] = useState<number>();
 
   if (shares.loading && shares.data === undefined) {

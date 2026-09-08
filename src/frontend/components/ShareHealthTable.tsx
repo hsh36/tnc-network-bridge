@@ -23,7 +23,7 @@ function getStatusTone(status: string): BadgeTone {
     case 'offline':
       return 'error';
     default:
-      return 'default';
+      return 'idle';
   }
 }
 

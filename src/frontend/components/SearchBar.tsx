@@ -82,6 +82,7 @@ export function SearchBar({
             Path
           </label>
           <Input
+            id="path-filter"
             type="text"
             placeholder="e.g., /PARTS"
             value={filters.path}
@@ -96,6 +97,7 @@ export function SearchBar({
             Search
           </label>
           <Input
+            id="search-filter"
             type="text"
             placeholder="File name..."
             value={filters.search}

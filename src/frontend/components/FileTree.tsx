@@ -38,8 +38,8 @@ function buildFileTree(items: readonly FileIndexEntry[]): TreeNode[] {
     };
 
     let current = root;
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i]!;
       const isLast = i === parts.length - 1;
 
       const node = getOrCreate(current, part);
@@ -115,7 +115,7 @@ function TreeNodeComponent({
             <TreeNodeComponent
               key={child.path}
               node={child}
-              selectedFile={selectedFile}
+              {...(selectedFile ? { selectedFile } : {})}
               onSelectFile={onSelectFile}
               level={level + 1}
             />
@@ -143,7 +143,7 @@ export function FileTree({
         <TreeNodeComponent
           key={node.path}
           node={node}
-          selectedFile={selectedFile}
+          {...(selectedFile ? { selectedFile } : {})}
           onSelectFile={onSelectFile}
         />
       ))}

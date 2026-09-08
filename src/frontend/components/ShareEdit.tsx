@@ -43,10 +43,9 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
   }, [share.data]);
 
   useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(false), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
   }, [success]);
 
   if (share.loading && form === undefined) {
@@ -203,11 +202,14 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
           </Card>
 
           <Card>
-            <CardHeader
-              title="Advanced"
+            <div
               className="cursor-pointer"
               onClick={() => setShowAdvanced(!showAdvanced)}
-            />
+              role="button"
+              tabIndex={0}
+            >
+              <CardHeader title="Advanced" />
+            </div>
             {showAdvanced && (
               <CardBody className="flex flex-col gap-4 border-t border-border dark:border-border-dark">
                 <Input

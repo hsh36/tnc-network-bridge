@@ -28,16 +28,14 @@ export function TemperatureChart({ series, loading = false }: TemperatureChartPr
       .sort((a, b) => a.timestamp - b.timestamp) ?? [];
 
   // Find current temperature for status badge
-  const currentTemp = data.length > 0 ? data[data.length - 1]?.temp : null;
+  const lastData = data.length > 0 ? data[data.length - 1] : undefined;
+  const currentTemp = lastData?.temp ?? null;
 
-  let _tempStatus = 'ok';
   let tempColor = '#22c55e';
-  if (currentTemp !== null) {
+  if (currentTemp !== null && typeof currentTemp === 'number') {
     if (currentTemp > 80) {
-      _tempStatus = 'critical';
       tempColor = '#ef4444';
     } else if (currentTemp > 60) {
-      _tempStatus = 'warm';
       tempColor = '#f59e0b';
     }
   }

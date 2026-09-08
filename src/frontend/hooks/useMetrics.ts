@@ -39,7 +39,8 @@ export function useMetrics(
   const query = useMemo<MetricsQuery>(() => {
     const q: MetricsQuery = {};
     if (metric !== undefined) {
-      q.metric = metric;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-explicit-any
+      q.metric = (Array.isArray(metric) ? metric : [metric]) as any;
     }
     if (since !== undefined) {
       q.since = since;

@@ -72,11 +72,11 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/PART1.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0]).toMatchObject({
+      expect(versions.items[0]!).toMatchObject({
         origin: 'server',
         relPath: 'PGM/PART1.H',
       });
-      expect(versions.items[0].reason).toContain('pre-PULL');
+      expect(versions.items[0]!.reason).toContain('pre-PULL');
     });
 
     it('does not block the caller', async () => {
@@ -106,7 +106,7 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/PART2.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0]).toMatchObject({
+      expect(versions.items[0]!).toMatchObject({
         origin: 'tnc',
         relPath: 'PGM/PART2.H',
       });
@@ -128,7 +128,7 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/CONFLICT.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0]).toMatchObject({
+      expect(versions.items[0]!).toMatchObject({
         origin: 'conflict_loser',
         relPath: 'PGM/CONFLICT.H',
       });
@@ -150,11 +150,11 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/INITIAL.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0]).toMatchObject({
+      expect(versions.items[0]!).toMatchObject({
         origin: 'initial',
         relPath: 'PGM/INITIAL.H',
       });
-      expect(versions.items[0].reason).toContain('local');
+      expect(versions.items[0]!.reason).toContain('local');
     });
   });
 
@@ -177,7 +177,7 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/PULL.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0].origin).toBe('tnc');
+      expect(versions.items[0]!.origin).toBe('tnc');
     });
 
     it('handles local overwrite (PUSH scenario)', async () => {
@@ -191,7 +191,7 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/PUSH.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0].origin).toBe('server');
+      expect(versions.items[0]!.origin).toBe('server');
     });
 
     it('handles conflict loser on local side', async () => {
@@ -205,7 +205,7 @@ describe('VersioningEngine', () => {
 
       const versions = store.list({ shareId, relPath: 'PGM/CONF.H' });
       expect(versions.items).toHaveLength(1);
-      expect(versions.items[0].origin).toBe('conflict_loser');
+      expect(versions.items[0]!.origin).toBe('conflict_loser');
     });
   });
 
@@ -265,10 +265,10 @@ describe('VersioningEngine', () => {
 
       const versionsB = store.list({ shareId, relPath: 'PGM/B.H' });
       expect(versionsB.items).toHaveLength(1);
-      expect(versionsA.items[0].hash).toBe(versionsB.items[0].hash);
+      expect(versionsA.items[0]!.hash).toBe(versionsB.items[0]!.hash);
 
       // Both rows should exist (same hash, different paths), but only one blob
-      const hashes = new Set([versionsA.items[0].hash, versionsB.items[0].hash]);
+      const hashes = new Set([versionsA.items[0]!.hash, versionsB.items[0]!.hash]);
       expect(hashes.size).toBe(1);
     });
   });

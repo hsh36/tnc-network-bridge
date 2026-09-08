@@ -71,7 +71,12 @@ export function FilesBrowserPage(): JSX.Element {
       query: {
         share: filters.share,
         ...(filters.path.length > 0 ? { path: filters.path } : {}),
-        ...(filters.state !== 'all' ? { state: filters.state } : {}),
+        ...(filters.state !== 'all'
+          ? {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-explicit-any
+              state: filters.state as any,
+            }
+          : {}),
         ...(filters.search.length > 0 ? { q: filters.search } : {}),
         limit: 1000,
         offset: 0,
@@ -151,7 +156,7 @@ export function FilesBrowserPage(): JSX.Element {
               ) : viewMode === 'tree' ? (
                 <FileTree
                   items={fileItems}
-                  selectedFile={selectedFile}
+                  {...(selectedFile ? { selectedFile } : {})}
                   onSelectFile={handleSelectFile}
                 />
               ) : (

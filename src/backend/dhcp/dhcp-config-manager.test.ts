@@ -100,7 +100,7 @@ describe('DHCPConfigManager', () => {
     runMigrations(db);
     const secretKey = generateSecretKey();
     configManager = ConfigManager.create({ db, secretKey });
-    dhcpManager = new DHCPConfigManager({ db, config: configManager });
+    dhcpManager = new DHCPConfigManager({ db, config: configManager, logger: undefined });
   });
 
   afterEach(() => {

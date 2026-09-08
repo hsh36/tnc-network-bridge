@@ -14,17 +14,15 @@ export interface FileIndexState {
  *
  * Handles pagination, filtering, and caching of file listings.
  */
-export function useFileIndex(
-  options: {
-    readonly shareId: number;
-    readonly path?: string;
-    readonly state?: string;
-    readonly search?: string;
-    readonly limit?: number;
-    readonly offset?: number;
-    readonly enabled?: boolean;
-  } = {},
-): FileIndexState {
+export function useFileIndex(options: {
+  readonly shareId: number;
+  readonly path?: string;
+  readonly state?: string;
+  readonly search?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+  readonly enabled?: boolean;
+}): FileIndexState {
   const { shareId, path, state, search, limit = 1000, offset = 0, enabled = true } = options;
 
   const query = useApiQuery(
@@ -33,7 +31,12 @@ export function useFileIndex(
       query: {
         share: shareId,
         ...(path ? { path } : {}),
-        ...(state && state !== 'all' ? { state } : {}),
+        ...(state && state !== 'all'
+          ? {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-explicit-any
+              state: state as any,
+            }
+          : {}),
         ...(search ? { q: search } : {}),
         limit,
         offset,
