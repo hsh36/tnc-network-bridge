@@ -83,3 +83,23 @@ export const listSchedulesQuerySchema = paginationQuerySchema.extend({
   kind: scheduleKindSchema.optional(),
   enabled: z.coerce.boolean().optional(),
 });
+
+/**
+ * "When would this actually fire?" — answered before the expression is saved (T37).
+ *
+ * A five-field expression can be syntactically perfect and still never run (`0 0 30 2 *`)
+ * or fire at an hour the operator did not intend. Showing the next few occurrences is
+ * the only way to make that visible at the moment the mistake is being made.
+ */
+export const previewScheduleRequestSchema = z.object({ cron: cronSchema }).strict();
+
+export const previewScheduleResponseSchema = z.object({
+  cron: cronSchema,
+  /** Unix seconds of the next occurrences, soonest first. */
+  nextRuns: z.array(unixSecondsSchema),
+});
+
+export const runScheduleResponseSchema = z.object({
+  accepted: z.literal(true),
+  result: z.enum(['ok', 'error', 'skipped']),
+});

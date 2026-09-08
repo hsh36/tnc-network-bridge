@@ -60,6 +60,8 @@ const SPEC_ENDPOINTS = [
   'GET /schedules/:id',
   'PATCH /schedules/:id',
   'DELETE /schedules/:id',
+  'POST /schedules/preview',
+  'POST /schedules/:id/run',
   'GET /update/status',
   'POST /update/check',
   'POST /update/apply',

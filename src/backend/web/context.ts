@@ -2,6 +2,7 @@ import { type ConfigManager } from '../config/config-manager';
 import { type Db, type DbLogger } from '../config/db';
 import { type ConflictResolver } from '../locking/conflict-resolver';
 import { type LockManager } from '../locking/lock-manager';
+import { type Scheduler } from '../scheduling/scheduler';
 import { type AuditLog } from '../security/audit-log';
 import { type VersionStore } from '../versioning/version-store';
 import { type AuthManager } from './auth';
@@ -26,6 +27,8 @@ export interface AppContext {
   readonly logger?: DbLogger;
   /** Version history and its content-addressed blob store (T34). */
   readonly versions: VersionStore;
+  /** Cron engine backing `/schedules` (T36). */
+  readonly schedules: Scheduler;
   /**
    * Append-only record of administrative actions (T43).
    *

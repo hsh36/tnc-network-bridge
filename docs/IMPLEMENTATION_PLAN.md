@@ -389,7 +389,7 @@ All bodies validated by shared Zod schemas; the same schemas type the frontend c
 | GET | `/logs?source=&level=&since=&q=&limit=` | Log query |
 | GET | `/logs/stream` · `/events/stream` | **SSE** — log tail, live status/sync/lock events |
 | GET | `/system` | Disk, CPU, memory, SoC temp, uptime, interfaces, throttling flags |
-| GET/POST/PATCH/DELETE | `/schedules[/:id]` | Cron entries |
+| GET/POST/PATCH/DELETE | `/schedules[/:id]` · POST `/schedules/preview` · POST `/schedules/:id/run` | Cron entries, next-run preview, run now |
 | GET | `/update/status` · POST `/update/{check,apply,rollback}` · GET `/update/history` | Self-update |
 | GET/POST | `/certificates` · POST `/certificates/regenerate` | TLS material |
 | GET/PUT | `/firewall` · POST `/firewall/reset` | nftables rules |

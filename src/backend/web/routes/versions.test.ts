@@ -8,6 +8,8 @@ import { type Db } from '../../config/db';
 import { runMigrations } from '../../config/migrations/runner';
 import { generateSecretKey } from '../../config/secrets';
 import { createShareCacheRootResolver } from '../../config/share-paths';
+import { JobRegistry } from '../../scheduling/jobs';
+import { Scheduler } from '../../scheduling/scheduler';
 import { ConflictResolver } from '../../locking/conflict-resolver';
 import { LockManager } from '../../locking/lock-manager';
 import { AuthLogWriter } from '../../logging/auth-log';
@@ -72,6 +74,7 @@ beforeEach(async () => {
     conflicts: new ConflictResolver(db),
     events: new EventBus(),
     versions,
+    schedules: new Scheduler({ db, jobs: new JobRegistry() }),
     audit: new AuditLog(db),
     shareCacheRoot: createShareCacheRootResolver(db),
     certDir: tmpDir(),

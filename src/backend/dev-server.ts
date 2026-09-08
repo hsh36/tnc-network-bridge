@@ -9,6 +9,8 @@ import { ensureCertificate, HttpsServerManager } from './web/https-setup';
 import { ConflictResolver } from './locking/conflict-resolver';
 import { LockManager } from './locking/lock-manager';
 import { createShareCacheRootResolver } from './config/share-paths';
+import { JobRegistry } from './scheduling/jobs';
+import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
 import { BlobStore } from './versioning/blob-store';
 import { VersionStore } from './versioning/version-store';
@@ -70,6 +72,13 @@ async function main(): Promise<void> {
     logger: service.logging.logger,
   });
 
+  const schedules = new Scheduler({
+    db: service.db,
+    jobs: new JobRegistry(),
+    logger: service.logging.logger,
+    audit,
+  });
+
   const ctx: AppContext = {
     db: service.db,
     config: service.config,
@@ -78,6 +87,7 @@ async function main(): Promise<void> {
     conflicts,
     events,
     versions,
+    schedules,
     audit,
     shareCacheRoot: createShareCacheRootResolver(service.db),
     logger: service.logging.logger,
