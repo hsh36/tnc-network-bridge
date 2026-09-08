@@ -85,7 +85,7 @@ export function LocksConflictsPage(): JSX.Element {
 
   // Handle conflict resolution (restore losing version)
   const handleRestoreConflictVersion = (): void => {
-    if (conflictShown === undefined || conflictShown.loserVersionId === null) {
+    if (conflictShown?.loserVersionId === null || conflictShown === undefined) {
       return;
     }
     setIsRestoringConflict(true);
@@ -112,7 +112,7 @@ export function LocksConflictsPage(): JSX.Element {
   const handleDownloadConflictVersion = (versionId: number): void => {
     setIsDownloadingConflict(true);
     api('versions.download', { params: { id: versionId } })
-      .then(async (blob) => {
+      .then((blob) => {
         const url = URL.createObjectURL(blob as Blob);
         const a = document.createElement('a');
         a.href = url;
@@ -144,7 +144,9 @@ export function LocksConflictsPage(): JSX.Element {
           <ActiveLocksTable
             locks={locks.active}
             onRelease={handleReleaseLock}
-            onShowDetails={() => {}}
+            onShowDetails={() => {
+              // TODO: Show lock details modal
+            }}
             releasingId={releasingId}
             nowMs={Date.now()}
           />

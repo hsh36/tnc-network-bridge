@@ -56,29 +56,29 @@ export function Machines(): JSX.Element {
           type="checkbox"
           checked={selectedMachines.has(m.id)}
           onChange={(e) => handleSelect(m.id, e.target.checked)}
-          aria-label={`Select ${m.name || m.mac}`}
+          aria-label={`Select ${m.name ?? m.mac}`}
         />
       ),
     },
     {
       key: 'name',
       header: 'Name',
-      render: (m) => <span className="font-medium">{m.name || `TNC-${m.mac?.slice(-4)}`}</span>,
+      render: (m) => <span className="font-medium">{m.name ?? `TNC-${m.mac?.slice(-4)}`}</span>,
     },
     {
       key: 'mac',
       header: 'MAC Address',
-      render: (m) => <span className="font-mono text-xs text-slate-500">{m.mac || '—'}</span>,
+      render: (m) => <span className="font-mono text-xs text-slate-500">{m.mac ?? '—'}</span>,
     },
     {
       key: 'ip',
       header: 'IP Address',
-      render: (m) => <span className="font-mono text-xs">{m.ip || '—'}</span>,
+      render: (m) => <span className="font-mono text-xs">{m.ip ?? '—'}</span>,
     },
     {
       key: 'model',
       header: 'Model',
-      render: (m) => m.model || '—',
+      render: (m) => m.model ?? '—',
     },
     {
       key: 'status',

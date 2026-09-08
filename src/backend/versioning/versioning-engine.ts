@@ -72,7 +72,7 @@ export class VersioningEngine {
    * Called pre-PULL: the local cache has content, the server is about to overwrite it.
    * Non-blocking; fires and forgets.
    */
-  async captureBeforePull(shareId: number, relPath: string, sourcePath: string): Promise<void> {
+  captureBeforePull(shareId: number, relPath: string, sourcePath: string): void {
     this.fireAndForget(
       async () => {
         if (!(await this.shouldCapture())) {
@@ -97,7 +97,7 @@ export class VersioningEngine {
    * Called pre-PUSH: a file was edited locally and is about to be sent to the server.
    * Non-blocking; fires and forgets.
    */
-  async captureBeforePush(shareId: number, relPath: string, sourcePath: string): Promise<void> {
+  captureBeforePush(shareId: number, relPath: string, sourcePath: string): void {
     this.fireAndForget(
       async () => {
         if (!(await this.shouldCapture())) {
@@ -123,12 +123,12 @@ export class VersioningEngine {
    * the winning side overwrites it.
    * Non-blocking; fires and forgets.
    */
-  async captureConflictLoser(
+  captureConflictLoser(
     shareId: number,
     relPath: string,
     sourcePath: string,
     conflictMode: string,
-  ): Promise<void> {
+  ): void {
     this.fireAndForget(
       async () => {
         if (!(await this.shouldCapture())) {
@@ -154,12 +154,12 @@ export class VersioningEngine {
    * captured, establishing a baseline for future change detection.
    * Non-blocking; fires and forgets.
    */
-  async captureInitial(
+  captureInitial(
     shareId: number,
     relPath: string,
     sourcePath: string,
     side: 'local' | 'remote',
-  ): Promise<void> {
+  ): void {
     this.fireAndForget(
       async () => {
         if (!(await this.shouldCapture())) {
@@ -184,27 +184,27 @@ export class VersioningEngine {
    * The orchestrator uses this method through its `SyncPorts.captureVersion()` contract.
    * The capture kind (server, tnc, conflict_loser) is encoded in the verdict it produces.
    */
-  async handleOrchestratorCapture(
+  handleOrchestratorCapture(
     shareId: number,
     relPath: string,
     sourcePath: string,
     capture: VersionCapture,
-  ): Promise<void> {
+  ): void {
     if (capture.side === 'local') {
       if (capture.reason === 'overwrite') {
-        await this.captureBeforePush(shareId, relPath, sourcePath);
+        this.captureBeforePush(shareId, relPath, sourcePath);
       } else if (capture.reason === 'delete') {
-        await this.captureBeforePush(shareId, relPath, sourcePath);
+        this.captureBeforePush(shareId, relPath, sourcePath);
       } else if (capture.reason === 'conflict_loser') {
-        await this.captureConflictLoser(shareId, relPath, sourcePath, 'unknown');
+        this.captureConflictLoser(shareId, relPath, sourcePath, 'unknown');
       }
     } else if (capture.side === 'remote') {
       if (capture.reason === 'overwrite') {
-        await this.captureBeforePull(shareId, relPath, sourcePath);
+        this.captureBeforePull(shareId, relPath, sourcePath);
       } else if (capture.reason === 'delete') {
-        await this.captureBeforePull(shareId, relPath, sourcePath);
+        this.captureBeforePull(shareId, relPath, sourcePath);
       } else if (capture.reason === 'conflict_loser') {
-        await this.captureConflictLoser(shareId, relPath, sourcePath, 'unknown');
+        this.captureConflictLoser(shareId, relPath, sourcePath, 'unknown');
       }
     }
   }

@@ -3,7 +3,6 @@ import {
   applyNetworkConfigRequestSchema,
   applyNetworkConfigResponseSchema,
   confirmNetworkChangeRequestSchema,
-  networkInterfacesResponseSchema,
   pendingNetworkChangeResponseSchema,
   type ApplyNetworkConfigResponse,
   type NetworkInterfacesResponse,
@@ -68,7 +67,7 @@ export function networkRoutes(ctx: AppContext): Router {
    *   "change": { ... pending change details ... } (if pending_confirmation)
    * }
    */
-  router.post('/network/apply-config', requireSession(ctx), async (req, res, next) => {
+  router.post('/network/apply-config', requireSession(ctx), (req, res, next) => {
     try {
       const request = applyNetworkConfigRequestSchema.parse(req.body);
 
@@ -117,7 +116,7 @@ export function networkRoutes(ctx: AppContext): Router {
    *   "status": "ok"
    * }
    */
-  router.post('/network/confirm-change', requireSession(ctx), async (req, res, next) => {
+  router.post('/network/confirm-change', requireSession(ctx), (req, res, next) => {
     try {
       const request = confirmNetworkChangeRequestSchema.parse(req.body);
 
@@ -158,7 +157,7 @@ export function networkRoutes(ctx: AppContext): Router {
    *   "secondsRemaining": 45 | null
    * }
    */
-  router.get('/network/pending-change', requireSession(ctx), async (req, res, next) => {
+  router.get('/network/pending-change', requireSession(ctx), (req, res, next) => {
     try {
       const mac = req.query.mac as string | undefined;
       if (!mac) {
@@ -210,7 +209,7 @@ export function networkRoutes(ctx: AppContext): Router {
    *   "status": "ok"
    * }
    */
-  router.put('/network/interfaces/:mac/config', requireSession(ctx), async (req, res, next) => {
+  router.put('/network/interfaces/:mac/config', requireSession(ctx), (req, res, next) => {
     try {
       const mac = req.params.mac!;
 

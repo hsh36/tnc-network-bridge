@@ -125,9 +125,7 @@ export class FailoverController {
         this.logger?.info({ downForS: now - this.serverDownSince }, 'server link restored');
       }
       this.serverDownSince = null;
-      if (this.healthySince === null) {
-        this.healthySince = now;
-      }
+      this.healthySince ??= now;
       // Only clear once the link has been *consistently* healthy, or a flapping server
       // toggles the share's read-only flag — and every toggle is an smbd reload.
       if (now - this.healthySince >= this.recoveryStabilityS) {
@@ -236,7 +234,7 @@ export class FailoverController {
     return this.build(now);
   }
 
-  private build(now: number): FailoverStatus {
+  private build(_now: number): FailoverStatus {
     const reasons = [...this.reasons].sort();
     // `degraded` means "a problem is being tolerated inside its grace period" — the
     // server is down but writes still work. Surfacing it separately is what lets the

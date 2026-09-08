@@ -83,9 +83,7 @@ function downloadFile(content: string, filename: string, mimeType: string): void
   URL.revokeObjectURL(url);
 }
 
-interface ExpandedState {
-  [id: number]: boolean;
-}
+type ExpandedState = Record<number, boolean>;
 
 export function Logs(): JSX.Element {
   // Parse URL params for deep linking
@@ -99,7 +97,7 @@ export function Logs(): JSX.Element {
     return s ? Number(s) : '';
   });
   const [q, setQ] = useState(params.get('q') ?? '');
-  const [timeRange, setTimeRange] = useState<TimeRange>(TIME_RANGES[0] as TimeRange);
+  const [timeRange, setTimeRange] = useState<TimeRange>(TIME_RANGES[0]!);
   const [customSince, setCustomSince] = useState<string>('');
   const [customUntil, setCustomUntil] = useState<string>('');
   const [useCustom, setUseCustom] = useState(false);
@@ -194,7 +192,7 @@ export function Logs(): JSX.Element {
     setSource('');
     setShare('');
     setQ('');
-    setTimeRange(TIME_RANGES[0] as TimeRange);
+    setTimeRange(TIME_RANGES[0]!);
     setUseCustom(false);
     setSelectedIds(new Set());
   };
@@ -298,7 +296,7 @@ export function Logs(): JSX.Element {
                   setUseCustom(false);
                   const idx = Number(e.target.value);
                   if (idx >= 0 && idx < TIME_RANGES.length) {
-                    setTimeRange(TIME_RANGES[idx] as TimeRange);
+                    setTimeRange(TIME_RANGES[idx]!);
                   }
                 }
               }}

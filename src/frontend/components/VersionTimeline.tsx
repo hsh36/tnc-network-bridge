@@ -49,7 +49,6 @@ function formatAge(createdAt: number): string {
 
 export function VersionTimeline({ file }: { readonly file: FileIndexEntry }): JSX.Element {
   const [restoreId, setRestoreId] = useState<number>();
-  const [pinnedId, setPinnedId] = useState<number>();
   const [busyId, setBusyId] = useState<number>();
   const [error, setError] = useState<string>();
 
@@ -101,7 +100,6 @@ export function VersionTimeline({ file }: { readonly file: FileIndexEntry }): JS
       body: { pinned: !version.pinned },
     })
       .then(() => {
-        setPinnedId(version.id);
         versions.refresh();
       })
       .catch((err: unknown) => {

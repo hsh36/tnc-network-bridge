@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { type UpdateStatus, type UpdateHistoryEntry } from '../../shared';
 import { useApiQuery } from './useApi';
 import { useSSE } from './useSSE';

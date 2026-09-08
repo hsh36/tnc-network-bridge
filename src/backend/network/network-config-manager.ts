@@ -111,7 +111,7 @@ export function parseStateFromNmcliOutput(stdout: string): 'up' | 'down' | 'unkn
 export function parseSpeedFromNmcliOutput(stdout: string): number | undefined {
   for (const line of stdout.split('\n')) {
     if (line.startsWith('WIRED-PROPERTIES.CARRIER:')) {
-      const carrier = line.slice('WIRED-PROPERTIES.CARRIER:'.length).trim();
+      const _carrier = line.slice('WIRED-PROPERTIES.CARRIER:'.length).trim();
       // Speed is typically not reported by nmcli device show; real implementations
       // would read from /sys/class/net/<iface>/speed. For now, return undefined.
       // In production, this would integrate with /sys/class/net/eth0/speed.
@@ -137,10 +137,10 @@ export class NetworkConfigManager {
    * Returns interfaces with their current state. MAC address is the stable key.
    * In production, this integrates with nmcli and /sys/class/net.
    */
-  async discoverInterfaces(): Promise<InterfaceDiscovery[]> {
+  discoverInterfaces(): Promise<InterfaceDiscovery[]> {
     // In production, this would call nmcli to discover interfaces.
     // For now, return an empty list; tests will inject mock data.
-    return [];
+    return Promise.resolve([]);
   }
 
   /**
@@ -148,7 +148,7 @@ export class NetworkConfigManager {
    *
    * If the interface has no stored config, returns the default (DHCP, no IPv6).
    */
-  async getConfig(mac: string): Promise<InterfaceNetworkConfig> {
+  getConfig(mac: string): Promise<InterfaceNetworkConfig> {
     // Load from database or return default
     const row = this.db.get<InterfaceRow>(
       'SELECT config FROM network_interface_config WHERE mac = ?',
@@ -156,21 +156,21 @@ export class NetworkConfigManager {
     );
 
     if (row === undefined) {
-      return defaultInterfaceNetworkConfig();
+      return Promise.resolve(defaultInterfaceNetworkConfig());
     }
 
     try {
-      return JSON.parse(row.config) as InterfaceNetworkConfig;
+      return Promise.resolve(JSON.parse(row.config) as InterfaceNetworkConfig);
     } catch {
       this.logger?.warn({ mac }, 'Failed to parse stored network config, using default');
-      return defaultInterfaceNetworkConfig();
+      return Promise.resolve(defaultInterfaceNetworkConfig());
     }
   }
 
   /**
    * Get all stored interface configurations.
    */
-  async getAllConfigs(): Promise<Map<string, InterfaceNetworkConfig>> {
+  getAllConfigs(): Promise<Map<string, InterfaceNetworkConfig>> {
     const rows = this.db.all<InterfaceRow>('SELECT mac, config FROM network_interface_config');
     const result = new Map<string, InterfaceNetworkConfig>();
 
@@ -183,18 +183,19 @@ export class NetworkConfigManager {
       }
     }
 
-    return result;
+    return Promise.resolve(result);
   }
 
   /**
    * Store a configuration for an interface.
    */
-  async storeConfig(mac: string, config: InterfaceNetworkConfig): Promise<void> {
+  storeConfig(mac: string, config: InterfaceNetworkConfig): Promise<void> {
     this.db.run(
       `INSERT INTO network_interface_config (mac, config) VALUES (?, ?)
        ON CONFLICT(mac) DO UPDATE SET config = ?`,
       [mac, JSON.stringify(config), JSON.stringify(config)],
     );
+    return Promise.resolve();
   }
 
   /**
@@ -210,13 +211,13 @@ export class NetworkConfigManager {
   async applyConfig(
     mac: string,
     config: InterfaceNetworkConfig,
-    revertAfterSeconds: number = 60,
+    _revertAfterSeconds = 60,
   ): Promise<{ status: 'ok' | 'pending_confirmation'; change?: PendingChange }> {
     // In production, this would:
     // 1. Discover the kernel interface name for the MAC
     // 2. Validate the config won't cause lockout
     // 3. Invoke the privileged helper
-    // 4. Store the pending change if revertAfterSeconds > 0
+    // 4. Store the pending change if _revertAfterSeconds > 0
 
     // For now, just store it
     await this.storeConfig(mac, config);
@@ -229,42 +230,43 @@ export class NetworkConfigManager {
    * Invoking apply-network again with revertAfterSeconds: 0 tells the helper
    * to stop the systemd timer and drop the rollback profile.
    */
-  async confirmPendingChange(mac: string): Promise<void> {
+  confirmPendingChange(mac: string): Promise<void> {
     // In production, this would invoke apply-network with revertAfterSeconds: 0
     // to cancel the timer. For now, just remove the pending change record.
     this.db.run('DELETE FROM pending_network_change WHERE mac = ?', [mac]);
+    return Promise.resolve();
   }
 
   /**
    * Get the current pending change for an interface, if any.
    */
-  async getPendingChange(mac: string): Promise<PendingChange | null> {
+  getPendingChange(mac: string): Promise<PendingChange | null> {
     const row = this.db.get<PendingChangeRow>(
       'SELECT mac, old_config, new_config, expires_at FROM pending_network_change WHERE mac = ?',
       [mac],
     );
 
     if (row === undefined) {
-      return null;
+      return Promise.resolve(null);
     }
 
     try {
-      return {
+      return Promise.resolve({
         mac: row.mac,
         oldConfig: JSON.parse(row.old_config) as InterfaceNetworkConfig,
         newConfig: JSON.parse(row.new_config) as InterfaceNetworkConfig,
         expiresAt: row.expires_at,
-      };
+      });
     } catch {
       this.logger?.warn({ mac }, 'Failed to parse pending network change');
-      return null;
+      return Promise.resolve(null);
     }
   }
 
   /**
    * Store a pending change awaiting confirmation.
    */
-  async storePendingChange(
+  storePendingChange(
     mac: string,
     oldConfig: InterfaceNetworkConfig,
     newConfig: InterfaceNetworkConfig,
@@ -279,6 +281,7 @@ export class NetworkConfigManager {
          expires_at = excluded.expires_at`,
       [mac, JSON.stringify(oldConfig), JSON.stringify(newConfig), expiresAt],
     );
+    return Promise.resolve();
   }
 
   /**
@@ -286,10 +289,10 @@ export class NetworkConfigManager {
    *
    * Called periodically; entries that have expired are removed.
    */
-  async cleanupExpiredChanges(nowSeconds: number): Promise<number> {
+  cleanupExpiredChanges(nowSeconds: number): Promise<number> {
     const result = this.db.run('DELETE FROM pending_network_change WHERE expires_at <= ?', [
       nowSeconds,
     ]);
-    return result.changes;
+    return Promise.resolve(result.changes);
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type ShareRuntime, type ConflictMode } from '../../shared';
+import { type ConflictMode } from '../../shared';
 import { Button } from './ui/Button';
 import { Card, CardBody, CardHeader } from './ui/Card';
 import { Checkbox, Input, Select, Textarea } from './ui/Input';

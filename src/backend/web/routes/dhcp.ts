@@ -72,45 +72,41 @@ export function dhcpRoutes(ctx: AppContext): Router {
    * - Static reservations (from tnc_clients table)
    * - SMB sessions (future integration with T13)
    */
-  router.get('/dhcp/machines', requireSession(ctx), async (_req, res, next) => {
-    try {
-      const leases = await manager.parseLeaseFile();
-      const discovered = manager.getDiscoveredMachines();
+  router.get('/dhcp/machines', requireSession(ctx), (_req, res, next) => {
+    void manager
+      .parseLeaseFile()
+      .then((leases) => {
+        try {
+          const discovered = manager.getDiscoveredMachines();
 
-      // Merge leases and discovered machines, preferring discovered for richer data
-      const machineMap = new Map<string, (typeof discovered)[0]>();
-      for (const machine of discovered) {
-        machineMap.set(machine.mac, machine);
-      }
+          // Merge leases and discovered machines, preferring discovered for richer data
+          const machineMap = new Map<string, (typeof discovered)[0]>();
+          for (const machine of discovered) {
+            machineMap.set(machine.mac, machine);
+          }
 
-      // Add or update from leases
-      for (const lease of leases) {
-        if (!machineMap.has(lease.mac)) {
-          machineMap.set(lease.mac, {
-            mac: lease.mac,
-            ip: lease.ip,
-            hostname: lease.hostname ?? '',
-            lastSeen: lease.timestamp,
-            isOnline: true,
+          // Add or update from leases
+          for (const lease of leases) {
+            if (!machineMap.has(lease.mac)) {
+              machineMap.set(lease.mac, {
+                mac: lease.mac,
+                ip: lease.ip,
+                hostname: lease.hostname ?? '',
+                lastSeen: lease.timestamp,
+                isOnline: true,
+              });
+            }
+          }
+
+          ok(res, {
+            machines: Array.from(machineMap.values()),
+            count: machineMap.size,
           });
-        } else {
-          const existing = machineMap.get(lease.mac)!;
-          machineMap.set(lease.mac, {
-            ...existing,
-            ip: lease.ip,
-            lastSeen: Math.max(existing.lastSeen, lease.timestamp),
-            isOnline: true,
-          });
+        } catch (error) {
+          next(error);
         }
-      }
-
-      ok(res, {
-        machines: Array.from(machineMap.values()),
-        count: machineMap.size,
-      });
-    } catch (error) {
-      next(error);
-    }
+      })
+      .catch(next);
   });
 
   /**
@@ -118,21 +114,25 @@ export function dhcpRoutes(ctx: AppContext): Router {
    *
    * Returns current DHCP leases (parsed from dnsmasq.leases file).
    */
-  router.get('/dhcp/leases', requireSession(ctx), async (_req, res, next) => {
-    try {
-      const leases = await manager.parseLeaseFile();
-      ok(res, {
-        leases: leases.map((lease) => ({
-          mac: lease.mac,
-          ip: lease.ip,
-          hostname: lease.hostname,
-          timestamp: lease.timestamp,
-        })),
-        count: leases.length,
-      });
-    } catch (error) {
-      next(error);
-    }
+  router.get('/dhcp/leases', requireSession(ctx), (_req, res, next) => {
+    void manager
+      .parseLeaseFile()
+      .then((leases) => {
+        try {
+          ok(res, {
+            leases: leases.map((lease) => ({
+              mac: lease.mac,
+              ip: lease.ip,
+              hostname: lease.hostname,
+              timestamp: lease.timestamp,
+            })),
+            count: leases.length,
+          });
+        } catch (error) {
+          next(error);
+        }
+      })
+      .catch(next);
   });
 
   /**
@@ -177,7 +177,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
               {
                 mac,
                 ip,
-                hostname: hostname || mac,
+                hostname: hostname ?? mac,
                 now,
               },
             );
@@ -189,7 +189,7 @@ export function dhcpRoutes(ctx: AppContext): Router {
               {
                 mac,
                 ip,
-                hostname: hostname || mac,
+                hostname: hostname ?? mac,
                 now,
               },
             );

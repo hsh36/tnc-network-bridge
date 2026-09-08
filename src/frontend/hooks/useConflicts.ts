@@ -56,7 +56,7 @@ export function useConflicts(): ConflictsState {
 
   // Refresh when conflict events occur via SSE
   useEffect(() => {
-    if (sse.latest !== undefined && sse.latest.type === 'conflict') {
+    if (sse.latest?.type === 'conflict') {
       void refresh();
     }
   }, [sse.latest, refresh]);

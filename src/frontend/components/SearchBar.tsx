@@ -45,7 +45,7 @@ export function SearchBar({
             className="mt-1 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm dark:border-border-dark dark:bg-surface-dark-subtle dark:text-slate-100"
           >
             {shareList.length > 0 ? (
-              shareList.map((share: any) => (
+              shareList.map((share: Share) => (
                 <option key={share.id} value={share.id}>
                   {share.name}
                 </option>

@@ -129,15 +129,15 @@ export class DHCPConfigManager {
 
     // Parse the range to extract start and end
     const rangeParts = dhcpConfig.range.split('-');
-    const rangeStart = rangeParts[0] || dhcpConfig.range;
-    const rangeEnd = rangeParts[1] || dhcpConfig.range;
+    const rangeStart = rangeParts[0] ?? dhcpConfig.range;
+    const rangeEnd = rangeParts[1] ?? dhcpConfig.range;
 
     const config: DnsmasqConfig = {
       tncInterface: interface_,
       rangeStart,
       rangeEnd,
       leaseTime: dhcpConfig.leaseTime,
-      gateway: dhcpConfig.gateway || this.extractGatewayFromTncInterface(networkConfig.tnc.address),
+      gateway: dhcpConfig.gateway ?? this.extractGatewayFromTncInterface(networkConfig.tnc.address),
       dns: dhcpConfig.dns,
       domain: 'tnc.local',
       enabled: dhcpConfig.enabled,
@@ -155,7 +155,7 @@ export class DHCPConfigManager {
    * Example: "192.168.42.1/24" -> "192.168.42.1"
    */
   private extractGatewayFromTncInterface(address: string): string {
-    const cidr = address.split('/')[0] || address;
+    const cidr = address.split('/')[0] ?? address;
     return cidr;
   }
 
@@ -207,14 +207,14 @@ export class DHCPConfigManager {
    *
    * If the `discovered_machines` table does not exist, this is a no-op.
    */
-  async updateDiscoveredMachines(leases: readonly DhcpLease[]): Promise<void> {
+  updateDiscoveredMachines(leases: readonly DhcpLease[]): Promise<void> {
     // Check if the table exists
     const tableExists = this.db.get(
       `SELECT 1 FROM sqlite_master WHERE type='table' AND name='discovered_machines'`,
     );
 
     if (!tableExists) {
-      return;
+      return Promise.resolve();
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -252,6 +252,7 @@ export class DHCPConfigManager {
         }
       }
     });
+    return Promise.resolve();
   }
 
   /**
@@ -259,13 +260,13 @@ export class DHCPConfigManager {
    *
    * Returns an empty array if the table does not exist.
    */
-  getDiscoveredMachines(): Array<{
+  getDiscoveredMachines(): {
     readonly mac: string;
     readonly ip: string;
     readonly hostname: string;
     readonly lastSeen: number;
     readonly isOnline: boolean;
-  }> {
+  }[] {
     // Check if the table exists
     const tableExists = this.db.get(
       `SELECT 1 FROM sqlite_master WHERE type='table' AND name='discovered_machines'`,

@@ -37,7 +37,7 @@ export function tokensRoutes(ctx: AppContext): Router {
     '/tokens',
     requireSession(ctx),
     requireCsrf(ctx),
-    asyncHandler(async (req, res) => {
+    asyncHandler((req, res) => {
       const body = createTokenRequestSchema.parse(req.body);
       const result = ctx.auth.createToken(body.name, body.scopes);
       ok(res, { token: result.token, value: result.value }, 201);
@@ -48,7 +48,7 @@ export function tokensRoutes(ctx: AppContext): Router {
     '/tokens/:id',
     requireSession(ctx),
     requireCsrf(ctx),
-    asyncHandler(async (req, res) => {
+    asyncHandler((req, res) => {
       const tokenId = idParam(req.params.id);
 
       // Ensure the token exists before attempting revocation.

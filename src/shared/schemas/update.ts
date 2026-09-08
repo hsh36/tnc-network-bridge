@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { type z } from 'zod';
 import { updateStatusSchema, updateHistoryEntrySchema } from './operations';
 
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;

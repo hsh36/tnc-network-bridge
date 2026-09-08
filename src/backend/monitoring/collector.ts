@@ -68,12 +68,13 @@ interface SyncStats {
   readonly errorCount: number;
 }
 
-interface NetworkStats {
-  [iface: string]: {
+type NetworkStats = Record<
+  string,
+  {
     readonly rxBytes: number;
     readonly txBytes: number;
-  };
-}
+  }
+>;
 
 export class MetricsCollector {
   private readonly db: Db;
@@ -150,8 +151,8 @@ export class MetricsCollector {
       const lines = content.split('\n');
       // Skip header lines (first 2)
       for (const line of lines.slice(2)) {
-        const match = line.match(
-          /^\s*(\S+):\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/,
+        const match = /^\s*(\S+):\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/.exec(
+          line,
         );
         if (match) {
           const [, iface, rxStr, txStr] = match;

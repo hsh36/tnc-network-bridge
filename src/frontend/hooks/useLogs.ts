@@ -136,5 +136,16 @@ export function useLogs(filter: LogsFilter, options: UseLogsOptions = {}): UseLo
     setLogs([]);
   }, []);
 
-  return { logs, loading, error, total, live, paused, toggleLive, togglePause, clearLogs, refresh };
+  return {
+    logs,
+    loading,
+    error,
+    total,
+    live,
+    paused,
+    toggleLive,
+    togglePause,
+    clearLogs,
+    refresh: () => void refresh(),
+  };
 }

@@ -58,7 +58,7 @@ export function QueueDepthChart({ series, loading = false }: QueueDepthChartProp
             <XAxis
               dataKey="timestamp"
               tick={{ fontSize: 12 }}
-              tickFormatter={(ts) => formatTimestamp(ts)}
+              tickFormatter={(ts: unknown) => formatTimestamp(ts as number)}
             />
             <YAxis
               tick={{ fontSize: 12 }}
@@ -71,7 +71,7 @@ export function QueueDepthChart({ series, loading = false }: QueueDepthChartProp
                 borderRadius: '4px',
               }}
               formatter={(value: unknown) => [Math.round(value as number), 'Files']}
-              labelFormatter={(label) => formatTimestamp(label)}
+              labelFormatter={(label: unknown) => formatTimestamp(label as number)}
             />
             <Line
               type="monotone"

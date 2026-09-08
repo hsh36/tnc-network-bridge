@@ -73,7 +73,27 @@ export function filesRoutes(ctx: AppContext): Router {
     );
 
     // Transform rows to match the expected schema (convert nulls and SQL integers to booleans)
-    const transformedItems = items.map((row: any) => ({
+    interface FileIndexRow {
+      id: number;
+      share_id: string;
+      rel_path: string;
+      is_dir: 0 | 1;
+      loc_size: number | null;
+      loc_mtime: number | null;
+      loc_hash: string | null;
+      srv_size: number | null;
+      srv_mtime: number | null;
+      srv_hash: string | null;
+      base_size: number | null;
+      base_mtime: number | null;
+      base_hash: string | null;
+      state: string;
+      last_sync_at: number | null;
+      last_error: string | null;
+      retry_count: number;
+      next_retry_at: number | null;
+    }
+    const transformedItems = (items as FileIndexRow[]).map((row) => ({
       id: row.id,
       shareId: row.share_id,
       relPath: row.rel_path,

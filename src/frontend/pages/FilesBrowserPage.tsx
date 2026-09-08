@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import { Card, CardHeader } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Input } from '../components/ui/Input';
 import { Spinner } from '../components/ui/Spinner';
 import { useApiQuery } from '../hooks/useApi';
 import { FilePreview } from '../components/FilePreview';

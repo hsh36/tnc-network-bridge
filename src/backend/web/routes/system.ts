@@ -84,7 +84,7 @@ export function systemRoutes(ctx: AppContext): Router {
   });
 
   // Update endpoints (T44) — minimal implementation for UI
-  const updateHistory: Array<{
+  const updateHistory: {
     id: string;
     ts: number;
     fromVersion: string | null;
@@ -92,7 +92,7 @@ export function systemRoutes(ctx: AppContext): Router {
     channel: 'stable' | 'beta' | null;
     result: 'ok' | 'failed' | 'rolled_back';
     log: string | null;
-  }> = [];
+  }[] = [];
 
   router.get('/update/status', requireSessionOrToken(ctx), (_req, res) => {
     ok(res, {
@@ -106,7 +106,7 @@ export function systemRoutes(ctx: AppContext): Router {
     });
   });
 
-  router.post('/update/check', requireSession(ctx), async (_req, res) => {
+  router.post('/update/check', requireSession(ctx), (_req, res) => {
     // Placeholder: in T43, this would poll GitHub Releases
     ok(res, {
       currentVersion: ctx.version,
@@ -119,7 +119,7 @@ export function systemRoutes(ctx: AppContext): Router {
     });
   });
 
-  router.post('/update/apply', requireSession(ctx), async (_req, res) => {
+  router.post('/update/apply', requireSession(ctx), (_req, res) => {
     // Placeholder: in T43, this would download, verify, and apply
     ctx.events.publish({
       ts: Date.now(),
@@ -137,7 +137,7 @@ export function systemRoutes(ctx: AppContext): Router {
     ok(res, { accepted: true });
   });
 
-  router.post('/update/rollback', requireSession(ctx), async (_req, res) => {
+  router.post('/update/rollback', requireSession(ctx), (_req, res) => {
     // Placeholder: in T43, this would rollback to the previous version
     ctx.events.publish({
       ts: Date.now(),

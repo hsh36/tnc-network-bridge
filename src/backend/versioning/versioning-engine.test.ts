@@ -67,7 +67,7 @@ describe('VersioningEngine', () => {
       const sourcePath = await writeCacheFile('PGM/PART1.H', 'BEGIN PGM PART1 MM');
 
       // Call capture and wait for async operation
-      await engine.captureBeforePull(shareId, 'PGM/PART1.H', sourcePath);
+      engine.captureBeforePull(shareId, 'PGM/PART1.H', sourcePath);
       await waitForAsync();
 
       const versions = store.list({ shareId, relPath: 'PGM/PART1.H' });
@@ -83,7 +83,7 @@ describe('VersioningEngine', () => {
       const sourcePath = await writeCacheFile('PGM/PART1.H', 'content');
       const start = Date.now();
 
-      await engine.captureBeforePull(shareId, 'PGM/PART1.H', sourcePath);
+      engine.captureBeforePull(shareId, 'PGM/PART1.H', sourcePath);
       const elapsed = Date.now() - start;
 
       // Should complete nearly instantly (async, fires and forgets)
@@ -101,7 +101,7 @@ describe('VersioningEngine', () => {
     it('captures local content before push', async () => {
       const sourcePath = await writeCacheFile('PGM/PART2.H', 'LOCAL EDIT');
 
-      await engine.captureBeforePush(shareId, 'PGM/PART2.H', sourcePath);
+      engine.captureBeforePush(shareId, 'PGM/PART2.H', sourcePath);
       await waitForAsync();
 
       const versions = store.list({ shareId, relPath: 'PGM/PART2.H' });
@@ -123,7 +123,7 @@ describe('VersioningEngine', () => {
     it('captures the losing side of a conflict', async () => {
       const sourcePath = await writeCacheFile('PGM/CONFLICT.H', 'LOSER CONTENT');
 
-      await engine.captureConflictLoser(shareId, 'PGM/CONFLICT.H', sourcePath, 'last_write_wins');
+      engine.captureConflictLoser(shareId, 'PGM/CONFLICT.H', sourcePath, 'last_write_wins');
       await waitForAsync();
 
       const versions = store.list({ shareId, relPath: 'PGM/CONFLICT.H' });
@@ -145,7 +145,7 @@ describe('VersioningEngine', () => {
     it('captures initial state of a file', async () => {
       const sourcePath = await writeCacheFile('PGM/INITIAL.H', 'INITIAL STATE');
 
-      await engine.captureInitial(shareId, 'PGM/INITIAL.H', sourcePath, 'local');
+      engine.captureInitial(shareId, 'PGM/INITIAL.H', sourcePath, 'local');
       await waitForAsync();
 
       const versions = store.list({ shareId, relPath: 'PGM/INITIAL.H' });
@@ -169,7 +169,7 @@ describe('VersioningEngine', () => {
     it('handles remote overwrite (PULL scenario)', async () => {
       const sourcePath = await writeCacheFile('PGM/PULL.H', 'LOCAL VERSION');
 
-      await engine.handleOrchestratorCapture(shareId, 'PGM/PULL.H', sourcePath, {
+      engine.handleOrchestratorCapture(shareId, 'PGM/PULL.H', sourcePath, {
         side: 'local',
         reason: 'overwrite',
       });
@@ -183,7 +183,7 @@ describe('VersioningEngine', () => {
     it('handles local overwrite (PUSH scenario)', async () => {
       const sourcePath = await writeCacheFile('PGM/PUSH.H', 'REMOTE VERSION');
 
-      await engine.handleOrchestratorCapture(shareId, 'PGM/PUSH.H', sourcePath, {
+      engine.handleOrchestratorCapture(shareId, 'PGM/PUSH.H', sourcePath, {
         side: 'remote',
         reason: 'overwrite',
       });
@@ -197,7 +197,7 @@ describe('VersioningEngine', () => {
     it('handles conflict loser on local side', async () => {
       const sourcePath = await writeCacheFile('PGM/CONF.H', 'LOCAL LOSES');
 
-      await engine.handleOrchestratorCapture(shareId, 'PGM/CONF.H', sourcePath, {
+      engine.handleOrchestratorCapture(shareId, 'PGM/CONF.H', sourcePath, {
         side: 'local',
         reason: 'conflict_loser',
       });
@@ -253,14 +253,14 @@ describe('VersioningEngine', () => {
       }
 
       // Capture first file
-      await engine.captureBeforePull(shareId, 'PGM/A.H', path1);
+      engine.captureBeforePull(shareId, 'PGM/A.H', path1);
       await waitForAsync();
 
       const versionsA = store.list({ shareId, relPath: 'PGM/A.H' });
       expect(versionsA.items).toHaveLength(1);
 
       // Capture second file with same content
-      await engine.captureBeforePull(shareId, 'PGM/B.H', path2);
+      engine.captureBeforePull(shareId, 'PGM/B.H', path2);
       await waitForAsync();
 
       const versionsB = store.list({ shareId, relPath: 'PGM/B.H' });
@@ -284,10 +284,9 @@ describe('VersioningEngine', () => {
       }
 
       // Capture is async but non-blocking
-      const promise = engine.captureBeforePull(shareId, 'PGM/QUICK.H', sourcePath);
+      engine.captureBeforePull(shareId, 'PGM/QUICK.H', sourcePath);
 
-      // Promise should resolve immediately
-      await promise;
+      // Should complete immediately (fire and forget)
 
       // Initially it should be empty (async)
       let versions = store.list({ shareId, relPath: 'PGM/QUICK.H' });

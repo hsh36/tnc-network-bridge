@@ -207,7 +207,7 @@ function NetworkSection(): JSX.Element {
           setForm({ ...form, mtu: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['mtu']}
+        error={errors.mtu}
         className="w-40"
       />
       <Checkbox
@@ -296,7 +296,11 @@ function SmbSection(): JSX.Element {
             onChange={(e) => {
               setForm({
                 ...form,
-                server: { ...form.server, minProtocol: e.target.value as any },
+                server: {
+                  ...form.server,
+                  minProtocol: e.target.value as
+                    'SMB2' | 'SMB3' | 'SMB3_00' | 'SMB3_02' | 'SMB3_11',
+                },
               });
               setIsDirty(true);
             }}
@@ -388,7 +392,7 @@ function SmbSection(): JSX.Element {
             onChange={(e) => {
               setForm({
                 ...form,
-                tnc: { ...form.tnc, minProtocol: e.target.value as any },
+                tnc: { ...form.tnc, minProtocol: e.target.value as 'NT1' | 'SMB2' | 'SMB3' },
               });
               setIsDirty(true);
             }}
@@ -405,7 +409,7 @@ function SmbSection(): JSX.Element {
             onChange={(e) => {
               setForm({
                 ...form,
-                tnc: { ...form.tnc, maxProtocol: e.target.value as any },
+                tnc: { ...form.tnc, maxProtocol: e.target.value as 'NT1' | 'SMB2' | 'SMB3' },
               });
               setIsDirty(true);
             }}
@@ -529,7 +533,7 @@ function SyncSection(): JSX.Element {
           setForm({ ...form, conflictMode: e.target.value as ConflictMode });
           setIsDirty(true);
         }}
-        error={errors['conflictMode']}
+        error={errors.conflictMode}
         className="w-64"
       >
         <option value="last_write_wins">Last write wins</option>
@@ -549,7 +553,7 @@ function SyncSection(): JSX.Element {
           });
           setIsDirty(true);
         }}
-        error={errors['bandwidthLimitKbps']}
+        error={errors.bandwidthLimitKbps}
         className="w-64"
       />
 
@@ -562,7 +566,7 @@ function SyncSection(): JSX.Element {
           setForm({ ...form, maxFileSizeMb: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['maxFileSizeMb']}
+        error={errors.maxFileSizeMb}
         className="w-64"
       />
 
@@ -575,7 +579,7 @@ function SyncSection(): JSX.Element {
           setForm({ ...form, mtimeToleranceMs: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['mtimeToleranceMs']}
+        error={errors.mtimeToleranceMs}
         className="w-64"
       />
 
@@ -588,7 +592,7 @@ function SyncSection(): JSX.Element {
           setForm({ ...form, scanIntervalMs: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['scanIntervalMs']}
+        error={errors.scanIntervalMs}
         className="w-64"
       />
 
@@ -601,7 +605,7 @@ function SyncSection(): JSX.Element {
           setForm({ ...form, concurrency: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['concurrency']}
+        error={errors.concurrency}
         className="w-40"
       />
 
@@ -718,10 +722,13 @@ function LockingSection(): JSX.Element {
         label="Server projection mode"
         value={form.serverProjection}
         onChange={(e) => {
-          setForm({ ...form, serverProjection: e.target.value as any });
+          setForm({
+            ...form,
+            serverProjection: e.target.value as 'none' | 'sidecar' | 'byte_range',
+          });
           setIsDirty(true);
         }}
-        error={errors['serverProjection']}
+        error={errors.serverProjection}
       >
         <option value="none">None</option>
         <option value="sidecar">Sidecar</option>
@@ -737,7 +744,7 @@ function LockingSection(): JSX.Element {
           setForm({ ...form, tncLockTtlS: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['tncLockTtlS']}
+        error={errors.tncLockTtlS}
         className="w-64"
       />
 
@@ -750,7 +757,7 @@ function LockingSection(): JSX.Element {
           setForm({ ...form, releaseLingerS: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['releaseLingerS']}
+        error={errors.releaseLingerS}
         className="w-64"
       />
 
@@ -759,10 +766,13 @@ function LockingSection(): JSX.Element {
         label="Schedule default"
         value={form.scheduleDefault}
         onChange={(e) => {
-          setForm({ ...form, scheduleDefault: e.target.value as any });
+          setForm({
+            ...form,
+            scheduleDefault: e.target.value as 'none' | 'business_hours' | 'custom',
+          });
           setIsDirty(true);
         }}
-        error={errors['scheduleDefault']}
+        error={errors.scheduleDefault}
       >
         <option value="none">None (no locks)</option>
         <option value="business_hours">Business hours</option>
@@ -856,7 +866,7 @@ function VersioningSection(): JSX.Element {
           setForm({ ...form, keepCount: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['keepCount']}
+        error={errors.keepCount}
         className="w-64"
       />
 
@@ -869,7 +879,7 @@ function VersioningSection(): JSX.Element {
           setForm({ ...form, keepDays: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['keepDays']}
+        error={errors.keepDays}
         className="w-64"
       />
 
@@ -883,7 +893,7 @@ function VersioningSection(): JSX.Element {
           setForm({ ...form, maxStoreGb: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['maxStoreGb']}
+        error={errors.maxStoreGb}
         className="w-64"
       />
 
@@ -954,7 +964,7 @@ function SecuritySection(): JSX.Element {
           setForm({ ...form, sessionIdleMin: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['sessionIdleMin']}
+        error={errors.sessionIdleMin}
         className="w-64"
       />
 
@@ -967,7 +977,7 @@ function SecuritySection(): JSX.Element {
           setForm({ ...form, sessionAbsoluteH: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['sessionAbsoluteH']}
+        error={errors.sessionAbsoluteH}
         className="w-64"
       />
 
@@ -980,7 +990,7 @@ function SecuritySection(): JSX.Element {
           setForm({ ...form, loginMaxAttempts: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['loginMaxAttempts']}
+        error={errors.loginMaxAttempts}
         className="w-64"
       />
 
@@ -999,10 +1009,10 @@ function SecuritySection(): JSX.Element {
         label="Minimum TLS version"
         value={form.tlsMin}
         onChange={(e) => {
-          setForm({ ...form, tlsMin: e.target.value as any });
+          setForm({ ...form, tlsMin: e.target.value as 'TLSv1.2' | 'TLSv1.3' });
           setIsDirty(true);
         }}
-        error={errors['tlsMin']}
+        error={errors.tlsMin}
         className="w-40"
       >
         <option value="TLSv1.2">TLS 1.2</option>
@@ -1082,10 +1092,10 @@ function UpdatesSection(): JSX.Element {
         label="Update channel"
         value={form.channel}
         onChange={(e) => {
-          setForm({ ...form, channel: e.target.value as any });
+          setForm({ ...form, channel: e.target.value as 'stable' | 'beta' });
           setIsDirty(true);
         }}
-        error={errors['channel']}
+        error={errors.channel}
       >
         <option value="stable">Stable</option>
         <option value="beta">Beta</option>
@@ -1099,7 +1109,7 @@ function UpdatesSection(): JSX.Element {
           setForm({ ...form, scheduleCron: e.target.value });
           setIsDirty(true);
         }}
-        error={errors['scheduleCron']}
+        error={errors.scheduleCron}
         hint="e.g., '0 3 * * 0' for 3 AM on Sundays"
       />
 
@@ -1111,7 +1121,7 @@ function UpdatesSection(): JSX.Element {
           setForm({ ...form, githubRepo: e.target.value });
           setIsDirty(true);
         }}
-        error={errors['githubRepo']}
+        error={errors.githubRepo}
         hint="Format: owner/repo"
       />
 
@@ -1144,7 +1154,7 @@ function UpdatesSection(): JSX.Element {
           setForm({ ...form, healthTimeoutS: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['healthTimeoutS']}
+        error={errors.healthTimeoutS}
         className="w-64"
       />
 
@@ -1224,7 +1234,7 @@ function DhcpSection(): JSX.Element {
           setForm({ ...form, range: e.target.value });
           setIsDirty(true);
         }}
-        error={errors['range']}
+        error={errors.range}
       />
 
       <Input
@@ -1235,7 +1245,7 @@ function DhcpSection(): JSX.Element {
           setForm({ ...form, leaseTime: e.target.value });
           setIsDirty(true);
         }}
-        error={errors['leaseTime']}
+        error={errors.leaseTime}
       />
 
       <Input
@@ -1243,10 +1253,10 @@ function DhcpSection(): JSX.Element {
         label="DNS server"
         value={form.dns}
         onChange={(e) => {
-          setForm({ ...form, dns: e.target.value as any });
+          setForm({ ...form, dns: e.target.value });
           setIsDirty(true);
         }}
-        error={errors['dns']}
+        error={errors.dns}
       />
 
       <Input
@@ -1257,7 +1267,7 @@ function DhcpSection(): JSX.Element {
           setForm({ ...form, gateway: e.target.value || undefined });
           setIsDirty(true);
         }}
-        error={errors['gateway']}
+        error={errors.gateway}
       />
 
       <div className="flex items-center gap-3">
@@ -1323,10 +1333,13 @@ function LoggingSection(): JSX.Element {
         label="Log level"
         value={form.level}
         onChange={(e) => {
-          setForm({ ...form, level: e.target.value as any });
+          setForm({
+            ...form,
+            level: e.target.value as 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal',
+          });
           setIsDirty(true);
         }}
-        error={errors['level']}
+        error={errors.level}
       >
         <option value="trace">Trace</option>
         <option value="debug">Debug</option>
@@ -1345,7 +1358,7 @@ function LoggingSection(): JSX.Element {
           setForm({ ...form, retainDays: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['retainDays']}
+        error={errors.retainDays}
         className="w-64"
       />
 
@@ -1416,7 +1429,7 @@ function MonitoringSection(): JSX.Element {
           setForm({ ...form, sampleIntervalS: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['sampleIntervalS']}
+        error={errors.sampleIntervalS}
         className="w-64"
       />
 
@@ -1429,7 +1442,7 @@ function MonitoringSection(): JSX.Element {
           setForm({ ...form, diskWarnPct: Number(e.target.value) });
           setIsDirty(true);
         }}
-        error={errors['diskWarnPct']}
+        error={errors.diskWarnPct}
         className="w-40"
       />
 

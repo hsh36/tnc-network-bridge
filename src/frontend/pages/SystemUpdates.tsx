@@ -34,7 +34,9 @@ export function SystemUpdates(): JSX.Element {
   const [showScheduleEditor, setShowScheduleEditor] = useState(false);
 
   const isUpdating =
-    status && status.phase !== 'idle' && status.phase !== 'done' && status.phase !== 'failed';
+    status?.phase !== 'idle' && status?.phase !== 'done' && status?.phase !== 'failed'
+      ? true
+      : false;
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,7 +71,7 @@ export function SystemUpdates(): JSX.Element {
                   size="sm"
                   variant="secondary"
                   loading={rolling}
-                  onClick={() => rollback()}
+                  onClick={() => void rollback()}
                   disabled={isUpdating || applying || checking}
                 >
                   Rollback
@@ -108,7 +110,7 @@ export function SystemUpdates(): JSX.Element {
                 <Button
                   size="sm"
                   loading={applying}
-                  onClick={() => apply(status.available.version)}
+                  onClick={() => void apply(status.available.version)}
                   disabled={isUpdating || checking || rolling}
                 >
                   Apply Update
@@ -117,7 +119,7 @@ export function SystemUpdates(): JSX.Element {
                   size="sm"
                   variant="secondary"
                   loading={checking}
-                  onClick={() => check()}
+                  onClick={() => void check()}
                   disabled={isUpdating || applying || rolling}
                 >
                   Check Again
@@ -163,7 +165,7 @@ export function SystemUpdates(): JSX.Element {
               <Button
                 size="sm"
                 loading={checking}
-                onClick={() => check()}
+                onClick={() => void check()}
                 disabled={isUpdating || applying || rolling}
               >
                 Check for Updates
@@ -190,7 +192,7 @@ export function SystemUpdates(): JSX.Element {
             ) : (
               <>
                 <ScheduleEditor
-                  onSave={(cron) => {
+                  onSave={(_cron) => {
                     // TODO: Save schedule via API
                     setShowScheduleEditor(false);
                   }}

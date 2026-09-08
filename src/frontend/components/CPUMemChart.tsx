@@ -58,7 +58,7 @@ export function CPUMemChart({
             <XAxis
               dataKey="timestamp"
               tick={{ fontSize: 12 }}
-              tickFormatter={(ts) => formatTimestamp(ts)}
+              tickFormatter={(ts: unknown) => formatTimestamp(ts as number)}
             />
             <YAxis
               yAxisId="left"
@@ -80,7 +80,7 @@ export function CPUMemChart({
                 borderRadius: '4px',
               }}
               formatter={(value: unknown) => `${(value as number).toFixed(1)}%`}
-              labelFormatter={(label) => formatTimestamp(label)}
+              labelFormatter={(label: unknown) => formatTimestamp(label as number)}
             />
             <Legend />
             <Line
@@ -111,7 +111,7 @@ export function CPUMemChart({
 function mergeMetricSeries(
   seriesCpu: MetricSeries | undefined,
   seriesMem: MetricSeries | undefined,
-): Array<{ timestamp: number; cpu: number; memory: number }> {
+): { timestamp: number; cpu: number; memory: number }[] {
   const map = new Map<number, { timestamp: number; cpu: number; memory: number }>();
 
   if (seriesCpu) {

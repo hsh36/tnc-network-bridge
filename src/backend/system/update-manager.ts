@@ -35,7 +35,7 @@ export class UpdateManager {
   private lastError: string | null = null;
   private rollbackVersion: string | null = null;
   private publishEvent: (event: BridgeEvent) => void;
-  private updateHistory: Array<{
+  private updateHistory: {
     id: string;
     ts: number;
     fromVersion: string | null;
@@ -43,7 +43,7 @@ export class UpdateManager {
     channel: 'stable' | 'beta' | 'dev' | null;
     result: 'ok' | 'failed' | 'rolled_back';
     log: string | null;
-  }> = [];
+  }[] = [];
 
   constructor(options: UpdateManagerOptions) {
     this.currentVersion = options.currentVersion;
@@ -62,7 +62,7 @@ export class UpdateManager {
     };
   }
 
-  async check(): Promise<UpdateStatus> {
+  check(): Promise<UpdateStatus> {
     this.phase = 'checking';
     this.publishStatus();
 
@@ -72,12 +72,12 @@ export class UpdateManager {
       this.lastError = null;
       this.phase = 'idle';
       this.publishStatus();
-      return this.getStatus();
+      return Promise.resolve(this.getStatus());
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : 'Unknown error';
       this.phase = 'idle';
       this.publishStatus();
-      throw error;
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -160,7 +160,7 @@ export class UpdateManager {
     }
   }
 
-  getHistory(): Array<{
+  getHistory(): {
     id: string;
     ts: number;
     fromVersion: string | null;
@@ -168,7 +168,7 @@ export class UpdateManager {
     channel: 'stable' | 'beta' | 'dev' | null;
     result: 'ok' | 'failed' | 'rolled_back';
     log: string | null;
-  }> {
+  }[] {
     return this.updateHistory;
   }
 

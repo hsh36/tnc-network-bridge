@@ -3,7 +3,6 @@ import { type FileIndexEntry } from '../../shared';
 import { Card, CardBody, CardHeader } from './ui/Card';
 import { Button } from './ui/Button';
 import { Spinner } from './ui/Spinner';
-import { api, ApiError } from '../lib/api-client';
 
 const PREVIEW_MAX_LINES = 100;
 

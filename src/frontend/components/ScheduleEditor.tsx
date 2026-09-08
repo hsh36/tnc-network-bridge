@@ -40,9 +40,9 @@ export function ScheduleEditor({
     if (!currentCron) return;
     const parts = currentCron.trim().split(/\s+/);
     if (parts.length >= 5) {
-      setMinute(parts[0] || '0');
-      setHour(parts[1] || '2');
-      setWeekday(parts[4] || '0');
+      setMinute(parts[0] ?? '0');
+      setHour(parts[1] ?? '2');
+      setWeekday(parts[4] ?? '0');
     }
   }, [currentCron]);
 

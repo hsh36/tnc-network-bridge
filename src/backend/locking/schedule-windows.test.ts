@@ -70,7 +70,7 @@ afterEach(async () => {
 
 describe('ScheduleLockWindowManager', () => {
   describe('lock window', () => {
-    it('acquires locks on matching paths', async () => {
+    it('acquires locks on matching paths', () => {
       const ctx: JobContext = {
         trigger: 'cron',
         scheduleId: 1,
@@ -79,7 +79,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleLockWindow'](ctx);
+      const outcome = manager.handleLockWindow(ctx);
 
       // Should have locked the three .H files
       expect(outcome?.detail).toContain('locked 3 paths');
@@ -114,7 +114,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleLockWindow'](ctx);
+      const outcome = manager.handleLockWindow(ctx);
 
       // The SQL query excludes already-locked files, so only 2 of 3 .H files are attempted
       expect(outcome?.detail).toContain('locked 2 paths');
@@ -137,7 +137,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      manager['handleLockWindow'](ctx);
+      manager.handleLockWindow(ctx);
 
       // Check that the locks have an expiration time
       const locks_rows = db.all(
@@ -158,7 +158,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleLockWindow'](ctx);
+      const outcome = manager.handleLockWindow(ctx);
 
       expect(outcome?.skipped).toBe(true);
       expect(outcome?.detail).toContain('share 999 not found');
@@ -173,7 +173,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleLockWindow'](ctx);
+      const outcome = manager.handleLockWindow(ctx);
 
       expect(outcome?.skipped).toBe(true);
     });
@@ -208,7 +208,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock + 3600,
       };
 
-      const outcome = manager['handleUnlockWindow'](ctx);
+      const outcome = manager.handleUnlockWindow(ctx);
 
       expect(outcome?.detail).toContain('released 2 locks');
 
@@ -242,7 +242,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock + 3600,
       };
 
-      const outcome = manager['handleUnlockWindow'](ctx);
+      const outcome = manager.handleUnlockWindow(ctx);
 
       expect(outcome?.detail).toContain('released 1 locks');
 
@@ -275,7 +275,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock + 3600,
       };
 
-      const outcome = manager['handleUnlockWindow'](ctx);
+      const outcome = manager.handleUnlockWindow(ctx);
 
       expect(outcome?.detail).toContain('released 1 locks');
 
@@ -296,7 +296,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleUnlockWindow'](ctx);
+      const outcome = manager.handleUnlockWindow(ctx);
 
       expect(outcome?.skipped).toBe(true);
     });
@@ -310,7 +310,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleUnlockWindow'](ctx);
+      const outcome = manager.handleUnlockWindow(ctx);
 
       expect(outcome?.skipped).toBe(true);
     });
@@ -324,7 +324,7 @@ describe('ScheduleLockWindowManager', () => {
         firedAt: clock,
       };
 
-      const outcome = manager['handleUnlockWindow'](ctx);
+      const outcome = manager.handleUnlockWindow(ctx);
 
       expect(outcome?.detail).toContain('no scheduled locks');
     });

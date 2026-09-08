@@ -7,7 +7,7 @@ interface TreeNode {
   path: string;
   isDir: boolean;
   file?: FileIndexEntry;
-  children?: TreeNode[];
+  children?: Record<string, TreeNode>;
 }
 
 function buildFileTree(items: readonly FileIndexEntry[]): TreeNode[] {
@@ -22,27 +22,38 @@ function buildFileTree(items: readonly FileIndexEntry[]): TreeNode[] {
   for (const item of sorted) {
     const parts = item.relPath.split('/').filter((p) => p.length > 0);
 
+    // Type-safe helper to get or create node
+    const getOrCreate = (map: Record<string, TreeNode>, part: string): TreeNode => {
+      let node = map[part];
+      if (node) return node;
+
+      node = {
+        name: part,
+        path: '',
+        isDir: false,
+        children: {},
+      };
+      map[part] = node;
+      return node;
+    };
+
     let current = root;
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       const isLast = i === parts.length - 1;
 
-      if (!current[part]) {
-        const path = parts.slice(0, i + 1).join('/');
-        current[part] = {
-          name: part,
-          path,
-          isDir: !isLast || item.isDir,
-          file: isLast ? item : undefined,
-          children: {},
-        };
+      const node = getOrCreate(current, part);
+      node.path = parts.slice(0, i + 1).join('/');
+
+      if (isLast) {
+        node.isDir = item.isDir;
+        node.file = item;
+      } else {
+        node.isDir = true;
       }
 
-      if (isLast && item.isDir) {
-        current[part].isDir = true;
-      }
-
-      current = current[part].children ?? (current[part].children = {});
+      node.children ??= {};
+      current = node.children;
     }
   }
 

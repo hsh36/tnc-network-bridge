@@ -58,7 +58,7 @@ export function ErrorRateChart({ series, loading = false }: ErrorRateChartProps)
             <XAxis
               dataKey="timestamp"
               tick={{ fontSize: 12 }}
-              tickFormatter={(ts) => formatTimestamp(ts)}
+              tickFormatter={(ts: unknown) => formatTimestamp(ts as number)}
             />
             <YAxis
               tick={{ fontSize: 12 }}
@@ -71,7 +71,7 @@ export function ErrorRateChart({ series, loading = false }: ErrorRateChartProps)
                 borderRadius: '4px',
               }}
               formatter={(value: unknown) => [(value as number).toFixed(2), 'Errors/min']}
-              labelFormatter={(label) => formatTimestamp(label)}
+              labelFormatter={(label: unknown) => formatTimestamp(label as number)}
             />
             <Line
               type="monotone"

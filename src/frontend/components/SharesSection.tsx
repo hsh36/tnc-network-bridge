@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { type ShareRuntime } from '../../shared';
 import { Badge, type BadgeTone } from './ui/Badge';
 import { Button } from './ui/Button';
-import { Card, CardBody, CardHeader } from './ui/Card';
+import { Card, CardHeader } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { FullPageSpinner } from './ui/Spinner';
 import { Table, type Column } from './ui/Table';

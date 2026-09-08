@@ -30,14 +30,14 @@ export function TemperatureChart({ series, loading = false }: TemperatureChartPr
   // Find current temperature for status badge
   const currentTemp = data.length > 0 ? data[data.length - 1]?.temp : null;
 
-  let tempStatus = 'ok';
+  let _tempStatus = 'ok';
   let tempColor = '#22c55e';
   if (currentTemp !== null) {
     if (currentTemp > 80) {
-      tempStatus = 'critical';
+      _tempStatus = 'critical';
       tempColor = '#ef4444';
     } else if (currentTemp > 60) {
-      tempStatus = 'warm';
+      _tempStatus = 'warm';
       tempColor = '#f59e0b';
     }
   }
@@ -81,7 +81,7 @@ export function TemperatureChart({ series, loading = false }: TemperatureChartPr
             <XAxis
               dataKey="timestamp"
               tick={{ fontSize: 12 }}
-              tickFormatter={(ts) => formatTimestamp(ts)}
+              tickFormatter={(ts: unknown) => formatTimestamp(ts as number)}
             />
             <YAxis
               tick={{ fontSize: 12 }}
@@ -95,7 +95,7 @@ export function TemperatureChart({ series, loading = false }: TemperatureChartPr
                 borderRadius: '4px',
               }}
               formatter={(value: unknown) => `${(value as number).toFixed(1)}°C`}
-              labelFormatter={(label) => formatTimestamp(label)}
+              labelFormatter={(label: unknown) => formatTimestamp(label as number)}
             />
             <ReferenceLine
               y={60}

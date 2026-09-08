@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { type TimeRange } from '../../shared';
 import { CPUMemChart } from '../components/CPUMemChart';
 import { DiskUsageChart } from '../components/DiskUsageChart';

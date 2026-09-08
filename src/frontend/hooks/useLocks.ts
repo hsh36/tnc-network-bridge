@@ -58,7 +58,7 @@ export function useLocks(): LocksState {
 
   // Refresh when lock events occur via SSE
   useEffect(() => {
-    if (sse.latest !== undefined && sse.latest.type === 'lock') {
+    if (sse.latest?.type === 'lock') {
       void refresh();
     }
   }, [sse.latest, refresh]);

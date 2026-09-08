@@ -59,12 +59,12 @@ export function ThroughputChart({
             <XAxis
               dataKey="timestamp"
               tick={{ fontSize: 12 }}
-              tickFormatter={(ts) => formatTimestamp(ts)}
+              tickFormatter={(ts: unknown) => formatTimestamp(ts as number)}
             />
             <YAxis
               tick={{ fontSize: 12 }}
               label={{ value: 'Bytes/sec', angle: -90, position: 'insideLeft' }}
-              tickFormatter={(v) => formatBytes(v, 0)}
+              tickFormatter={(v: unknown) => formatBytes(v as number, 0)}
             />
             <Tooltip
               contentStyle={{
@@ -73,7 +73,7 @@ export function ThroughputChart({
                 borderRadius: '4px',
               }}
               formatter={(value: unknown) => [formatBytes(value as number, 2), '']}
-              labelFormatter={(label) => formatTimestamp(label)}
+              labelFormatter={(label: unknown) => formatTimestamp(label as number)}
             />
             <Legend />
             <Line
@@ -102,7 +102,7 @@ export function ThroughputChart({
 function mergeMetricSeries(
   seriesIn: MetricSeries | undefined,
   seriesOut: MetricSeries | undefined,
-): Array<{ timestamp: number; throughput_in: number; throughput_out: number }> {
+): { timestamp: number; throughput_in: number; throughput_out: number }[] {
   const map = new Map<
     number,
     { timestamp: number; throughput_in: number; throughput_out: number }

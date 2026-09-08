@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   collector.start(10_000);
 
   // Register rollup job (consolidate old samples to hourly buckets)
-  jobs.register('prune', async () => {
+  jobs.register('prune', () => {
     // Rollup samples older than 7 days (604,800 seconds) into hourly buckets
     const result = collector.rollUp(7 * 24 * 60 * 60);
     return {

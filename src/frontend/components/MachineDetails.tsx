@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type TncClient, type TncModelSchema } from '../../shared';
+import { type TncClient } from '../../shared';
 import { Button } from './ui/Button';
 import { Card, CardBody, CardHeader } from './ui/Card';
 import { Input, Select } from './ui/Input';
@@ -88,7 +88,7 @@ export function MachineDetails({
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white dark:bg-surface-dark">
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-white p-6 dark:border-border-dark dark:bg-surface-dark">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            {form.name || `TNC-${form.mac?.slice(-4)}`}
+            {form.name ?? `TNC-${form.mac?.slice(-4)}`}
           </h2>
           <button
             onClick={onClose}
@@ -157,7 +157,7 @@ export function MachineDetails({
                   MAC Address
                 </label>
                 <code className="text-xs font-mono text-slate-600 dark:text-slate-400">
-                  {form.mac || '—'}
+                  {form.mac ?? '—'}
                 </code>
               </div>
               <div className="flex items-center justify-between">
@@ -165,7 +165,7 @@ export function MachineDetails({
                   Current IP
                 </label>
                 <code className="text-xs font-mono text-slate-600 dark:text-slate-400">
-                  {form.ip || '—'}
+                  {form.ip ?? '—'}
                 </code>
               </div>
               <div className="flex items-center justify-between">

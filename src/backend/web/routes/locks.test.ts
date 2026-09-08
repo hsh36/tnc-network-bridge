@@ -231,7 +231,9 @@ describe('GET /locks/schedule/preview', () => {
 
     if (resShare1.body.data.windows.length > 0) {
       // All windows should have shareId 1
-      expect(resShare1.body.data.windows.every((w: any) => w.shareId === 1)).toBe(true);
+      expect(resShare1.body.data.windows.every((w: { shareId: number }) => w.shareId === 1)).toBe(
+        true,
+      );
     }
   });
 });
