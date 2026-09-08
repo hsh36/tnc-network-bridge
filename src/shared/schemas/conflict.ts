@@ -55,3 +55,19 @@ export const resolveConflictRequestSchema = z
   .strict();
 
 export type ResolveConflictRequest = z.infer<typeof resolveConflictRequestSchema>;
+
+/** Extended conflict detail for UI display (T51) with version info. */
+export const conflictDetailSchema = conflictSchema.extend({
+  /** Size of the losing version in bytes. */
+  loserSize: z.number().int().nonnegative().nullable(),
+  /** Size of the winning version in bytes. */
+  winnerSize: z.number().int().nonnegative().nullable(),
+  /** Who modified the losing version (username, machine name, or IP). */
+  loserModifiedBy: z.string().nullable(),
+  /** Who modified the winning version. */
+  winnerModifiedBy: z.string().nullable(),
+  /** Whether the losing version is still in the version store. */
+  loserVersionExists: z.boolean(),
+});
+
+export type ConflictDetail = z.infer<typeof conflictDetailSchema>;

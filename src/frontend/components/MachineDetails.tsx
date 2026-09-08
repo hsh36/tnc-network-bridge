@@ -12,7 +12,11 @@ interface MachineDetailsProps {
   readonly onRefresh: () => void;
 }
 
-export function MachineDetails({ machineId, onClose, onRefresh }: MachineDetailsProps): JSX.Element {
+export function MachineDetails({
+  machineId,
+  onClose,
+  onRefresh,
+}: MachineDetailsProps): JSX.Element {
   const machine = useApiQuery('tncClients.get', { params: { id: machineId } });
   const [form, setForm] = useState<TncClient | undefined>();
   const [saving, setSaving] = useState(false);
@@ -45,7 +49,9 @@ export function MachineDetails({ machineId, onClose, onRefresh }: MachineDetails
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
         <div className="w-full max-w-2xl rounded-lg bg-white p-6 dark:bg-surface-dark">
           <p className="text-red-600">Could not load machine details</p>
-          <Button onClick={onClose} className="mt-4">Close</Button>
+          <Button onClick={onClose} className="mt-4">
+            Close
+          </Button>
         </div>
       </div>
     );
@@ -75,8 +81,7 @@ export function MachineDetails({ machineId, onClose, onRefresh }: MachineDetails
       .finally(() => setSaving(false));
   };
 
-  const isOnline =
-    form.lastSeenAt !== null && Date.now() / 1000 - form.lastSeenAt < 300;
+  const isOnline = form.lastSeenAt !== null && Date.now() / 1000 - form.lastSeenAt < 300;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

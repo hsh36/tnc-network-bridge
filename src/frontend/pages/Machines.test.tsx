@@ -51,9 +51,7 @@ describe('Machines page', () => {
     );
 
     expect(screen.getByText('Machines')).toBeInTheDocument();
-    expect(
-      screen.getByText('Discovered TNC machines on the network.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Discovered TNC machines on the network.')).toBeInTheDocument();
   });
 
   it('displays the list of discovered machines', () => {

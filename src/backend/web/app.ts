@@ -8,6 +8,7 @@ import { authRoutes } from './routes/auth';
 import { configRoutes } from './routes/config';
 import { dhcpRoutes } from './routes/dhcp';
 import { eventsRoutes } from './routes/events';
+import { filesRoutes } from './routes/files';
 import { locksRoutes } from './routes/locks';
 import { logsRoutes } from './routes/logs';
 import { metricsRoutes } from './routes/metrics';
@@ -92,6 +93,7 @@ export function createApp(ctx: AppContext): Express {
   router.use(statusRoutes(ctx));
   router.use(configRoutes(ctx));
   router.use(dhcpRoutes(ctx));
+  router.use(filesRoutes(ctx));
   router.use(locksRoutes(ctx));
   router.use(logsRoutes(ctx));
   router.use(systemRoutes(ctx));

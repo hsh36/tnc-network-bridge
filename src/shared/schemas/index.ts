@@ -15,3 +15,4 @@ export * from './schedule';
 export * from './operations';
 export * from './events';
 export * from './network';
+export * from './monitoring';

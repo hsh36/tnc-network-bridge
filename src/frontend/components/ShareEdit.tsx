@@ -152,9 +152,7 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
                 id="conflictMode"
                 label="Conflict Resolution"
                 value={form.conflictMode}
-                onChange={(e) =>
-                  setForm({ ...form, conflictMode: e.target.value as ConflictMode })
-                }
+                onChange={(e) => setForm({ ...form, conflictMode: e.target.value as ConflictMode })}
               >
                 <option value="last_write_wins">Last Write Wins</option>
                 <option value="tnc_wins">TNC Wins</option>

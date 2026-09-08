@@ -67,3 +67,17 @@ export type ListLocksQuery = z.infer<typeof listLocksQuerySchema>;
 export const releaseLockQuerySchema = z.object({
   reason: z.string().max(500).optional(),
 });
+
+/** Extended lock detail for UI display (T51). */
+export const lockDetailSchema = lockSchema.extend({
+  /** Machine model from TNC discovery (T34). */
+  machineModel: z.string().nullable(),
+  /** Machine MAC address. */
+  macAddress: z.string().nullable(),
+  /** Duration lock has been held in seconds. */
+  heldSeconds: z.number().int().nonnegative(),
+  /** Seconds until expiration, null if held indefinitely. */
+  expiresInSeconds: z.number().int().nonnegative().nullable(),
+});
+
+export type LockDetail = z.infer<typeof lockDetailSchema>;

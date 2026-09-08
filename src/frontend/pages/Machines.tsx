@@ -85,28 +85,19 @@ export function Machines(): JSX.Element {
       header: 'Status',
       render: (m) => {
         const isOnline = m.lastSeenAt !== null && Date.now() / 1000 - m.lastSeenAt < 300;
-        return (
-          <Badge tone={isOnline ? 'ok' : 'idle'}>
-            {isOnline ? 'Online' : 'Offline'}
-          </Badge>
-        );
+        return <Badge tone={isOnline ? 'ok' : 'idle'}>{isOnline ? 'Online' : 'Offline'}</Badge>;
       },
     },
     {
       key: 'lastActivity',
       header: 'Last Activity',
-      render: (m) =>
-        m.lastSeenAt !== null ? new Date(m.lastSeenAt * 1000).toLocaleString() : '—',
+      render: (m) => (m.lastSeenAt !== null ? new Date(m.lastSeenAt * 1000).toLocaleString() : '—'),
     },
     {
       key: 'actions',
       header: '',
       render: (m) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setSelectedId(m.id)}
-        >
+        <Button size="sm" variant="ghost" onClick={() => setSelectedId(m.id)}>
           Edit
         </Button>
       ),

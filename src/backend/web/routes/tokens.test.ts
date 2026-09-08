@@ -209,11 +209,7 @@ describe('POST /tokens', () => {
   it('rejects invalid token names', async () => {
     const { agent, csrf } = await loginAgent();
 
-    await agent
-      .post('/api/v1/tokens')
-      .set('x-csrf-token', csrf)
-      .send({ name: '' })
-      .expect(400);
+    await agent.post('/api/v1/tokens').set('x-csrf-token', csrf).send({ name: '' }).expect(400);
 
     await agent
       .post('/api/v1/tokens')
@@ -238,10 +234,7 @@ describe('DELETE /tokens/:id', () => {
     const { agent, csrf } = await loginAgent();
     const created = auth.createToken('to-revoke', ['read']);
 
-    await agent
-      .delete(`/api/v1/tokens/${created.token.id}`)
-      .set('x-csrf-token', csrf)
-      .expect(200);
+    await agent.delete(`/api/v1/tokens/${created.token.id}`).set('x-csrf-token', csrf).expect(200);
 
     const res = await agent.get('/api/v1/tokens').expect(200);
     const token = res.body.data.items.find((t: { id: number }) => t.id === created.token.id);
@@ -251,19 +244,13 @@ describe('DELETE /tokens/:id', () => {
   it('returns 404 for a non-existent token', async () => {
     const { agent, csrf } = await loginAgent();
 
-    await agent
-      .delete('/api/v1/tokens/99999')
-      .set('x-csrf-token', csrf)
-      .expect(404);
+    await agent.delete('/api/v1/tokens/99999').set('x-csrf-token', csrf).expect(404);
   });
 
   it('rejects requests with invalid id format', async () => {
     const { agent, csrf } = await loginAgent();
 
-    await agent
-      .delete('/api/v1/tokens/not-a-number')
-      .set('x-csrf-token', csrf)
-      .expect(400);
+    await agent.delete('/api/v1/tokens/not-a-number').set('x-csrf-token', csrf).expect(400);
   });
 
   it('can revoke multiple tokens independently', async () => {
@@ -271,10 +258,7 @@ describe('DELETE /tokens/:id', () => {
     const token1 = auth.createToken('token1', ['read']);
     const token2 = auth.createToken('token2', ['read']);
 
-    await agent
-      .delete(`/api/v1/tokens/${token1.token.id}`)
-      .set('x-csrf-token', csrf)
-      .expect(200);
+    await agent.delete(`/api/v1/tokens/${token1.token.id}`).set('x-csrf-token', csrf).expect(200);
 
     const res = await agent.get('/api/v1/tokens').expect(200);
     const t1 = res.body.data.items.find((t: { id: number }) => t.id === token1.token.id);
@@ -286,20 +270,14 @@ describe('DELETE /tokens/:id', () => {
 
 describe('Token authentication in metrics endpoints', () => {
   it('rejects an invalid token', async () => {
-    await request(app)
-      .get('/api/v1/metrics/prtg')
-      .set('x-api-key', 'tnc_invalid')
-      .expect(401);
+    await request(app).get('/api/v1/metrics/prtg').set('x-api-key', 'tnc_invalid').expect(401);
   });
 
   it('rejects a revoked token', async () => {
     const created = auth.createToken('test', ['read']);
     auth.revokeToken(created.token.id);
 
-    await request(app)
-      .get('/api/v1/metrics/prtg')
-      .set('x-api-key', created.value)
-      .expect(401);
+    await request(app).get('/api/v1/metrics/prtg').set('x-api-key', created.value).expect(401);
   });
 
   it('grants access with a valid token to /metrics/prtg', async () => {
@@ -339,10 +317,7 @@ describe('Token authentication in metrics endpoints', () => {
     const created = auth.createToken('tracker', ['read']);
 
     // Use the token
-    await request(app)
-      .get('/api/v1/metrics')
-      .set('x-api-key', created.value)
-      .expect(200);
+    await request(app).get('/api/v1/metrics').set('x-api-key', created.value).expect(200);
 
     // Fetch updated token info
     const { agent } = await loginAgent();
@@ -357,10 +332,7 @@ describe('Tokens are read-only by design', () => {
     const created = auth.createToken('readonly', ['read']);
 
     // GET /metrics is allowed
-    await request(app)
-      .get('/api/v1/metrics')
-      .set('x-api-key', created.value)
-      .expect(200);
+    await request(app).get('/api/v1/metrics').set('x-api-key', created.value).expect(200);
 
     // GET /metrics/prometheus is allowed
     await request(app)
@@ -369,10 +341,7 @@ describe('Tokens are read-only by design', () => {
       .expect(200);
 
     // GET /metrics/prtg is allowed
-    await request(app)
-      .get('/api/v1/metrics/prtg')
-      .set('x-api-key', created.value)
-      .expect(200);
+    await request(app).get('/api/v1/metrics/prtg').set('x-api-key', created.value).expect(200);
   });
 
   it('tokens are rejected on session-only endpoints', async () => {
@@ -386,9 +355,6 @@ describe('Tokens are read-only by design', () => {
       .expect(401);
 
     // DELETE /tokens/:id requires session, not token
-    await request(app)
-      .delete('/api/v1/tokens/1')
-      .set('x-api-key', created.value)
-      .expect(401);
+    await request(app).delete('/api/v1/tokens/1').set('x-api-key', created.value).expect(401);
   });
 });

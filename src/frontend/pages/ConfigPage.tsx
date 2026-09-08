@@ -74,7 +74,6 @@ function validateConfigSection<K extends keyof typeof configSectionSchemas>(
   return errors;
 }
 
-
 // ---------------------------------------------------------------------------
 // Network Settings
 // ---------------------------------------------------------------------------
@@ -243,7 +242,9 @@ function SmbSection(): JSX.Element {
   const { banner, onSaved, onError } = useSaveBanner();
 
   useEffect(() => {
-    void api('config.get', { params: { section: 'smb' } }).then((data) => setForm(data as SmbConfig));
+    void api('config.get', { params: { section: 'smb' } }).then((data) =>
+      setForm(data as SmbConfig),
+    );
   }, []);
 
   useEffect(() => {
@@ -354,7 +355,11 @@ function SmbSection(): JSX.Element {
             id="serverPassword"
             label="Password"
             type="password"
-            value={form.server.credentials.password === '********' ? '' : form.server.credentials.password}
+            value={
+              form.server.credentials.password === '********'
+                ? ''
+                : form.server.credentials.password
+            }
             placeholder={form.server.credentials.password === '********' ? 'Unchanged' : undefined}
             onChange={(e) => {
               setForm({

@@ -60,7 +60,7 @@ describe('VersioningEngine', () => {
     async function waitForAsync(): Promise<void> {
       await new Promise((resolve) => setImmediate(resolve));
       await new Promise((resolve) => setImmediate(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for async blob store I/O
     }
 
     it('captures local content before server overwrites', async () => {
@@ -95,7 +95,7 @@ describe('VersioningEngine', () => {
     async function waitForAsync(): Promise<void> {
       await new Promise((resolve) => setImmediate(resolve));
       await new Promise((resolve) => setImmediate(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for async blob store I/O
     }
 
     it('captures local content before push', async () => {
@@ -117,7 +117,7 @@ describe('VersioningEngine', () => {
     async function waitForAsync(): Promise<void> {
       await new Promise((resolve) => setImmediate(resolve));
       await new Promise((resolve) => setImmediate(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for async blob store I/O
     }
 
     it('captures the losing side of a conflict', async () => {
@@ -139,7 +139,7 @@ describe('VersioningEngine', () => {
     async function waitForAsync(): Promise<void> {
       await new Promise((resolve) => setImmediate(resolve));
       await new Promise((resolve) => setImmediate(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for async blob store I/O
     }
 
     it('captures initial state of a file', async () => {

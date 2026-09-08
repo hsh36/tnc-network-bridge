@@ -89,11 +89,7 @@ export function SharesSection(): JSX.Element {
       key: 'actions',
       header: '',
       render: (s) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setEditingId(s.id)}
-        >
+        <Button size="sm" variant="ghost" onClick={() => setEditingId(s.id)}>
           Settings
         </Button>
       ),
@@ -106,9 +102,7 @@ export function SharesSection(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Shares
-          </h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Shares</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Manage synchronized shares and per-share settings.
           </p>

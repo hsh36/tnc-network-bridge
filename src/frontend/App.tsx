@@ -6,10 +6,12 @@ import { FullPageSpinner } from './components/ui/Spinner';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ConfigPage } from './pages/ConfigPage';
 import { Dashboard } from './pages/Dashboard';
-import { Locks } from './pages/Locks';
+import { FilesBrowserPage } from './pages/FilesBrowserPage';
+import { LocksConflictsPage } from './pages/LocksConflictsPage';
 import { Login } from './pages/Login';
 import { Logs } from './pages/Logs';
 import { Machines } from './pages/Machines';
+import { MonitoringPage } from './pages/MonitoringPage';
 import { Scheduling } from './pages/Scheduling';
 import { SystemUpdates } from './pages/SystemUpdates';
 import { Versions } from './pages/Versions';
@@ -46,7 +48,7 @@ function AppRoutes(): JSX.Element {
         path="/locks"
         element={
           <RequireAuth>
-            <Locks />
+            <LocksConflictsPage />
           </RequireAuth>
         }
       />
@@ -55,6 +57,22 @@ function AppRoutes(): JSX.Element {
         element={
           <RequireAuth>
             <Machines />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/files"
+        element={
+          <RequireAuth>
+            <FilesBrowserPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/monitoring"
+        element={
+          <RequireAuth>
+            <MonitoringPage />
           </RequireAuth>
         }
       />

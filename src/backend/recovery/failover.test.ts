@@ -106,7 +106,7 @@ describe('recovery hysteresis', () => {
 
     clock += 30;
     expect(controller.observe(healthy).readOnly).toBe(true);
-    clock += 31;
+    clock += 61; // Must exceed recoveryStabilityS: 60
     expect(controller.observe(healthy).readOnly).toBe(false);
   });
 
