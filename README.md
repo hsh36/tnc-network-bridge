@@ -1,6 +1,6 @@
 # TNC Network Bridge
 
-> A robust network bridge solution for TNC (Trusted Network Communication) environments.
+> A robust network bridge solution for HEIDENHAIN TNC (Tip Numerical Control) machines.
 
 ## Overview
 

@@ -542,7 +542,7 @@ server; a file open on the TNC is locked and never overwritten; the HTTPS dashbo
 └─ Run `/security-review` as part of this task.
 
 ### T64: Documentation
-├─ `README` (rewrite — the current one describes a generic "Trusted Network Communication" bridge, not this
+├─ `README` (rewrite — the current one describes a generic bridge, not this HEIDENHAIN TNC-specific
    product), `INSTALL.md`, `ADMIN.md` (operations, backup, recovery, troubleshooting), `API.md` + generated
    OpenAPI, `HEIDENHAIN.md` (**per-control compatibility matrix, SMB settings, filename rules, known quirks —
    the highest-value document for the actual user**), `CONTRIBUTING.md`, architecture diagrams, changelog.
