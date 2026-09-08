@@ -9,6 +9,7 @@ import { ensureCertificate, HttpsServerManager } from './web/https-setup';
 import { ConflictResolver } from './locking/conflict-resolver';
 import { LockManager } from './locking/lock-manager';
 import { createShareCacheRootResolver } from './config/share-paths';
+import { createBridgeMetrics } from './monitoring/registry';
 import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
@@ -101,6 +102,7 @@ async function main(): Promise<void> {
     events,
     versions,
     schedules,
+    metrics: createBridgeMetrics(),
     audit,
     shareCacheRoot: createShareCacheRootResolver(service.db),
     logger: service.logging.logger,

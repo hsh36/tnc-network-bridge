@@ -9,6 +9,7 @@ import { configRoutes } from './routes/config';
 import { eventsRoutes } from './routes/events';
 import { locksRoutes } from './routes/locks';
 import { logsRoutes } from './routes/logs';
+import { metricsRoutes } from './routes/metrics';
 import { schedulesRoutes } from './routes/schedules';
 import { statusRoutes } from './routes/status';
 import { systemRoutes } from './routes/system';
@@ -58,6 +59,7 @@ export function createApp(ctx: AppContext): Express {
   router.use(systemRoutes(ctx));
   router.use(versionsRoutes(ctx));
   router.use(schedulesRoutes(ctx));
+  router.use(metricsRoutes(ctx));
   router.use(eventsRoutes(ctx));
   app.use(API_BASE_PATH, router);
 

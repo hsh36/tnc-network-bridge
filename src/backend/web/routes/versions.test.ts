@@ -8,6 +8,7 @@ import { type Db } from '../../config/db';
 import { runMigrations } from '../../config/migrations/runner';
 import { generateSecretKey } from '../../config/secrets';
 import { createShareCacheRootResolver } from '../../config/share-paths';
+import { createBridgeMetrics } from '../../monitoring/registry';
 import { JobRegistry } from '../../scheduling/jobs';
 import { Scheduler } from '../../scheduling/scheduler';
 import { ConflictResolver } from '../../locking/conflict-resolver';
@@ -75,6 +76,7 @@ beforeEach(async () => {
     events: new EventBus(),
     versions,
     schedules: new Scheduler({ db, jobs: new JobRegistry() }),
+    metrics: createBridgeMetrics(),
     audit: new AuditLog(db),
     shareCacheRoot: createShareCacheRootResolver(db),
     certDir: tmpDir(),

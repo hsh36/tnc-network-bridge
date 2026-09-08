@@ -9,6 +9,7 @@ import { AuthLogWriter } from '../logging/auth-log';
 import { ConflictResolver } from '../locking/conflict-resolver';
 import { LockManager } from '../locking/lock-manager';
 import { createShareCacheRootResolver } from '../config/share-paths';
+import { createBridgeMetrics } from '../monitoring/registry';
 import { JobRegistry } from '../scheduling/jobs';
 import { Scheduler } from '../scheduling/scheduler';
 import { AuditLog, installAuditGuards } from '../security/audit-log';
@@ -50,6 +51,7 @@ function buildContext(): AppContext {
     events: new EventBus(),
     versions: new VersionStore({ db, blobs: new BlobStore({ root: `${tmpDir()}/versions` }) }),
     schedules: new Scheduler({ db, jobs: new JobRegistry() }),
+    metrics: createBridgeMetrics(),
     audit: new AuditLog(db),
     shareCacheRoot: createShareCacheRootResolver(db),
     certDir: tmpDir(),
