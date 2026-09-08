@@ -33,6 +33,9 @@ tmp/
 temp/
 *.tmp
 
+# Local dev server state (db, logs, self-signed TLS) — see src/backend/dev-server.ts
+.dev-data/
+
 # OS
 Thumbs.db
 .DS_Store

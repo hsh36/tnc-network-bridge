@@ -8,5 +8,6 @@ export default defineConfig({
     globals: true,
     include: ['**/*.test.ts', '**/*.test.tsx'],
     passWithNoTests: true,
+    setupFiles: ['./vitest.setup.ts'],
   },
 });

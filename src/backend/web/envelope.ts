@@ -1,4 +1,4 @@
-import { type ZodError } from 'zod';
+import { ZodError } from 'zod';
 import { type ApiErrorCode, type FieldError } from '../../shared';
 import {
   AuthError,
@@ -69,6 +69,14 @@ export function fieldErrorsFromZod(error: ZodError): FieldError[] {
 export function toHttpError(err: unknown): HttpError {
   if (err instanceof HttpError) {
     return err;
+  }
+  if (err instanceof ZodError) {
+    return new HttpError(
+      400,
+      'VALIDATION_FAILED',
+      'The request did not match the expected shape',
+      fieldErrorsFromZod(err),
+    );
   }
   if (err instanceof ConfigValidationError) {
     return new HttpError(

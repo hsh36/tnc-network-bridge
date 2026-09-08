@@ -1,32 +1,78 @@
-import { API_BASE_PATH, apiContract, buildPath, ENDPOINT_IDS, PRODUCT_NAME } from '../shared';
+import { type ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Layout } from './components/Layout';
+import { FullPageSpinner } from './components/ui/Spinner';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ConfigPage } from './pages/ConfigPage';
+import { Dashboard } from './pages/Dashboard';
+import { Locks } from './pages/Locks';
+import { Login } from './pages/Login';
+import { Logs } from './pages/Logs';
 
-/**
- * Placeholder shell. The real layout, routing and auth guard land in T32.
- *
- * It deliberately imports the whole shared barrel — constants, every Zod schema and
- * the API contract. That makes the T2 acceptance criterion something the build
- * enforces rather than something we assert: if anything under `src/shared` ever
- * reaches for a Node built-in or a backend module, this bundle stops compiling.
- */
+/** Redirects to `/login` when there is no session, preserving the intended route (T32's AC). */
+function RequireAuth({ children }: { readonly children: ReactNode }): JSX.Element {
+  const { session, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <FullPageSpinner />;
+  }
+  if (session === undefined) {
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  }
+  return <Layout>{children}</Layout>;
+}
+
+function AppRoutes(): JSX.Element {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <Dashboard />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/locks"
+        element={
+          <RequireAuth>
+            <Locks />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/config"
+        element={
+          <RequireAuth>
+            <ConfigPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/logs"
+        element={
+          <RequireAuth>
+            <Logs />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 export function App(): JSX.Element {
   return (
-    <main>
-      <h1>{PRODUCT_NAME}</h1>
-      <p>
-        API base path: <code>{API_BASE_PATH}</code>
-      </p>
-      <p>{ENDPOINT_IDS.length} endpoints defined in the shared contract.</p>
-      <ul>
-        {ENDPOINT_IDS.slice(0, 5).map((id) => (
-          <li key={id}>
-            <strong>{apiContract[id].method}</strong>{' '}
-            <code>
-              {buildPath(id, { id: 1, section: 'sync', action: 'scan', target: 'reboot' })}
-            </code>{' '}
-            — {apiContract[id].summary}
-          </li>
-        ))}
-      </ul>
-    </main>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
