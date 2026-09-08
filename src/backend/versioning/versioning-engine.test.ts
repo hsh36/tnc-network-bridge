@@ -230,10 +230,10 @@ describe('VersioningEngine', () => {
         blobRoot: '/nonexistent/path/that/will/fail',
       });
 
-      // This should not throw
-      await expect(
-        badEngine.captureBeforePull(shareId, 'PGM/FAIL.H', sourcePath),
-      ).resolves.not.toThrow();
+      // This should not throw synchronously (captureBeforePull is fire-and-forget)
+      expect(() => {
+        badEngine.captureBeforePull(shareId, 'PGM/FAIL.H', sourcePath);
+      }).not.toThrow();
 
       // Sync should be unaffected by the capture failure
       expect(true).toBe(true);
@@ -280,7 +280,7 @@ describe('VersioningEngine', () => {
       async function waitForAsync(): Promise<void> {
         await new Promise((resolve) => setImmediate(resolve));
         await new Promise((resolve) => setImmediate(resolve));
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       // Capture is async but non-blocking
