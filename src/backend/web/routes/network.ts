@@ -157,16 +157,18 @@ export function networkRoutes(ctx: AppContext): Router {
    *   "secondsRemaining": 45 | null
    * }
    */
-  router.get('/network/pending-change', requireSession(ctx), (req, res, next) => {
+  router.get('/network/pending-change', requireSession(ctx), (req, res, next): void => {
     try {
       const mac = req.query.mac as string | undefined;
       if (!mac) {
-        return res.status(400).json({ error: 'mac query parameter is required' });
+        res.status(400).json({ error: 'mac query parameter is required' });
+        return;
       }
 
       // Validate MAC address format
       if (!/^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)) {
-        return res.status(400).json({ error: 'invalid MAC address format' });
+        res.status(400).json({ error: 'invalid MAC address format' });
+        return;
       }
 
       // In production, this would:
@@ -209,13 +211,14 @@ export function networkRoutes(ctx: AppContext): Router {
    *   "status": "ok"
    * }
    */
-  router.put('/network/interfaces/:mac/config', requireSession(ctx), (req, res, next) => {
+  router.put('/network/interfaces/:mac/config', requireSession(ctx), (req, res, next): void => {
     try {
       const mac = req.params.mac!;
 
       // Validate MAC address format
       if (!/^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)) {
-        return res.status(400).json({ error: 'invalid MAC address format' });
+        res.status(400).json({ error: 'invalid MAC address format' });
+        return;
       }
 
       // In production, this would:
