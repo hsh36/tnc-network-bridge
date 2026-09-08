@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Locks } from './pages/Locks';
 import { Login } from './pages/Login';
 import { Logs } from './pages/Logs';
+import { Machines } from './pages/Machines';
 import { Scheduling } from './pages/Scheduling';
 import { SystemUpdates } from './pages/SystemUpdates';
 import { Versions } from './pages/Versions';
@@ -46,6 +47,14 @@ function AppRoutes(): JSX.Element {
         element={
           <RequireAuth>
             <Locks />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/machines"
+        element={
+          <RequireAuth>
+            <Machines />
           </RequireAuth>
         }
       />

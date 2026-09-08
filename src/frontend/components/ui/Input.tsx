@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { cn } from './cn';
 
 export interface FieldProps {
@@ -104,3 +104,28 @@ export function Checkbox({ label, id, className, ...rest }: CheckboxProps): JSX.
     </label>
   );
 }
+
+export type TextareaProps = FieldProps & TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { label, error, hint, id, className, ...rest },
+  ref,
+) {
+  return (
+    <FieldWrapper label={label} error={error} hint={hint} id={id}>
+      <textarea
+        ref={ref}
+        id={id}
+        className={cn(
+          'rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition-colors',
+          'focus:border-accent focus:ring-1 focus:ring-accent',
+          'dark:bg-surface-dark dark:text-slate-100',
+          error !== undefined ? 'border-status-error' : 'border-border dark:border-border-dark',
+          className,
+        )}
+        aria-invalid={error !== undefined}
+        {...rest}
+      />
+    </FieldWrapper>
+  );
+});

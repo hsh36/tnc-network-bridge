@@ -15,6 +15,7 @@ import { networkRoutes } from './routes/network';
 import { schedulesRoutes } from './routes/schedules';
 import { statusRoutes } from './routes/status';
 import { systemRoutes } from './routes/system';
+import { tokensRoutes } from './routes/tokens';
 import { versionsRoutes } from './routes/versions';
 
 /**
@@ -96,6 +97,7 @@ export function createApp(ctx: AppContext): Express {
   router.use(systemRoutes(ctx));
   router.use(versionsRoutes(ctx));
   router.use(schedulesRoutes(ctx));
+  router.use(tokensRoutes(ctx));
   router.use(metricsRoutes(ctx));
   router.use(eventsRoutes(ctx));
   router.use(networkRoutes(ctx));

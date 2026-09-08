@@ -9,6 +9,7 @@ import { cn } from './ui/cn';
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/locks', label: 'Locks' },
+  { to: '/machines', label: 'Machines' },
   { to: '/versions', label: 'Versions' },
   { to: '/scheduling', label: 'Scheduling' },
   { to: '/system-updates', label: 'Updates' },
