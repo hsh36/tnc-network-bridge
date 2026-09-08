@@ -285,9 +285,7 @@ describe('parseProcMounts', () => {
 
   it('unescapes octal sequences so a share name with a space still matches', () => {
     // Without this the mount looks absent and gets remounted forever.
-    const entries = parseProcMounts(
-      '//srv/x /mnt/tnc-server/CNC\\040Programme cifs rw,soft 0 0\n',
-    );
+    const entries = parseProcMounts('//srv/x /mnt/tnc-server/CNC\\040Programme cifs rw,soft 0 0\n');
     expect(entries[0]?.mountPoint).toBe('/mnt/tnc-server/CNC Programme');
   });
 
@@ -442,11 +440,7 @@ describe('CifsMountManager mounting', () => {
   it('maps a credentials failure from the helper to a permission error, not a retry', async () => {
     const fs = new FakeFs(false);
     const { invoke } = makeInvoker(fs, {
-      failWith: new PrivilegedCallError(
-        'mount error: NT_STATUS_LOGON_FAILURE',
-        'failed',
-        32,
-      ),
+      failWith: new PrivilegedCallError('mount error: NT_STATUS_LOGON_FAILURE', 'failed', 32),
     });
     const manager = makeManager(fs, invoke);
 

@@ -349,10 +349,7 @@ describe('testSmbConnection', () => {
 
   it('uses an anonymous session when no username is supplied', async () => {
     const { run, argvLog } = scriptedRunner({});
-    await testSmbConnection(
-      { unc: '//fileserver/programs' },
-      { ...baseDeps, run, fs: fakeFs() },
-    );
+    await testSmbConnection({ unc: '//fileserver/programs' }, { ...baseDeps, run, fs: fakeFs() });
     expect(argvLog[0]).toContain('-N');
   });
 
@@ -507,10 +504,7 @@ describe('testSmbConnection', () => {
     // The product exists to remove SMB1 from the corporate network. Offering it here
     // would be self-defeating.
     const { run, argvLog } = scriptedRunner({});
-    await testSmbConnection(
-      { unc: '//fileserver/programs' },
-      { ...baseDeps, run, fs: fakeFs() },
-    );
+    await testSmbConnection({ unc: '//fileserver/programs' }, { ...baseDeps, run, fs: fakeFs() });
     expect(argvLog[0]?.join(' ')).toContain('client min protocol=SMB2');
   });
 });

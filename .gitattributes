@@ -1,11 +1,22 @@
-# This project is developed on Windows and deployed on Raspberry Pi OS.
-# Everything in the repository is committed and checked out with LF endings:
-# shell scripts, sudoers fragments, systemd units and Samba configs are all
-# broken or silently rejected by CRLF.
-* text=auto eol=lf
+# Normalize line endings for all files
+* text=auto
 
+# Explicitly set line ending for TypeScript/JavaScript files to LF
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+
+# Binary files
 *.png binary
 *.jpg binary
+*.jpeg binary
+*.gif binary
 *.ico binary
-*.woff binary
-*.woff2 binary
+*.db binary
+*.node binary

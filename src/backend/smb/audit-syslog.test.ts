@@ -13,8 +13,7 @@ import {
 
 // A realistic line: PRI for LOCAL5/notice, RFC3164 header, Samba tag, then the payload
 // whose first three fields come from `full_audit:prefix = %I|%u|%S`.
-const line = (payload: string): string =>
-  `<173>Sep  7 10:00:01 tnc-bridge smbd_audit: ${payload}`;
+const line = (payload: string): string => `<173>Sep  7 10:00:01 tnc-bridge smbd_audit: ${payload}`;
 
 const OPEN = '192.168.42.50|tnc|programs|open|ok|w|12345.H';
 

@@ -84,12 +84,7 @@ export const INOTIFY_LIMIT_REMEDIATION =
   'detects changes but uses more CPU and reports them more slowly.';
 
 export type WatchEventType =
-  | 'added'
-  | 'changed'
-  | 'removed'
-  | 'renamed'
-  | 'dir-added'
-  | 'dir-removed';
+  'added' | 'changed' | 'removed' | 'renamed' | 'dir-added' | 'dir-removed';
 
 export interface WatchEvent {
   readonly type: WatchEventType;
@@ -181,7 +176,10 @@ export class CacheWatcher extends EventEmitter {
   /** What each known path looked like when it was last seen. The rename key. */
   private readonly known = new Map<string, Identity>();
   private readonly debounces = new Map<string, NodeJS.Timeout>();
-  private readonly pendingUnlinks = new Map<string, { identity: Identity; timer: NodeJS.Timeout }>();
+  private readonly pendingUnlinks = new Map<
+    string,
+    { identity: Identity; timer: NodeJS.Timeout }
+  >();
 
   constructor(options: CacheWatcherOptions) {
     super();

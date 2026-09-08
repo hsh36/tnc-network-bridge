@@ -199,9 +199,9 @@ describe('input validation', () => {
   });
 
   it('rejects a traversal segment in a share path', () => {
-    expect(() =>
-      build({ shares: [{ name: 'x', path: '/srv/tnc/../../etc' }] }),
-    ).toThrow(SmbConfError);
+    expect(() => build({ shares: [{ name: 'x', path: '/srv/tnc/../../etc' }] })).toThrow(
+      SmbConfError,
+    );
   });
 
   it('rejects duplicate share sections', () => {
@@ -393,15 +393,15 @@ describe('assertSmbBoundTo', () => {
 
   it('rejects SMB listening on the LAN address', () => {
     // The assertion the AC calls for: smbd on the TNC interface ONLY.
-    expect(() =>
-      assertSmbBoundTo([{ address: '10.0.0.5', port: 445 }], ['192.168.42.1']),
-    ).toThrow(/outside the TNC network/);
+    expect(() => assertSmbBoundTo([{ address: '10.0.0.5', port: 445 }], ['192.168.42.1'])).toThrow(
+      /outside the TNC network/,
+    );
   });
 
   it('rejects a wildcard bind, which includes the LAN address by definition', () => {
-    expect(() =>
-      assertSmbBoundTo([{ address: '0.0.0.0', port: 445 }], ['192.168.42.1']),
-    ).toThrow(/0\.0\.0\.0:445/);
+    expect(() => assertSmbBoundTo([{ address: '0.0.0.0', port: 445 }], ['192.168.42.1'])).toThrow(
+      /0\.0\.0\.0:445/,
+    );
   });
 
   it('rejects an IPv6 wildcard bind', () => {

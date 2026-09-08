@@ -316,8 +316,7 @@ export function parseSmbStatusJson(raw: string): SmbStatus {
       pid: toNumber(serverId.pid) ?? toNumber(session.pid),
       username: toStringOrNull(session.username),
       group: toStringOrNull(session.groupname) ?? toStringOrNull(session.group),
-      remoteMachine:
-        toStringOrNull(session.remote_machine) ?? toStringOrNull(session.machine),
+      remoteMachine: toStringOrNull(session.remote_machine) ?? toStringOrNull(session.machine),
       dialect:
         toStringOrNull(session.session_dialect) ??
         toStringOrNull(session.dialect) ??
@@ -423,7 +422,7 @@ export function parseSmbStatusText(raw: string): SmbStatus {
       block = 'tcons';
       continue;
     }
-    if (trimmed.startsWith("Locked files:")) {
+    if (trimmed.startsWith('Locked files:')) {
       block = 'files';
       continue;
     }

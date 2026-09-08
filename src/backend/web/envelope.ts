@@ -1,6 +1,13 @@
 import { type ZodError } from 'zod';
 import { type ApiErrorCode, type FieldError } from '../../shared';
-import { AuthError, InvalidCredentialsError, InvalidCsrfError, InvalidTokenError, RateLimitedError, SessionExpiredError } from './auth';
+import {
+  AuthError,
+  InvalidCredentialsError,
+  InvalidCsrfError,
+  InvalidTokenError,
+  RateLimitedError,
+  SessionExpiredError,
+} from './auth';
 import { ConfigError, ConfigValidationError } from '../config/config-manager';
 import { CertificateError } from './https-setup';
 import { LockError, LockHeldError, LockNotFoundError } from '../locking/lock-manager';

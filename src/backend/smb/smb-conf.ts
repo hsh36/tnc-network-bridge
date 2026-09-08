@@ -407,9 +407,7 @@ export function assertSafeConfig(content: string, options: SafetyOptions): void 
     failures.push('global/interfaces is empty — smbd would listen on every interface');
   }
   if (!interfaces.includes(options.tncInterface)) {
-    failures.push(
-      `global/interfaces does not include the TNC interface "${options.tncInterface}"`,
-    );
+    failures.push(`global/interfaces does not include the TNC interface "${options.tncInterface}"`);
   }
   if (options.lanInterface !== undefined && interfaces.includes(options.lanInterface)) {
     failures.push(
@@ -470,9 +468,7 @@ export function assertSafeConfig(content: string, options: SafetyOptions): void 
   }
 
   if (failures.length > 0) {
-    throw new SmbConfError(
-      `refusing to activate this smb.conf:\n  - ${failures.join('\n  - ')}`,
-    );
+    throw new SmbConfError(`refusing to activate this smb.conf:\n  - ${failures.join('\n  - ')}`);
   }
 }
 

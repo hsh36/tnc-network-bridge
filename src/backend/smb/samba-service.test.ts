@@ -143,9 +143,9 @@ describe('decideApplyStrategy', () => {
 
   it('restarts when the workgroup or netbios name changes', () => {
     const before = buildSmbConf(BASE);
-    expect(decideApplyStrategy(before, buildSmbConf({ ...BASE, workgroup: 'OTHER' })).strategy).toBe(
-      'restart',
-    );
+    expect(
+      decideApplyStrategy(before, buildSmbConf({ ...BASE, workgroup: 'OTHER' })).strategy,
+    ).toBe('restart');
     expect(
       decideApplyStrategy(before, buildSmbConf({ ...BASE, netbiosName: 'OTHER' })).strategy,
     ).toBe('restart');
@@ -180,7 +180,7 @@ describe('checkNt1Support', () => {
 describe('SambaService.assertNt1Supported', () => {
   const service = (output: CommandOutput, logger?: never) =>
     new SambaService({
-      run: (() => Promise.resolve(output)),
+      run: () => Promise.resolve(output),
       ...(logger === undefined ? {} : { logger }),
     });
 
@@ -206,7 +206,7 @@ describe('SambaService.assertNt1Supported', () => {
   it('warns but continues when support cannot be determined', async () => {
     const warn = jest.fn();
     const svc = new SambaService({
-      run: (() => Promise.resolve(ok('nothing useful'))),
+      run: () => Promise.resolve(ok('nothing useful')),
       logger: { info: jest.fn(), warn, error: jest.fn() },
     });
 
@@ -324,9 +324,7 @@ describe('parseSmbStatusText', () => {
   });
 
   it('handles a report with no locked files', () => {
-    const status = parseSmbStatusText(
-      'Samba version 4.13.13\n\nLocked files:\nNo locked files\n',
-    );
+    const status = parseSmbStatusText('Samba version 4.13.13\n\nLocked files:\nNo locked files\n');
     expect(status.openFiles).toEqual([]);
   });
 
@@ -400,10 +398,10 @@ describe('SambaService.status', () => {
   it('prefers JSON when the build supports it', async () => {
     const calls: string[][] = [];
     const service = new SambaService({
-      run: ((argv) => {
+      run: (argv) => {
         calls.push([...argv]);
         return Promise.resolve(ok(SMBSTATUS_JSON));
-      }),
+      },
     });
 
     const status = await service.status();
@@ -414,10 +412,10 @@ describe('SambaService.status', () => {
 
   it('falls back to the text parser on a build without --json', async () => {
     const service = new SambaService({
-      run: ((argv) =>
+      run: (argv) =>
         Promise.resolve(
           argv.includes('--json') ? failed('unrecognized option') : ok(SMBSTATUS_TEXT),
-        )),
+        ),
     });
 
     const status = await service.status();
@@ -428,8 +426,7 @@ describe('SambaService.status', () => {
 
   it('falls back when --json returns unparseable output', async () => {
     const service = new SambaService({
-      run: ((argv) =>
-        Promise.resolve(argv.includes('--json') ? ok('{oops') : ok(SMBSTATUS_TEXT))),
+      run: (argv) => Promise.resolve(argv.includes('--json') ? ok('{oops') : ok(SMBSTATUS_TEXT)),
       logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
     });
 
@@ -440,7 +437,7 @@ describe('SambaService.status', () => {
     // A bridge that stops syncing because it could not enumerate sessions has confused
     // a diagnostic for a dependency.
     const service = new SambaService({
-      run: (() => Promise.resolve(failed('permission denied'))),
+      run: () => Promise.resolve(failed('permission denied')),
       logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
     });
 

@@ -202,11 +202,7 @@ export const FAILURE_RULES: readonly FailureRule[] = [
   },
   {
     kind: 'clock_skew',
-    patterns: [
-      'NT_STATUS_TIME_DIFFERENCE_AT_DC',
-      'KRB5KRB_AP_ERR_SKEW',
-      'CLOCK SKEW TOO GREAT',
-    ],
+    patterns: ['NT_STATUS_TIME_DIFFERENCE_AT_DC', 'KRB5KRB_AP_ERR_SKEW', 'CLOCK SKEW TOO GREAT'],
     message: {
       de: 'Die Uhrzeit der Bridge weicht zu stark vom Domänencontroller ab.',
       en: "The bridge's clock differs too much from the domain controller.",
@@ -523,9 +519,10 @@ export async function testSmbConnection(
   const now = deps.now ?? Date.now;
   const started = now();
 
-  const finish = (
-    partial: Omit<TestSmbResponse, 'durationMs'>,
-  ): TestSmbResponse => ({ ...partial, durationMs: Math.max(0, now() - started) });
+  const finish = (partial: Omit<TestSmbResponse, 'durationMs'>): TestSmbResponse => ({
+    ...partial,
+    durationMs: Math.max(0, now() - started),
+  });
 
   let target: ParsedUnc;
   try {
@@ -777,13 +774,7 @@ async function probeWritable(
     // of detail that erodes trust in everything else the product does.
     await deps
       .run(
-        [
-          smbclient,
-          `//${target.host}/${target.share}`,
-          ...commonArgs,
-          '-c',
-          `del "${remotePath}"`,
-        ],
+        [smbclient, `//${target.host}/${target.share}`, ...commonArgs, '-c', `del "${remotePath}"`],
         runOptions,
       )
       .catch(() => undefined);

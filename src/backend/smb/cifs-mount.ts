@@ -341,13 +341,7 @@ export function assertSoftMount(entry: MountEntry): void {
  * pausing for a snapshot — does not flip a whole share into read-only. Three
  * consecutive failures do.
  */
-export const MOUNT_STATES = [
-  'unmounted',
-  'healthy',
-  'degraded',
-  'offline',
-  'remounting',
-] as const;
+export const MOUNT_STATES = ['unmounted', 'healthy', 'degraded', 'offline', 'remounting'] as const;
 
 export type MountState = (typeof MOUNT_STATES)[number];
 
