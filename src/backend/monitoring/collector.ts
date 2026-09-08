@@ -1,11 +1,11 @@
-import { statfs } from 'node:fs/promises';
+import { readFile, statfs } from 'node:fs/promises';
 import { loadavg, totalmem, freemem } from 'node:os';
 import { type MetricName } from '../../shared';
 import { type Db, type DbLogger } from '../config/db';
 import { type BridgeMetrics } from './registry';
 
 /**
- * Fills the live gauges and persists a sample row (T41).
+ * Fills the live gauges and persists a sample row (T45).
  *
  * Two outputs from one pass, deliberately. The Prometheus endpoint wants *current*
  * values and the dashboard wants *history*, and collecting each separately would let
@@ -60,6 +60,21 @@ export async function readDiskUsage(path: string): Promise<DiskUsage> {
   return { totalBytes, freeBytes, usedBytes, usedPct };
 }
 
+interface SyncStats {
+  readonly filesIn: number;
+  readonly filesOut: number;
+  readonly bytesIn: number;
+  readonly bytesOut: number;
+  readonly errorCount: number;
+}
+
+interface NetworkStats {
+  [iface: string]: {
+    readonly rxBytes: number;
+    readonly txBytes: number;
+  };
+}
+
 export class MetricsCollector {
   private readonly db: Db;
   private readonly metrics: BridgeMetrics;
@@ -69,6 +84,9 @@ export class MetricsCollector {
   private readonly startedAt: number;
 
   private timer: NodeJS.Timeout | undefined;
+  private lastSyncStats: SyncStats | undefined;
+  private lastCollectTime: number | undefined;
+  private tempReadFailed = false; // Log temperature read failure once
 
   constructor(options: CollectorOptions) {
     this.db = options.db;
@@ -77,6 +95,94 @@ export class MetricsCollector {
     this.logger = options.logger;
     this.now = options.now ?? (() => Math.floor(Date.now() / 1000));
     this.startedAt = options.startedAt ?? Date.now();
+  }
+
+  /**
+   * Reads sync statistics from the metrics registry and computes throughput.
+   * Calculates files/s and error rate based on counters.
+   */
+  private readSyncStats(): SyncStats {
+    // Get current counters from the registry
+    const filesInTotal = this.metrics.syncFiles.get({ direction: 'pull' });
+    const filesOutTotal = this.metrics.syncFiles.get({ direction: 'push' });
+    const bytesInTotal = this.metrics.syncBytes.get({ direction: 'pull' });
+    const bytesOutTotal = this.metrics.syncBytes.get({ direction: 'push' });
+
+    // Count recent errors from the error log
+    const now = this.now();
+    const recentErrorCount =
+      this.db.pluck<number>(
+        `SELECT count(*) FROM log_entries
+         WHERE source IN ('sync', 'lock', 'smb') AND level IN ('error', 'fatal')
+           AND ts >= @since`,
+        { since: (now - 60) * 1000 }, // Last 60 seconds
+      ) ?? 0;
+
+    return {
+      filesIn: filesInTotal,
+      filesOut: filesOutTotal,
+      bytesIn: bytesInTotal,
+      bytesOut: bytesOutTotal,
+      errorCount: recentErrorCount,
+    };
+  }
+
+  /** Reads CPU temperature from Raspberry Pi's thermal zone, or returns 0 if unavailable. */
+  private async readCpuTemperature(): Promise<number> {
+    try {
+      const tempStr = await readFile('/sys/class/thermal/thermal_zone0/temp', 'utf8');
+      const tempMilliC = Number.parseInt(tempStr.trim(), 10);
+      return Number.isFinite(tempMilliC) && tempMilliC >= 0 ? tempMilliC / 1000 : 0;
+    } catch {
+      if (!this.tempReadFailed) {
+        this.logger?.debug({}, 'CPU temperature unavailable (not a Pi or missing sysfs)');
+        this.tempReadFailed = true;
+      }
+      return 0;
+    }
+  }
+
+  /** Reads network interface RX/TX bytes from /proc/net/dev. */
+  private async readNetworkStats(): Promise<NetworkStats> {
+    const stats: NetworkStats = {};
+    try {
+      const content = await readFile('/proc/net/dev', 'utf8');
+      const lines = content.split('\n');
+      // Skip header lines (first 2)
+      for (const line of lines.slice(2)) {
+        const match = line.match(
+          /^\s*(\S+):\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/,
+        );
+        if (match) {
+          const [, iface, rxStr, txStr] = match;
+          if (iface && rxStr && txStr) {
+            stats[iface] = {
+              rxBytes: Number.parseInt(rxStr, 10),
+              txBytes: Number.parseInt(txStr, 10),
+            };
+          }
+        }
+      }
+    } catch (err) {
+      this.logger?.debug({ err }, 'could not read network stats');
+    }
+    return stats;
+  }
+
+  /** Reads current queue depth by querying in-flight transfers. */
+  private readQueueDepth(): number {
+    // Query pending transfers from the database by checking file_index state
+    // and recent sync activity
+    try {
+      const queuedCount =
+        this.db.pluck<number>(
+          `SELECT count(*) FROM file_index
+           WHERE state IN ('pending_push', 'pending_pull')`,
+        ) ?? 0;
+      return queuedCount;
+    } catch {
+      return 0;
+    }
   }
 
   /**
@@ -103,6 +209,14 @@ export class MetricsCollector {
     const load = loadavg()[0] ?? 0;
     samples.push({ metric: 'cpu.load', shareId: 0, value: load });
 
+    // CPU temperature
+    try {
+      const temp = await this.readCpuTemperature();
+      samples.push({ metric: 'cpu.temp', shareId: 0, value: temp });
+    } catch (err) {
+      this.logger?.debug({ err }, 'could not read CPU temperature');
+    }
+
     const total = totalmem();
     const memUsedPct = total > 0 ? ((total - freemem()) / total) * 100 : 0;
     samples.push({ metric: 'mem.used_pct', shareId: 0, value: memUsedPct });
@@ -110,6 +224,64 @@ export class MetricsCollector {
     const uptimeSeconds = Math.floor((Date.now() - this.startedAt) / 1000);
     this.metrics.uptime.set(uptimeSeconds);
     samples.push({ metric: 'uptime.seconds', shareId: 0, value: uptimeSeconds });
+
+    // Sync statistics and throughput
+    try {
+      const syncStats = this.readSyncStats();
+
+      // Raw counters for total bytes and files
+      samples.push({ metric: 'sync.bytes_in', shareId: 0, value: syncStats.bytesIn });
+      samples.push({ metric: 'sync.bytes_out', shareId: 0, value: syncStats.bytesOut });
+
+      // Files per second (calculated from delta)
+      const now = this.now();
+      if (this.lastSyncStats !== undefined && this.lastCollectTime !== undefined) {
+        const timeDelta = now - this.lastCollectTime;
+        if (timeDelta > 0) {
+          const filesDelta =
+            syncStats.filesIn +
+            syncStats.filesOut -
+            (this.lastSyncStats.filesIn + this.lastSyncStats.filesOut);
+          const filesPerS = filesDelta / timeDelta;
+          samples.push({ metric: 'sync.files_per_s', shareId: 0, value: Math.max(0, filesPerS) });
+
+          // Error rate: errors in the last minute
+          const errorRate = syncStats.errorCount / 60; // errors per second
+          samples.push({ metric: 'sync.error_rate', shareId: 0, value: errorRate });
+        }
+      }
+
+      this.lastSyncStats = syncStats;
+      this.lastCollectTime = now;
+    } catch (err) {
+      this.logger?.warn({ err }, 'could not read sync statistics');
+    }
+
+    // Queue depth
+    try {
+      const queueDepth = this.readQueueDepth();
+      this.metrics.queueDepth.set(queueDepth);
+      samples.push({ metric: 'queue.depth', shareId: 0, value: queueDepth });
+    } catch (err) {
+      this.logger?.warn({ err }, 'could not read queue depth');
+    }
+
+    // Network interface statistics
+    try {
+      const netStats = await this.readNetworkStats();
+      let totalRx = 0;
+      let totalTx = 0;
+
+      for (const stats of Object.values(netStats)) {
+        totalRx += stats.rxBytes;
+        totalTx += stats.txBytes;
+      }
+
+      samples.push({ metric: 'net.rx_bytes', shareId: 0, value: totalRx });
+      samples.push({ metric: 'net.tx_bytes', shareId: 0, value: totalTx });
+    } catch (err) {
+      this.logger?.debug({ err }, 'could not read network statistics');
+    }
 
     try {
       const activeLocks =

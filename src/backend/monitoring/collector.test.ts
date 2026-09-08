@@ -133,6 +133,60 @@ describe('collect', () => {
 
     expect(metrics.sharesOnline.get()).toBe(1);
   });
+
+  it('collects sync throughput metrics', async () => {
+    metrics.syncFiles.inc(5, { direction: 'pull' });
+    metrics.syncFiles.inc(3, { direction: 'push' });
+    metrics.syncBytes.inc(1_000_000, { direction: 'pull' });
+    metrics.syncBytes.inc(500_000, { direction: 'push' });
+
+    const samples = await collector.collect();
+
+    const metrics_ = samples.map((s) => s.metric);
+    expect(metrics_).toContain('sync.bytes_in');
+    expect(metrics_).toContain('sync.bytes_out');
+  });
+
+  it('collects queue depth metrics', async () => {
+    db.run(
+      `INSERT INTO shares (id, name, server_unc, mount_point, cache_path, created_at, updated_at)
+       VALUES (1, 'main', '//srv/s', '/mnt/main', '/srv/main', @now, @now)`,
+      { now: NOW },
+    );
+    db.run(
+      `INSERT INTO file_index (share_id, rel_path, rel_path_ci, state)
+       VALUES (1, 'file1.h', 'file1.h', 'pending_push')`,
+    );
+    db.run(
+      `INSERT INTO file_index (share_id, rel_path, rel_path_ci, state)
+       VALUES (1, 'file2.h', 'file2.h', 'pending_pull')`,
+    );
+
+    const samples = await collector.collect();
+
+    const queueMetric = samples.find((s) => s.metric === 'queue.depth');
+    expect(queueMetric).toBeDefined();
+    expect(queueMetric?.value).toBe(2);
+  });
+
+  it('collects CPU temperature (or 0 if unavailable)', async () => {
+    const samples = await collector.collect();
+
+    const tempMetric = samples.find((s) => s.metric === 'cpu.temp');
+    expect(tempMetric).toBeDefined();
+    expect(tempMetric?.value).toBeGreaterThanOrEqual(0);
+  });
+
+  it('collects network statistics', async () => {
+    const samples = await collector.collect();
+
+    const rxMetric = samples.find((s) => s.metric === 'net.rx_bytes');
+    const txMetric = samples.find((s) => s.metric === 'net.tx_bytes');
+    expect(rxMetric).toBeDefined();
+    expect(txMetric).toBeDefined();
+    expect(rxMetric?.value).toBeGreaterThanOrEqual(0);
+    expect(txMetric?.value).toBeGreaterThanOrEqual(0);
+  });
 });
 
 describe('start and stop', () => {

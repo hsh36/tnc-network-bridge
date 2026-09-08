@@ -1,9 +1,9 @@
 import { statfsSync } from 'node:fs';
 import { freemem, hostname, loadavg, networkInterfaces, release, totalmem, uptime } from 'node:os';
 import { Router } from 'express';
-import { type NetworkInterface, type SystemInfo } from '../../../shared';
+import { type NetworkInterface, type SystemInfo, updateHistoryQuerySchema } from '../../../shared';
 import { type AppContext } from '../context';
-import { ok, requireSessionOrToken } from '../middleware';
+import { ok, requireSessionOrToken, requireSession } from '../middleware';
 
 function readDisk(mountPoint: string): SystemInfo['disks'][number] | undefined {
   try {
@@ -81,6 +81,91 @@ export function systemRoutes(ctx: AppContext): Router {
       interfaces: collectInterfaces(network.lan.interface, network.tnc.interface),
     };
     ok(res, info);
+  });
+
+  // Update endpoints (T44) — minimal implementation for UI
+  const updateHistory: Array<{
+    id: string;
+    ts: number;
+    fromVersion: string | null;
+    toVersion: string | null;
+    channel: 'stable' | 'beta' | null;
+    result: 'ok' | 'failed' | 'rolled_back';
+    log: string | null;
+  }> = [];
+
+  router.get('/update/status', requireSessionOrToken(ctx), (_req, res) => {
+    ok(res, {
+      currentVersion: ctx.version,
+      available: null,
+      phase: 'idle',
+      progressPct: null,
+      lastCheckAt: null,
+      lastError: null,
+      rollbackVersion: null,
+    });
+  });
+
+  router.post('/update/check', requireSession(ctx), async (_req, res) => {
+    // Placeholder: in T43, this would poll GitHub Releases
+    ok(res, {
+      currentVersion: ctx.version,
+      available: null,
+      phase: 'idle',
+      progressPct: null,
+      lastCheckAt: Math.floor(Date.now() / 1000),
+      lastError: null,
+      rollbackVersion: null,
+    });
+  });
+
+  router.post('/update/apply', requireSession(ctx), async (_req, res) => {
+    // Placeholder: in T43, this would download, verify, and apply
+    ctx.events.publish({
+      ts: Date.now(),
+      type: 'update',
+      status: {
+        currentVersion: ctx.version,
+        available: null,
+        phase: 'idle',
+        progressPct: null,
+        lastCheckAt: null,
+        lastError: null,
+        rollbackVersion: null,
+      },
+    });
+    ok(res, { accepted: true });
+  });
+
+  router.post('/update/rollback', requireSession(ctx), async (_req, res) => {
+    // Placeholder: in T43, this would rollback to the previous version
+    ctx.events.publish({
+      ts: Date.now(),
+      type: 'update',
+      status: {
+        currentVersion: ctx.version,
+        available: null,
+        phase: 'idle',
+        progressPct: null,
+        lastCheckAt: null,
+        lastError: null,
+        rollbackVersion: null,
+      },
+    });
+    ok(res, { accepted: true });
+  });
+
+  router.get('/update/history', requireSessionOrToken(ctx), (req, res) => {
+    const query = updateHistoryQuerySchema.parse(req.query);
+    const limit = query.limit ?? 50;
+    const offset = query.offset ?? 0;
+    const items = updateHistory.slice(offset, offset + limit);
+    ok(res, {
+      items,
+      total: updateHistory.length,
+      offset,
+      limit,
+    });
   });
 
   return router;

@@ -171,7 +171,7 @@ export function previewRuns(expression: string, count = 5): Date[] {
 
 export class Scheduler {
   private readonly db: Db;
-  private readonly jobs: JobRegistry;
+  readonly jobs: JobRegistry;
   private readonly logger: DbLogger | undefined;
   private readonly audit: AuditLog | undefined;
   private readonly now: () => number;

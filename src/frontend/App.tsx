@@ -10,6 +10,7 @@ import { Locks } from './pages/Locks';
 import { Login } from './pages/Login';
 import { Logs } from './pages/Logs';
 import { Scheduling } from './pages/Scheduling';
+import { SystemUpdates } from './pages/SystemUpdates';
 import { Versions } from './pages/Versions';
 
 /** Redirects to `/login` when there is no session, preserving the intended route (T32's AC). */
@@ -77,6 +78,14 @@ function AppRoutes(): JSX.Element {
         element={
           <RequireAuth>
             <Logs />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/system-updates"
+        element={
+          <RequireAuth>
+            <SystemUpdates />
           </RequireAuth>
         }
       />

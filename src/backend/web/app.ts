@@ -6,10 +6,12 @@ import { type AppContext } from './context';
 import { errorHandler, notFoundHandler, requestIdMiddleware } from './middleware';
 import { authRoutes } from './routes/auth';
 import { configRoutes } from './routes/config';
+import { dhcpRoutes } from './routes/dhcp';
 import { eventsRoutes } from './routes/events';
 import { locksRoutes } from './routes/locks';
 import { logsRoutes } from './routes/logs';
 import { metricsRoutes } from './routes/metrics';
+import { networkRoutes } from './routes/network';
 import { schedulesRoutes } from './routes/schedules';
 import { statusRoutes } from './routes/status';
 import { systemRoutes } from './routes/system';
@@ -88,6 +90,7 @@ export function createApp(ctx: AppContext): Express {
   router.use(authRoutes(ctx));
   router.use(statusRoutes(ctx));
   router.use(configRoutes(ctx));
+  router.use(dhcpRoutes(ctx));
   router.use(locksRoutes(ctx));
   router.use(logsRoutes(ctx));
   router.use(systemRoutes(ctx));
@@ -95,6 +98,7 @@ export function createApp(ctx: AppContext): Express {
   router.use(schedulesRoutes(ctx));
   router.use(metricsRoutes(ctx));
   router.use(eventsRoutes(ctx));
+  router.use(networkRoutes(ctx));
   app.use(API_BASE_PATH, router);
 
   app.use(notFoundHandler);

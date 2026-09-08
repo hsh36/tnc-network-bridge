@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: '/locks', label: 'Locks' },
   { to: '/versions', label: 'Versions' },
   { to: '/scheduling', label: 'Scheduling' },
+  { to: '/system-updates', label: 'Updates' },
   { to: '/config', label: 'Configuration' },
   { to: '/logs', label: 'Logs' },
 ] as const;

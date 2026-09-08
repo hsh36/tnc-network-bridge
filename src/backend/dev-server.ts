@@ -8,14 +8,17 @@ import { EventBus } from './web/event-bus';
 import { ensureCertificate, HttpsServerManager } from './web/https-setup';
 import { ConflictResolver } from './locking/conflict-resolver';
 import { LockManager } from './locking/lock-manager';
+import { ScheduleLockWindowManager } from './locking/schedule-windows';
 import { createShareCacheRootResolver } from './config/share-paths';
 import { createBridgeMetrics } from './monitoring/registry';
+import { MetricsCollector } from './monitoring/collector';
 import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
 import { BlobStore } from './versioning/blob-store';
 import { VersionCleanup } from './versioning/cleanup';
 import { VersionStore } from './versioning/version-store';
+import { VersioningEngine } from './versioning/versioning-engine';
 
 /**
  * Development/standalone entrypoint.
@@ -68,9 +71,17 @@ async function main(): Promise<void> {
 
   installAuditGuards(service.db);
   const audit = new AuditLog(service.db, service.logging.logger);
+  const blobRoot = join(DEV_ROOT, 'versions');
   const versions = new VersionStore({
     db: service.db,
-    blobs: new BlobStore({ root: join(DEV_ROOT, 'versions') }),
+    blobs: new BlobStore({ root: blobRoot }),
+    logger: service.logging.logger,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const versioning = new VersioningEngine({
+    store: versions,
+    blobRoot,
     logger: service.logging.logger,
   });
 
@@ -93,6 +104,17 @@ async function main(): Promise<void> {
     audit,
   });
 
+  // Wire up lock/unlock schedule window handlers (T42)
+  new ScheduleLockWindowManager({
+    db: service.db,
+    locks,
+    scheduler: schedules,
+    logger: service.logging.logger,
+    audit,
+  });
+
+  const metrics = createBridgeMetrics();
+
   const ctx: AppContext = {
     db: service.db,
     config: service.config,
@@ -102,7 +124,7 @@ async function main(): Promise<void> {
     events,
     versions,
     schedules,
-    metrics: createBridgeMetrics(),
+    metrics,
     audit,
     shareCacheRoot: createShareCacheRootResolver(service.db),
     logger: service.logging.logger,
@@ -111,6 +133,29 @@ async function main(): Promise<void> {
     startedAt: Date.now(),
     now: () => Date.now(),
   };
+
+  // Metrics sampling and rollup (T45)
+  const cachePath = join(DEV_ROOT, 'cache', 'shared');
+
+  const collector = new MetricsCollector({
+    db: service.db,
+    metrics,
+    cachePath,
+    logger: service.logging.logger,
+    startedAt: Date.now(),
+  });
+
+  // Sample metrics every 10 seconds
+  collector.start(10_000);
+
+  // Register rollup job (consolidate old samples to hourly buckets)
+  jobs.register('prune', async () => {
+    // Rollup samples older than 7 days (604,800 seconds) into hourly buckets
+    const result = collector.rollUp(7 * 24 * 60 * 60);
+    return {
+      detail: `rolled up ${result.rolledUp} samples, deleted ${result.deleted} old samples`,
+    };
+  });
 
   const app = createApp(ctx);
   const https = HttpsServerManager.create(app, {
@@ -133,6 +178,7 @@ async function main(): Promise<void> {
     {
       shutdown: async (reason) => {
         clearInterval(heartbeat);
+        collector.stop();
         await https.close();
         await service.shutdown(reason);
       },
