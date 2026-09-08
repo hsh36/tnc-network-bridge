@@ -78,8 +78,8 @@ async function main(): Promise<void> {
     logger: service.logging.logger,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const versioning = new VersioningEngine({
+  // Versioning engine initialized for demo (not used in development)
+  void new VersioningEngine({
     store: versions,
     blobRoot,
     logger: service.logging.logger,

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { Card, CardHeader } from '../components/ui/Card';
+import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Spinner } from '../components/ui/Spinner';
 import { useApiQuery } from '../hooks/useApi';

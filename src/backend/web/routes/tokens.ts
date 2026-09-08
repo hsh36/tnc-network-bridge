@@ -41,6 +41,7 @@ export function tokensRoutes(ctx: AppContext): Router {
       const body = createTokenRequestSchema.parse(req.body);
       const result = ctx.auth.createToken(body.name, body.scopes);
       ok(res, { token: result.token, value: result.value }, 201);
+      return Promise.resolve();
     }),
   );
 
@@ -51,7 +52,7 @@ export function tokensRoutes(ctx: AppContext): Router {
     asyncHandler((req, res) => {
       const tokenId = idParam(req.params.id);
 
-      // Ensure the token exists before attempting revocation.
+      // Ensure the token exists before attempted revocation.
       const allTokens = ctx.auth.listTokens();
       const token = allTokens.find((t) => t.id === tokenId);
       if (token === undefined) {
@@ -60,6 +61,7 @@ export function tokensRoutes(ctx: AppContext): Router {
 
       ctx.auth.revokeToken(tokenId);
       ok(res, { acknowledged: true as const });
+      return Promise.resolve();
     }),
   );
 

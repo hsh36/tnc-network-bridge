@@ -111,7 +111,6 @@ export function parseStateFromNmcliOutput(stdout: string): 'up' | 'down' | 'unkn
 export function parseSpeedFromNmcliOutput(stdout: string): number | undefined {
   for (const line of stdout.split('\n')) {
     if (line.startsWith('WIRED-PROPERTIES.CARRIER:')) {
-      const _carrier = line.slice('WIRED-PROPERTIES.CARRIER:'.length).trim();
       // Speed is typically not reported by nmcli device show; real implementations
       // would read from /sys/class/net/<iface>/speed. For now, return undefined.
       // In production, this would integrate with /sys/class/net/eth0/speed.
@@ -122,13 +121,13 @@ export function parseSpeedFromNmcliOutput(stdout: string): number | undefined {
 
 export class NetworkConfigManager {
   private readonly db: Db;
-  private readonly logger?: DbLogger;
-  private readonly invokePrivileged: HelperInvoker;
+  private readonly logger: DbLogger | undefined;
 
   constructor(options: NetworkConfigManagerOptions) {
     this.db = options.db;
-    this.logger = options.logger;
-    this.invokePrivileged = options.invokePrivileged ?? invokePrivileged;
+    this.logger = options.logger ?? undefined;
+    // Invokerivileged could be used for privileged operations in production
+    void (options.invokePrivileged ?? invokePrivileged);
   }
 
   /**

@@ -110,7 +110,7 @@ export function SystemUpdates(): JSX.Element {
                 <Button
                   size="sm"
                   loading={applying}
-                  onClick={() => void apply(status.available.version)}
+                  onClick={() => void apply(status.available!.version)}
                   disabled={isUpdating || checking || rolling}
                 >
                   Apply Update

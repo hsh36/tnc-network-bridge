@@ -10,7 +10,7 @@ import { MachineDetails } from '../components/MachineDetails';
 import { Badge } from '../components/ui/Badge';
 
 export function Machines(): JSX.Element {
-  const machines = useApiQuery('tncClients.list', {}, { pollMs: 30_000 });
+  const machines = useApiQuery('tncClients.list', { query: {} }, { pollMs: 30_000 });
   const [selectedId, setSelectedId] = useState<number>();
   const [selectedMachines, setSelectedMachines] = useState<Set<number>>(new Set());
 
