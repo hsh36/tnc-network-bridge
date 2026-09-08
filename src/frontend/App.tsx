@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Locks } from './pages/Locks';
 import { Login } from './pages/Login';
 import { Logs } from './pages/Logs';
+import { Versions } from './pages/Versions';
 
 /** Redirects to `/login` when there is no session, preserving the intended route (T32's AC). */
 function RequireAuth({ children }: { readonly children: ReactNode }): JSX.Element {
@@ -43,6 +44,14 @@ function AppRoutes(): JSX.Element {
         element={
           <RequireAuth>
             <Locks />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/versions"
+        element={
+          <RequireAuth>
+            <Versions />
           </RequireAuth>
         }
       />

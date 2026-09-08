@@ -9,6 +9,7 @@ import { cn } from './ui/cn';
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/locks', label: 'Locks' },
+  { to: '/versions', label: 'Versions' },
   { to: '/config', label: 'Configuration' },
   { to: '/logs', label: 'Logs' },
 ] as const;

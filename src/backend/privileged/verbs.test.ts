@@ -212,9 +212,9 @@ describe('config-body verbs are bounded even though their content is free-form',
   const bodyVerbs = ['write-samba-config', 'write-dnsmasq-config', 'write-nft-ruleset'] as const;
 
   it.each(bodyVerbs)('%s rejects a NUL byte in the body', (verb) => {
-    expect(() => validateRequest({ ...VALID_REQUESTS[verb], content: 'a\u0000b' }, OPTIONS)).toThrow(
-      /NUL byte/,
-    );
+    expect(() =>
+      validateRequest({ ...VALID_REQUESTS[verb], content: 'a\u0000b' }, OPTIONS),
+    ).toThrow(/NUL byte/);
   });
 
   it.each(bodyVerbs)('%s rejects a body over 1 MiB', (verb) => {
