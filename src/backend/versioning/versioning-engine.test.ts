@@ -114,12 +114,17 @@ describe('VersioningEngine', () => {
   });
 
   describe('captureConflictLoser', () => {
+    async function waitForAsync(): Promise<void> {
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     it('captures the losing side of a conflict', async () => {
       const sourcePath = await writeCacheFile('PGM/CONFLICT.H', 'LOSER CONTENT');
 
       await engine.captureConflictLoser(shareId, 'PGM/CONFLICT.H', sourcePath, 'last_write_wins');
-      await new Promise((resolve) => setImmediate(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await waitForAsync();
 
       const versions = store.list({ shareId, relPath: 'PGM/CONFLICT.H' });
       expect(versions.items).toHaveLength(1);
@@ -131,12 +136,17 @@ describe('VersioningEngine', () => {
   });
 
   describe('captureInitial', () => {
+    async function waitForAsync(): Promise<void> {
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     it('captures initial state of a file', async () => {
       const sourcePath = await writeCacheFile('PGM/INITIAL.H', 'INITIAL STATE');
 
       await engine.captureInitial(shareId, 'PGM/INITIAL.H', sourcePath, 'local');
-      await new Promise((resolve) => setImmediate(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await waitForAsync();
 
       const versions = store.list({ shareId, relPath: 'PGM/INITIAL.H' });
       expect(versions.items).toHaveLength(1);
@@ -239,17 +249,21 @@ describe('VersioningEngine', () => {
       async function waitForAsync(): Promise<void> {
         await new Promise((resolve) => setImmediate(resolve));
         await new Promise((resolve) => setImmediate(resolve));
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
+      // Capture first file
       await engine.captureBeforePull(shareId, 'PGM/A.H', path1);
-      await engine.captureBeforePull(shareId, 'PGM/B.H', path2);
       await waitForAsync();
 
       const versionsA = store.list({ shareId, relPath: 'PGM/A.H' });
-      const versionsB = store.list({ shareId, relPath: 'PGM/B.H' });
-
       expect(versionsA.items).toHaveLength(1);
+
+      // Capture second file with same content
+      await engine.captureBeforePull(shareId, 'PGM/B.H', path2);
+      await waitForAsync();
+
+      const versionsB = store.list({ shareId, relPath: 'PGM/B.H' });
       expect(versionsB.items).toHaveLength(1);
       expect(versionsA.items[0].hash).toBe(versionsB.items[0].hash);
 

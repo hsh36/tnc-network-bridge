@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { macAddressSchema, ipv4Schema } from '../../../shared/schemas/primitives';
+import { macAddressSchema, ipv4Schema } from '../../../shared';
 import { DHCPConfigManager } from '../dhcp/dhcp-config-manager';
 import { rateLimit } from '../security/rate-limit';
 import { type AppContext } from '../context';
