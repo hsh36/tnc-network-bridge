@@ -2,6 +2,7 @@ import { cleanupTmpDbs, tmpDb } from '../../../tests/support/tmp-db';
 import { type Db } from '../config/db';
 import { runMigrations } from '../config/migrations/runner';
 import { ConfigManager } from '../config/config-manager';
+import { generateSecretKey } from '../config/secrets';
 import { JobRegistry, type JobContext } from '../scheduling/jobs';
 import { Scheduler } from '../scheduling/scheduler';
 import { LockManager } from './lock-manager';
@@ -18,7 +19,7 @@ let jobs: JobRegistry;
 beforeEach(() => {
   db = tmpDb();
   runMigrations(db);
-  config = new ConfigManager(db);
+  config = ConfigManager.create({ db, secretKey: generateSecretKey() });
   clock = 1_700_000_000;
   locks = new LockManager({ db, config, now: () => clock });
   jobs = new JobRegistry();
@@ -85,11 +86,11 @@ describe('ScheduleLockWindowManager', () => {
       expect(outcome?.detail).toContain('locked 3 paths');
 
       // Verify the locks exist
-      const activeLocks = db.all(
+      const activeLocks = db.all<{ rel_path: string }>(
         `SELECT rel_path FROM locks WHERE share_id = 1 AND released_at IS NULL ORDER BY rel_path`,
       );
       expect(activeLocks).toHaveLength(3);
-      expect(activeLocks.map((l: { rel_path: string }) => l.rel_path)).toEqual([
+      expect(activeLocks.map((l) => l.rel_path)).toEqual([
         'programs/folder/part3.H',
         'programs/part1.H',
         'programs/part2.H',
@@ -257,6 +258,7 @@ describe('ScheduleLockWindowManager', () => {
     it('does not release manual locks', () => {
       // Create a manual lock and a scheduled lock
       locks.createManual(1, {
+        shareId: 1,
         relPath: 'programs/part1.H',
         note: 'operator lock',
       });
