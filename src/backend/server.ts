@@ -12,6 +12,7 @@ import { createBridgeMetrics } from './monitoring/registry';
 import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
+import { FirewallService } from './security/firewall-service';
 import { BlobStore } from './versioning/blob-store';
 import { VersionCleanup } from './versioning/cleanup';
 import { VersionStore } from './versioning/version-store';
@@ -252,6 +253,18 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   };
 
   try {
+    // Before the listener opens: the management interface must never be reachable from
+    // the machine segment, not even for the seconds between binding and the first
+    // config save. See security/firewall.ts for why this is enforced twice.
+    const firewall = new FirewallService({ logger });
+    firewall.apply(service.config.get('network').tnc.interface);
+    // The rule names an interface, so moving the TNC side to another NIC has to reload
+    // it — otherwise the drop points at a NIC nothing arrives on, and the admin UI is
+    // quietly reachable from the machine segment again.
+    service.config.onSectionChange('network', () => {
+      firewall.apply(service.config.get('network').tnc.interface);
+    });
+
     const material = ensureCertificate(paths.certDir);
 
     const context: AppContext = {

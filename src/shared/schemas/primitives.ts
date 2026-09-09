@@ -65,9 +65,16 @@ export const uncPathSchema = z
   );
 
 /** Kernel network interface name, e.g. `eth0`. */
+/**
+ * Exported as a pattern as well as a schema: code that interpolates an interface name
+ * into a root-owned config file needs to re-check it there, at the point of use, rather
+ * than trust that it came through the schema on the way in.
+ */
+export const INTERFACE_NAME_PATTERN = /^[A-Za-z0-9._-]{1,15}$/;
+
 export const interfaceNameSchema = z
   .string()
-  .regex(/^[A-Za-z0-9._-]{1,15}$/, 'Invalid network interface name');
+  .regex(INTERFACE_NAME_PATTERN, 'Invalid network interface name');
 
 export const ipv4Schema = z.string().ip({ version: 'v4' });
 export const ipv6Schema = z.string().ip({ version: 'v6' });

@@ -6,6 +6,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { API_BASE_PATH } from '../../shared';
 import { type AppContext } from './context';
+import { managementGuard } from './management-guard';
 import { errorHandler, notFoundHandler, requestIdMiddleware } from './middleware';
 import { authRoutes } from './routes/auth';
 import { certificateRoutes } from './routes/certificates';
@@ -100,7 +101,10 @@ export function createApp(ctx: AppContext, options: AppOptions = {}): Express {
       crossOriginResourcePolicy: { policy: 'same-origin' },
     }),
   );
+  // Before anything else that could act on the request: a caller on the TNC segment
+  // must not reach a route, a session check or a rate limiter. See management-guard.ts.
   app.use(requestIdMiddleware);
+  app.use(managementGuard(ctx));
   app.use(cookieParser());
   app.use(express.json({ limit: '2mb' }));
 
