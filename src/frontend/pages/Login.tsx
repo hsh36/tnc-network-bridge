@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PRODUCT_NAME } from '../../shared';
 import { ApiError } from '../lib/api-client';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from '../hooks/useTranslation';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -12,6 +13,7 @@ interface LocationState {
 }
 
 export function Login(): JSX.Element {
+  const t = useTranslation('auth');
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,7 +35,7 @@ export function Login(): JSX.Element {
         setError(
           err instanceof ApiError
             ? err.message
-            : 'Could not reach the bridge. Check the connection and try again.',
+            : t('connection_error'),
         );
       })
       .finally(() => setSubmitting(false));
@@ -51,13 +53,13 @@ export function Login(): JSX.Element {
               {PRODUCT_NAME}
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Sign in to manage this bridge
+              {t('manage_bridge')}
             </p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Input
               id="username"
-              label="Username"
+              label={t('username')}
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -65,7 +67,7 @@ export function Login(): JSX.Element {
             />
             <Input
               id="password"
-              label="Password"
+              label={t('password')}
               type="password"
               autoComplete="current-password"
               value={password}
@@ -74,7 +76,7 @@ export function Login(): JSX.Element {
               error={error}
             />
             <Button type="submit" loading={submitting} className="mt-1">
-              Sign in
+              {t('sign_in')}
             </Button>
           </form>
         </CardBody>

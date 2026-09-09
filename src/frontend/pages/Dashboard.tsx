@@ -6,6 +6,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { Table, type Column } from '../components/ui/Table';
 import { useApiQuery } from '../hooks/useApi';
 import { useSSE } from '../hooks/useSSE';
+import { useTranslation } from '../hooks/useTranslation';
 import { type Lock } from '../../shared';
 
 function bytesToHuman(bytes: number): string {
@@ -24,26 +25,29 @@ function connectionTone(state: string): BadgeTone {
   return state === 'open' ? 'ok' : state === 'connecting' ? 'warn' : 'error';
 }
 
-const lockColumns: readonly Column<Lock>[] = [
-  {
-    key: 'path',
-    header: 'Path',
-    render: (l) => <span className="font-mono text-xs">{l.relPath}</span>,
-  },
-  {
-    key: 'origin',
-    header: 'Origin',
-    render: (l) => <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge>,
-  },
-  { key: 'owner', header: 'Owner', render: (l) => l.ownerLabel ?? l.tncIp ?? '—' },
-  {
-    key: 'age',
-    header: 'Acquired',
-    render: (l) => new Date(l.acquiredAt * 1000).toLocaleTimeString(),
-  },
-];
+function getLockColumns(t: ReturnType<typeof useTranslation>): readonly Column<Lock>[] {
+  return [
+    {
+      key: 'path',
+      header: t('dashboard:table_path'),
+      render: (l) => <span className="font-mono text-xs">{l.relPath}</span>,
+    },
+    {
+      key: 'origin',
+      header: t('dashboard:table_origin'),
+      render: (l) => <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge>,
+    },
+    { key: 'owner', header: t('dashboard:table_owner'), render: (l) => l.ownerLabel ?? l.tncIp ?? '—' },
+    {
+      key: 'age',
+      header: t('dashboard:table_acquired'),
+      render: (l) => new Date(l.acquiredAt * 1000).toLocaleTimeString(),
+    },
+  ];
+}
 
 export function Dashboard(): JSX.Element {
+  const t = useTranslation('dashboard');
   const status = useApiQuery('status.get', {}, { pollMs: 15_000 });
   const system = useApiQuery('system.get', {}, { pollMs: 15_000 });
   const locks = useApiQuery('locks.list', { query: {} }, { pollMs: 10_000 });
@@ -55,22 +59,25 @@ export function Dashboard(): JSX.Element {
 
   const data = status.data;
   const disk = system.data?.disks[0];
+  const lockColumns = getLockColumns(t);
+
+  const getConnectionStatus = (): string => {
+    if (sse.state === 'open') return t('dashboard:status_live');
+    if (sse.state === 'connecting') return t('dashboard:status_connecting');
+    return t('dashboard:status_disconnected');
+  };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h1>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('dashboard:title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Live status of the sync bridge, version {data?.version ?? '—'}
+            {t('dashboard:live_status', { version: data?.version ?? '—' })}
           </p>
         </div>
         <Badge tone={connectionTone(sse.state)}>
-          {sse.state === 'open'
-            ? 'Live'
-            : sse.state === 'connecting'
-              ? 'Connecting…'
-              : 'Disconnected'}
+          {getConnectionStatus()}
         </Badge>
       </div>
 
@@ -78,7 +85,7 @@ export function Dashboard(): JSX.Element {
         <Card className="border-status-error/40">
           <CardBody>
             <p className="text-sm text-status-error">
-              Could not load status: {status.error.message}
+              {t('dashboard:load_error', { message: status.error.message })}
             </p>
           </CardBody>
         </Card>
@@ -88,24 +95,24 @@ export function Dashboard(): JSX.Element {
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <StatCard
-              label="Server link"
-              value={data.serverLink.reachable ? 'Online' : 'Offline'}
+              label={t('dashboard:server_link')}
+              value={data.serverLink.reachable ? t('dashboard:online') : t('dashboard:offline')}
               tone={data.serverLink.reachable ? 'ok' : 'error'}
               hint={data.serverLink.dialect ?? undefined}
             />
-            <StatCard label="Shares enabled" value={data.totals.sharesEnabled} />
+            <StatCard label={t('dashboard:shares_enabled')} value={data.totals.sharesEnabled} />
             <StatCard
-              label="Files indexed"
+              label={t('dashboard:files_indexed')}
               value={data.totals.filesIndexed}
-              hint={`${data.totals.filesPending} pending`}
+              hint={t('dashboard:pending', { count: data.totals.filesPending })}
             />
             <StatCard
-              label="Active locks"
+              label={t('dashboard:active_locks')}
               value={data.totals.activeLocks}
               tone={data.totals.activeLocks > 0 ? 'warn' : 'default'}
             />
             <StatCard
-              label="Conflicts"
+              label={t('dashboard:conflicts')}
               value={data.totals.unacknowledgedConflicts}
               tone={data.totals.unacknowledgedConflicts > 0 ? 'error' : 'default'}
             />
@@ -113,21 +120,21 @@ export function Dashboard(): JSX.Element {
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard
-              label="Throughput in"
+              label={t('dashboard:throughput_in')}
               value={`${bytesToHuman(data.totals.bytesInPerSec)}/s`}
             />
             <StatCard
-              label="Throughput out"
+              label={t('dashboard:throughput_out')}
               value={`${bytesToHuman(data.totals.bytesOutPerSec)}/s`}
             />
             <StatCard
-              label="Disk used"
+              label={t('dashboard:disk_used')}
               value={disk !== undefined ? `${disk.usedPct}%` : '—'}
               tone={disk !== undefined && disk.usedPct >= 85 ? 'warn' : 'default'}
-              hint={disk !== undefined ? bytesToHuman(disk.freeBytes) + ' free' : undefined}
+              hint={disk !== undefined ? t('dashboard:free', { size: bytesToHuman(disk.freeBytes) }) : undefined}
             />
             <StatCard
-              label="Memory used"
+              label={t('dashboard:memory_used')}
               value={system.data !== undefined ? `${system.data.memory.usedPct}%` : '—'}
             />
           </div>
@@ -135,7 +142,9 @@ export function Dashboard(): JSX.Element {
           {data.readOnlyReason !== null && (
             <Card className="border-status-warn/40">
               <CardBody>
-                <p className="text-sm text-status-warn">Read-only: {data.readOnlyReason}</p>
+                <p className="text-sm text-status-warn">
+                  {t('dashboard:read_only_mode', { reason: data.readOnlyReason })}
+                </p>
               </CardBody>
             </Card>
           )}
@@ -143,11 +152,14 @@ export function Dashboard(): JSX.Element {
       )}
 
       <Card>
-        <CardHeader title="Active locks" subtitle={`${locks.data?.total ?? 0} currently held`} />
+        <CardHeader
+          title={t('dashboard:active_locks_title')}
+          subtitle={t('dashboard:locks_held', { total: locks.data?.total ?? 0 })}
+        />
         {locks.data?.items.length === 0 ? (
           <EmptyState
-            title="No active locks"
-            description="Files locked by a TNC or an operator appear here."
+            title={t('dashboard:no_locks_message')}
+            description={t('dashboard:no_locks_description')}
           />
         ) : (
           <Table columns={lockColumns} rows={locks.data?.items ?? []} rowKey={(l) => l.id} />
@@ -155,12 +167,15 @@ export function Dashboard(): JSX.Element {
       </Card>
 
       <Card>
-        <CardHeader title="Recent events" subtitle="Live from the bridge's event bus" />
+        <CardHeader
+          title={t('dashboard:recent_events')}
+          subtitle={t('dashboard:event_bus')}
+        />
         <CardBody className="max-h-72 overflow-y-auto p-0">
           {sse.events.length === 0 ? (
             <EmptyState
-              title="No events yet"
-              description="Sync, lock and status events will appear here as they happen."
+              title={t('dashboard:no_events')}
+              description={t('dashboard:no_events_description')}
             />
           ) : (
             <ul className="divide-y divide-border text-sm dark:divide-border-dark">

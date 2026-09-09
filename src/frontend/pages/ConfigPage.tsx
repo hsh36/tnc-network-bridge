@@ -19,6 +19,7 @@ import { Checkbox, Input, Select } from '../components/ui/Input';
 import { Tabs } from '../components/ui/Tabs';
 import { FullPageSpinner } from '../components/ui/Spinner';
 import { SharesSection } from '../components/SharesSection';
+import { useTranslation } from '../hooks/useTranslation';
 import { api, ApiError } from '../lib/api-client';
 
 /**
@@ -28,7 +29,7 @@ import { api, ApiError } from '../lib/api-client';
  * logging, monitoring, plus test/connection features.
  */
 
-function useSaveBanner(): {
+function useSaveBanner(t: ReturnType<typeof useTranslation>): {
   readonly banner: JSX.Element | null;
   readonly onSaved: () => void;
   readonly onError: (err: unknown) => void;
@@ -48,9 +49,9 @@ function useSaveBanner(): {
           {message.text}
         </p>
       ),
-    onSaved: () => setMessage({ text: 'Saved.', tone: 'ok' }),
+    onSaved: () => setMessage({ text: t('config:saved_message'), tone: 'ok' }),
     onError: (err) =>
-      setMessage({ text: err instanceof ApiError ? err.message : 'Could not save', tone: 'error' }),
+      setMessage({ text: err instanceof ApiError ? err.message : t('config:save_error'), tone: 'error' }),
   };
 }
 
@@ -79,11 +80,12 @@ function validateConfigSection<K extends keyof typeof configSectionSchemas>(
 // ---------------------------------------------------------------------------
 
 function NetworkSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<NetworkConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'network' } }).then((data) =>
@@ -105,7 +107,7 @@ function NetworkSection(): JSX.Element {
     const validationErrors = validateConfigSection('network', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -125,7 +127,7 @@ function NetworkSection(): JSX.Element {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
           id="lanIf"
-          label="LAN interface"
+          label={t('lan_interface')}
           value={form.lan.interface}
           onChange={(e) => {
             setForm({ ...form, lan: { ...form.lan, interface: e.target.value } });
@@ -135,7 +137,7 @@ function NetworkSection(): JSX.Element {
         />
         <Input
           id="tncIf"
-          label="TNC interface"
+          label={t('tnc_interface')}
           value={form.tnc.interface}
           onChange={(e) => {
             setForm({ ...form, tnc: { ...form.tnc, interface: e.target.value } });
@@ -146,7 +148,7 @@ function NetworkSection(): JSX.Element {
       </div>
       <Select
         id="lanMethod"
-        label="LAN addressing"
+        label={t('lan_addressing')}
         value={form.lan.method}
         onChange={(e) => {
           setForm({ ...form, lan: { ...form.lan, method: e.target.value as 'dhcp' | 'static' } });
@@ -156,13 +158,13 @@ function NetworkSection(): JSX.Element {
         className="w-40"
       >
         <option value="dhcp">DHCP</option>
-        <option value="static">Static</option>
+        <option value="static">{t('static')}</option>
       </Select>
       {form.lan.method === 'static' && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             id="lanAddress"
-            label="LAN address (CIDR)"
+            label={t('lan_address_cidr')}
             value={form.lan.address ?? ''}
             onChange={(e) => {
               setForm({
@@ -175,7 +177,7 @@ function NetworkSection(): JSX.Element {
           />
           <Input
             id="lanGateway"
-            label="Gateway"
+            label={t('gateway')}
             value={form.lan.gateway ?? ''}
             onChange={(e) => {
               setForm({
@@ -190,7 +192,7 @@ function NetworkSection(): JSX.Element {
       )}
       <Input
         id="tncAddress"
-        label="TNC address (CIDR)"
+        label={t('tnc_address_cidr')}
         value={form.tnc.address}
         onChange={(e) => {
           setForm({ ...form, tnc: { ...form.tnc, address: e.target.value } });
@@ -200,7 +202,7 @@ function NetworkSection(): JSX.Element {
       />
       <Input
         id="mtu"
-        label="MTU (bytes)"
+        label={t('mtu_bytes')}
         type="number"
         value={form.mtu}
         onChange={(e) => {
@@ -212,7 +214,7 @@ function NetworkSection(): JSX.Element {
       />
       <Checkbox
         id="ipv6"
-        label="Enable IPv6"
+        label={t('enable_ipv6')}
         checked={form.ipv6.enabled}
         onChange={(e) => {
           setForm({ ...form, ipv6: { enabled: e.target.checked } });
@@ -221,7 +223,7 @@ function NetworkSection(): JSX.Element {
       />
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -234,12 +236,13 @@ function NetworkSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function SmbSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<SmbConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [testing, setTesting] = useState(false);
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'smb' } }).then((data) =>
@@ -261,7 +264,7 @@ function SmbSection(): JSX.Element {
     const validationErrors = validateConfigSection('smb', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -286,12 +289,12 @@ function SmbSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <div className="border-b border-border pb-4 dark:border-border-dark">
         <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-          Server (LAN side)
+          {t('server_side')}
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select
             id="serverMinProtocol"
-            label="Minimum protocol"
+            label={t('minimum_protocol')}
             value={form.server.minProtocol}
             onChange={(e) => {
               setForm({
@@ -314,7 +317,7 @@ function SmbSection(): JSX.Element {
           </Select>
           <Checkbox
             id="serverSeal"
-            label="Enable sealing (encryption)"
+            label={t('enable_sealing')}
             checked={form.server.seal}
             onChange={(e) => {
               setForm({ ...form, server: { ...form.server, seal: e.target.checked } });
@@ -325,7 +328,7 @@ function SmbSection(): JSX.Element {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             id="serverDomain"
-            label="Domain"
+            label={t('domain')}
             value={form.server.credentials.domain}
             onChange={(e) => {
               setForm({
@@ -341,7 +344,7 @@ function SmbSection(): JSX.Element {
           />
           <Input
             id="serverUsername"
-            label="Username"
+            label={t('username')}
             value={form.server.credentials.username}
             onChange={(e) => {
               setForm({
@@ -357,7 +360,7 @@ function SmbSection(): JSX.Element {
           />
           <Input
             id="serverPassword"
-            label="Password"
+            label={t('password')}
             type="password"
             value={
               form.server.credentials.password === '********'
@@ -382,12 +385,12 @@ function SmbSection(): JSX.Element {
 
       <div className="border-b border-border pb-4 dark:border-border-dark">
         <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-          TNC (Machine side)
+          {t('tnc_side')}
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Select
             id="tncMinProtocol"
-            label="Minimum protocol"
+            label={t('minimum_protocol')}
             value={form.tnc.minProtocol}
             onChange={(e) => {
               setForm({
@@ -404,7 +407,7 @@ function SmbSection(): JSX.Element {
           </Select>
           <Select
             id="tncMaxProtocol"
-            label="Maximum protocol"
+            label={t('maximum_protocol')}
             value={form.tnc.maxProtocol}
             onChange={(e) => {
               setForm({
@@ -423,7 +426,7 @@ function SmbSection(): JSX.Element {
         <div className="mt-4 flex flex-col gap-2">
           <Checkbox
             id="tncNtlmAuth"
-            label="Enable NTLM authentication"
+            label={t('enable_ntlm')}
             checked={form.tnc.ntlmAuth}
             onChange={(e) => {
               setForm({ ...form, tnc: { ...form.tnc, ntlmAuth: e.target.checked } });
@@ -432,7 +435,7 @@ function SmbSection(): JSX.Element {
           />
           <Checkbox
             id="tncLanmanAuth"
-            label="Enable LANMAN authentication (legacy)"
+            label={t('enable_lanman')}
             checked={form.tnc.lanmanAuth}
             onChange={(e) => {
               setForm({ ...form, tnc: { ...form.tnc, lanmanAuth: e.target.checked } });
@@ -443,7 +446,7 @@ function SmbSection(): JSX.Element {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             id="tncDosCharset"
-            label="DOS character set"
+            label={t('dos_charset')}
             value={form.tnc.dosCharset}
             onChange={(e) => {
               setForm({ ...form, tnc: { ...form.tnc, dosCharset: e.target.value } });
@@ -453,7 +456,7 @@ function SmbSection(): JSX.Element {
           />
           <Input
             id="tncWorkgroup"
-            label="Workgroup"
+            label={t('workgroup')}
             value={form.tnc.workgroup}
             onChange={(e) => {
               setForm({ ...form, tnc: { ...form.tnc, workgroup: e.target.value } });
@@ -466,10 +469,10 @@ function SmbSection(): JSX.Element {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         <Button onClick={testConnection} variant="secondary" loading={testing} className="w-fit">
-          Test Connection (Verbindung testen)
+          {t('test_connection_button')}
         </Button>
         {banner}
       </div>
@@ -482,11 +485,12 @@ function SmbSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function SyncSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<SyncConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'sync' } }).then((data) =>
@@ -508,7 +512,7 @@ function SyncSection(): JSX.Element {
     const validationErrors = validateConfigSection('sync', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -527,7 +531,7 @@ function SyncSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Select
         id="conflictMode"
-        label="Conflict mode"
+        label={t('conflict_mode')}
         value={form.conflictMode}
         onChange={(e) => {
           setForm({ ...form, conflictMode: e.target.value as ConflictMode });
@@ -536,14 +540,14 @@ function SyncSection(): JSX.Element {
         error={errors.conflictMode}
         className="w-64"
       >
-        <option value="last_write_wins">Last write wins</option>
-        <option value="tnc_wins">TNC wins</option>
-        <option value="server_wins">Server wins</option>
+        <option value="last_write_wins">{t('last_write_wins')}</option>
+        <option value="tnc_wins">{t('tnc_wins')}</option>
+        <option value="server_wins">{t('server_wins')}</option>
       </Select>
 
       <Input
         id="bandwidthLimit"
-        label="Bandwidth limit (kbps, empty = unlimited)"
+        label={t('bandwidth_limit')}
         type="number"
         value={form.bandwidthLimitKbps ?? ''}
         onChange={(e) => {
@@ -559,7 +563,7 @@ function SyncSection(): JSX.Element {
 
       <Input
         id="maxFileSize"
-        label="Max file size (MB)"
+        label={t('max_file_size')}
         type="number"
         value={form.maxFileSizeMb}
         onChange={(e) => {
@@ -572,7 +576,7 @@ function SyncSection(): JSX.Element {
 
       <Input
         id="mtimeTolerance"
-        label="Mtime tolerance (ms)"
+        label={t('mtime_tolerance')}
         type="number"
         value={form.mtimeToleranceMs}
         onChange={(e) => {
@@ -585,7 +589,7 @@ function SyncSection(): JSX.Element {
 
       <Input
         id="scanInterval"
-        label="Scan interval (ms)"
+        label={t('scan_interval')}
         type="number"
         value={form.scanIntervalMs}
         onChange={(e) => {
@@ -598,7 +602,7 @@ function SyncSection(): JSX.Element {
 
       <Input
         id="concurrency"
-        label="Concurrency"
+        label={t('concurrency')}
         type="number"
         value={form.concurrency}
         onChange={(e) => {
@@ -611,7 +615,7 @@ function SyncSection(): JSX.Element {
 
       <div>
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Exclude patterns (one per line)
+          {t('exclude_patterns')}
         </label>
         <textarea
           className="mt-1 h-24 w-full rounded-md border border-border bg-white px-3 py-2 text-sm dark:border-border-dark dark:bg-surface-dark"
@@ -631,7 +635,7 @@ function SyncSection(): JSX.Element {
 
       <Checkbox
         id="protectDeletes"
-        label="Never auto-propagate deletes"
+        label={t('protect_deletes')}
         checked={form.protectDeletes}
         onChange={(e) => {
           setForm({ ...form, protectDeletes: e.target.checked });
@@ -641,7 +645,7 @@ function SyncSection(): JSX.Element {
 
       <Checkbox
         id="failoverReadOnly"
-        label="Drop to read-only when the server is unreachable"
+        label={t('failover_readonly')}
         checked={form.failoverReadOnly}
         onChange={(e) => {
           setForm({ ...form, failoverReadOnly: e.target.checked });
@@ -651,7 +655,7 @@ function SyncSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -664,11 +668,12 @@ function SyncSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function LockingSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<LockingConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'locking' } }).then((data) =>
@@ -804,11 +809,12 @@ function LockingSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function VersioningSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<VersioningConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'versioning' } }).then((data) =>
@@ -912,11 +918,12 @@ function VersioningSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function SecuritySection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<SecurityConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'security' } }).then((data) =>
@@ -1034,11 +1041,12 @@ function SecuritySection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function UpdatesSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<UpdatesConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'updates' } }).then((data) =>
@@ -1173,11 +1181,12 @@ function UpdatesSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function DhcpSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<DhcpConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'dhcp' } }).then((data) =>
@@ -1285,11 +1294,12 @@ function DhcpSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function LoggingSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<LoggingConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'logging' } }).then((data) =>
@@ -1377,11 +1387,12 @@ function LoggingSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function MonitoringSection(): JSX.Element {
+  const t = useTranslation('config');
   const [form, setForm] = useState<MonitoringConfig>();
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { banner, onSaved, onError } = useSaveBanner();
+  const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
     void api('config.get', { params: { section: 'monitoring' } }).then((data) =>
@@ -1461,22 +1472,23 @@ function MonitoringSection(): JSX.Element {
 // ---------------------------------------------------------------------------
 
 export function ConfigPage(): JSX.Element {
+  const t = useTranslation('config');
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Configuration</h1>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('page_title')}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Changes apply immediately — the config manager notifies every subsystem on save.
+          {t('page_subtitle')}
         </p>
       </div>
       <Card>
-        <CardHeader title="Settings" />
+        <CardHeader title={t('settings_title')} />
         <CardBody>
           <Tabs
             items={[
-              { id: 'network', label: 'Network', content: <NetworkSection /> },
+              { id: 'network', label: t('network'), content: <NetworkSection /> },
               { id: 'smb', label: 'SMB', content: <SmbSection /> },
-              { id: 'dhcp', label: 'DHCP', content: <DhcpSection /> },
+              { id: 'dhcp', label: t('dhcp'), content: <DhcpSection /> },
               { id: 'shares', label: 'Shares', content: <SharesSection /> },
               { id: 'sync', label: 'Sync', content: <SyncSection /> },
               { id: 'locking', label: 'Locking', content: <LockingSection /> },
