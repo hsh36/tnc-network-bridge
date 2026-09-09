@@ -34,25 +34,26 @@ const RESULT_TONE: Record<string, BadgeTone> = {
   skipped: 'warn',
 };
 
-export function formatNextRun(
-  nextRunAt: number | null,
-  t: (key: string, variables?: Record<string, string | number>) => string,
-  now: number = Date.now(),
-): string {
+/**
+ * Format the next run time for display.
+ * Note: This is a utility function that returns English strings.
+ * Translations are handled at the component level via useTranslation.
+ */
+export function formatNextRun(nextRunAt: number | null, now: number = Date.now()): string {
   if (nextRunAt === null) {
-    return t('next_run_never');
+    return 'never';
   }
   const seconds = nextRunAt - Math.floor(now / 1000);
   if (seconds <= 0) {
-    return t('next_run_now');
+    return 'due now';
   }
   if (seconds < 3600) {
-    return t('next_run_min', { count: Math.round(seconds / 60) });
+    return `in ${Math.round(seconds / 60)} min`;
   }
   if (seconds < 86_400) {
-    return t('next_run_hour', { count: Math.round(seconds / 3600) });
+    return `in ${Math.round(seconds / 3600)} h`;
   }
-  return t('next_run_day', { count: Math.round(seconds / 86_400) });
+  return `in ${Math.round(seconds / 86_400)} d`;
 }
 
 export function Scheduling(): JSX.Element {
