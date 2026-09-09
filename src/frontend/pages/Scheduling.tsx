@@ -345,7 +345,7 @@ export function Scheduling(): JSX.Element {
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     <span className="font-mono">{schedule.cron}</span>
-                    {schedule.enabled && <> · next {formatNextRun(schedule.nextRunAt, t)}</>}
+                    {schedule.enabled && <> · next {formatNextRun(schedule.nextRunAt)}</>}
                     {schedule.target?.pathGlob !== undefined && <> · {schedule.target.pathGlob}</>}
                   </p>
                   {schedule.lastError !== null && (
