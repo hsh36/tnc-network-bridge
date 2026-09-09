@@ -2,26 +2,32 @@ import { type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { PRODUCT_NAME } from '../../shared';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from '../hooks/useTranslation';
 import { Button } from './ui/Button';
 import { LanguagePickerButtons } from './LanguagePicker';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { cn } from './ui/cn';
 
+/**
+ * `labelKey` rather than a label: the menu is rebuilt on every render, so resolving the
+ * string here would freeze it in whichever language was active when this module loaded.
+ */
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/locks', label: 'Locks' },
-  { to: '/machines', label: 'Machines' },
-  { to: '/files', label: 'Files' },
-  { to: '/monitoring', label: 'Monitoring' },
-  { to: '/versions', label: 'Versions' },
-  { to: '/scheduling', label: 'Scheduling' },
-  { to: '/system-updates', label: 'Updates' },
-  { to: '/config', label: 'Configuration' },
-  { to: '/logs', label: 'Logs' },
+  { to: '/', labelKey: 'dashboard', end: true },
+  { to: '/locks', labelKey: 'locks' },
+  { to: '/machines', labelKey: 'machines' },
+  { to: '/files', labelKey: 'files' },
+  { to: '/monitoring', labelKey: 'monitoring' },
+  { to: '/versions', labelKey: 'versions' },
+  { to: '/scheduling', labelKey: 'scheduling' },
+  { to: '/system-updates', labelKey: 'updates' },
+  { to: '/config', labelKey: 'config' },
+  { to: '/logs', labelKey: 'logs' },
 ] as const;
 
 export function Layout({ children }: { readonly children: ReactNode }): JSX.Element {
   const { session, logout } = useAuth();
+  const t = useTranslation('navigation');
   const navigate = useNavigate();
 
   const handleLogout = (): void => {
@@ -54,7 +60,7 @@ export function Layout({ children }: { readonly children: ReactNode }): JSX.Elem
                 )
               }
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -68,7 +74,7 @@ export function Layout({ children }: { readonly children: ReactNode }): JSX.Elem
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <Button variant="ghost" size="sm" onClick={handleLogout}>
-                Log out
+                {t('logout')}
               </Button>
             </div>
             <LanguagePickerButtons />

@@ -34,7 +34,9 @@
     "monitoring": "Überwachung",
     "logs": "Protokolle",
     "settings": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "scheduling": "Zeitpläne",
+    "updates": "Updates"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -183,7 +185,18 @@
     "log_fatal": "Fatal",
     "retain_logs": "Protokolle behalten (Tage)",
     "sample_interval": "Sample-Intervall (Sekunden)",
-    "disk_warn_threshold": "Festplatten-Warnungsschwelle (%)"
+    "disk_warn_threshold": "Festplatten-Warnungsschwelle (%)",
+    "tab_shares": "Freigaben",
+    "tab_sync": "Synchronisation",
+    "tab_locking": "Dateisperren",
+    "tab_versioning": "Versionierung",
+    "tab_security": "Sicherheit",
+    "tab_updates": "Updates",
+    "tab_logging": "Protokollierung",
+    "tab_monitoring": "Überwachung",
+    "dhcp_tnc_only_title": "Gilt ausschließlich für die TNC-Seite",
+    "dhcp_tnc_only_body": "Dieser DHCP-Server ist fest an die TNC-Schnittstelle gebunden und antwortet nie im LAN. Er vergibt Adressen an die CNC-Maschinen hinter der Bridge.",
+    "smb_credentials_note": "Vorgabe-Dienstkonto für alle Freigaben. Eine Freigabe kann es in ihren eigenen Einstellungen überschreiben."
   },
   "locks": {
     "title": "Dateisperren",
@@ -443,7 +456,9 @@
     "configure_schedule": "Zeitplan konfigurieren",
     "cancel_button": "Abbrechen",
     "schedule_note": "Automatische Updates können für die Ausführung zu einer bestimmten Zeit pro Woche geplant werden.",
-    "update_history": "Update-Verlauf"
+    "update_history": "Update-Verlauf",
+    "up_to_date_title": "Aktuell",
+    "up_to_date_body": "Version {version} ist die neueste Ausgabe. Geprüft am {date}."
   },
   "files": {
     "title": "Datei-Browser",
@@ -522,5 +537,25 @@
     "finish_next": "Mit dem Abschluss wird der öffentliche Setup-Endpunkt dauerhaft geschlossen. Netzwerkschnittstellen, das AD-Dienstkonto und Freigaben richten Sie danach unter Einstellungen ein.",
     "finish": "Einrichtung abschließen",
     "connection_error": "Die Bridge ist nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen."
+  },
+  "shares": {
+    "title": "Freigaben",
+    "subtitle": "Synchronisierte Freigaben und deren Einstellungen verwalten.",
+    "new_share": "+ Neue Freigabe",
+    "active_shares": "Aktive Freigaben",
+    "share_count": "{count} Freigaben",
+    "share_count_one": "1 Freigabe",
+    "col_name": "Freigabename",
+    "col_server_path": "Serverpfad",
+    "col_status": "Status",
+    "col_files": "Dateien",
+    "col_throughput": "Durchsatz",
+    "col_mode": "Modus",
+    "settings_button": "Einstellungen",
+    "none_title": "Keine Freigaben eingerichtet",
+    "none_description": "Legen Sie Ihre erste Freigabe an, um die Synchronisation zu starten.",
+    "read_only": "Nur lesen",
+    "read_write": "Lesen/Schreiben",
+    "files_summary": "{indexed} indiziert, {pending} ausstehend"
   }
 }

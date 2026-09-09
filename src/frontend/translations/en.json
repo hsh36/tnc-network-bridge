@@ -34,7 +34,9 @@
     "monitoring": "Monitoring",
     "logs": "Logs",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "scheduling": "Scheduling",
+    "updates": "Updates"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -183,7 +185,18 @@
     "log_fatal": "Fatal",
     "retain_logs": "Retain logs (days)",
     "sample_interval": "Sample interval (seconds)",
-    "disk_warn_threshold": "Disk warning threshold (%)"
+    "disk_warn_threshold": "Disk warning threshold (%)",
+    "tab_shares": "Shares",
+    "tab_sync": "Sync",
+    "tab_locking": "Locking",
+    "tab_versioning": "Versioning",
+    "tab_security": "Security",
+    "tab_updates": "Updates",
+    "tab_logging": "Logging",
+    "tab_monitoring": "Monitoring",
+    "dhcp_tnc_only_title": "Applies to the TNC side only",
+    "dhcp_tnc_only_body": "This DHCP server is bound exclusively to the TNC interface and never answers on the LAN. It hands addresses to the CNC machines behind the bridge.",
+    "smb_credentials_note": "Default service account for every share. A share can override it in its own settings."
   },
   "locks": {
     "title": "Locks & Conflicts",
@@ -443,7 +456,9 @@
     "configure_schedule": "Configure Schedule",
     "cancel_button": "Cancel",
     "schedule_note": "Automatic updates can be scheduled to run at a specific time each week.",
-    "update_history": "Update History"
+    "update_history": "Update History",
+    "up_to_date_title": "Up to date",
+    "up_to_date_body": "Version {version} is the newest release. Checked {date}."
   },
   "files": {
     "title": "File Browser",
@@ -522,5 +537,25 @@
     "finish_next": "Finishing closes the public setup endpoint for good. Network interfaces, the AD service account and shares are configured afterwards under Settings.",
     "finish": "Finish setup",
     "connection_error": "Could not reach the bridge. Check the connection and try again."
+  },
+  "shares": {
+    "title": "Shares",
+    "subtitle": "Manage synchronized shares and per-share settings.",
+    "new_share": "+ New Share",
+    "active_shares": "Active shares",
+    "share_count": "{count} shares",
+    "share_count_one": "1 share",
+    "col_name": "Share Name",
+    "col_server_path": "Server Path",
+    "col_status": "Status",
+    "col_files": "Files",
+    "col_throughput": "Throughput",
+    "col_mode": "Mode",
+    "settings_button": "Settings",
+    "none_title": "No shares configured",
+    "none_description": "Create your first share to begin synchronizing files.",
+    "read_only": "Read-only",
+    "read_write": "Read/write",
+    "files_summary": "{indexed} indexed, {pending} pending"
   }
 }

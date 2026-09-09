@@ -328,7 +328,16 @@ function SmbSection(): JSX.Element {
             }}
           />
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/*
+          These credentials are the fallback, not the only place an account can be set:
+          `createShareRequestSchema` carries smbDomain/smbUser/smbPassword per share and
+          falls back here when they are omitted. Without this note the section reads as
+          though one account is imposed on every share.
+        */}
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          {t('smb_credentials_note')}
+        </p>
+        <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             id="serverDomain"
             label={t('domain')}
@@ -698,7 +707,7 @@ function LockingSection(): JSX.Element {
     const validationErrors = validateConfigSection('locking', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -717,7 +726,7 @@ function LockingSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Checkbox
         id="lockingEnabled"
-        label="Enable file locking"
+        label={t('enable_locking')}
         checked={form.enabled}
         onChange={(e) => {
           setForm({ ...form, enabled: e.target.checked });
@@ -727,7 +736,7 @@ function LockingSection(): JSX.Element {
 
       <Select
         id="serverProjection"
-        label="Server projection mode"
+        label={t('server_projection')}
         value={form.serverProjection}
         onChange={(e) => {
           setForm({
@@ -738,14 +747,14 @@ function LockingSection(): JSX.Element {
         }}
         error={errors.serverProjection}
       >
-        <option value="none">None</option>
-        <option value="sidecar">Sidecar</option>
-        <option value="byte_range">Byte range</option>
+        <option value="none">{t('projection_none')}</option>
+        <option value="sidecar">{t('projection_sidecar')}</option>
+        <option value="byte_range">{t('projection_byte_range')}</option>
       </Select>
 
       <Input
         id="tncLockTtl"
-        label="TNC lock TTL (seconds)"
+        label={t('tnc_lock_ttl')}
         type="number"
         value={form.tncLockTtlS}
         onChange={(e) => {
@@ -758,7 +767,7 @@ function LockingSection(): JSX.Element {
 
       <Input
         id="releaseLinger"
-        label="Release linger time (seconds)"
+        label={t('release_linger')}
         type="number"
         value={form.releaseLingerS}
         onChange={(e) => {
@@ -771,7 +780,7 @@ function LockingSection(): JSX.Element {
 
       <Select
         id="scheduleDefault"
-        label="Schedule default"
+        label={t('schedule_default')}
         value={form.scheduleDefault}
         onChange={(e) => {
           setForm({
@@ -782,14 +791,14 @@ function LockingSection(): JSX.Element {
         }}
         error={errors.scheduleDefault}
       >
-        <option value="none">None (no locks)</option>
-        <option value="business_hours">Business hours</option>
-        <option value="custom">Custom</option>
+        <option value="none">{t('schedule_none')}</option>
+        <option value="business_hours">{t('schedule_business')}</option>
+        <option value="custom">{t('schedule_custom')}</option>
       </Select>
 
       <Checkbox
         id="blockPullWhenLocked"
-        label="Block pull when locked"
+        label={t('block_pull_locked')}
         checked={form.blockPullWhenLocked}
         onChange={(e) => {
           setForm({ ...form, blockPullWhenLocked: e.target.checked });
@@ -799,7 +808,7 @@ function LockingSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -839,7 +848,7 @@ function VersioningSection(): JSX.Element {
     const validationErrors = validateConfigSection('versioning', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -858,7 +867,7 @@ function VersioningSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Checkbox
         id="versioningEnabled"
-        label="Enable file versioning"
+        label={t('enable_versioning')}
         checked={form.enabled}
         onChange={(e) => {
           setForm({ ...form, enabled: e.target.checked });
@@ -868,7 +877,7 @@ function VersioningSection(): JSX.Element {
 
       <Input
         id="keepCount"
-        label="Keep count (number of versions)"
+        label={t('keep_count')}
         type="number"
         value={form.keepCount}
         onChange={(e) => {
@@ -881,7 +890,7 @@ function VersioningSection(): JSX.Element {
 
       <Input
         id="keepDays"
-        label="Keep days"
+        label={t('keep_days')}
         type="number"
         value={form.keepDays}
         onChange={(e) => {
@@ -894,7 +903,7 @@ function VersioningSection(): JSX.Element {
 
       <Input
         id="maxStoreGb"
-        label="Max store (GB)"
+        label={t('max_store_gb')}
         type="number"
         step="0.1"
         value={form.maxStoreGb}
@@ -908,7 +917,7 @@ function VersioningSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -948,7 +957,7 @@ function SecuritySection(): JSX.Element {
     const validationErrors = validateConfigSection('security', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -967,7 +976,7 @@ function SecuritySection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Input
         id="sessionIdleMin"
-        label="Session idle timeout (minutes)"
+        label={t('session_idle')}
         type="number"
         value={form.sessionIdleMin}
         onChange={(e) => {
@@ -980,7 +989,7 @@ function SecuritySection(): JSX.Element {
 
       <Input
         id="sessionAbsoluteH"
-        label="Session absolute timeout (hours)"
+        label={t('session_absolute')}
         type="number"
         value={form.sessionAbsoluteH}
         onChange={(e) => {
@@ -993,7 +1002,7 @@ function SecuritySection(): JSX.Element {
 
       <Input
         id="loginMaxAttempts"
-        label="Max login attempts per 15 min"
+        label={t('login_attempts')}
         type="number"
         value={form.loginMaxAttempts}
         onChange={(e) => {
@@ -1006,7 +1015,7 @@ function SecuritySection(): JSX.Element {
 
       <Checkbox
         id="fail2banEnabled"
-        label="Enable Fail2Ban integration"
+        label={t('enable_fail2ban')}
         checked={form.fail2banEnabled}
         onChange={(e) => {
           setForm({ ...form, fail2banEnabled: e.target.checked });
@@ -1016,7 +1025,7 @@ function SecuritySection(): JSX.Element {
 
       <Select
         id="tlsMin"
-        label="Minimum TLS version"
+        label={t('tls_minimum')}
         value={form.tlsMin}
         onChange={(e) => {
           setForm({ ...form, tlsMin: e.target.value as 'TLSv1.2' | 'TLSv1.3' });
@@ -1025,13 +1034,13 @@ function SecuritySection(): JSX.Element {
         error={errors.tlsMin}
         className="w-40"
       >
-        <option value="TLSv1.2">TLS 1.2</option>
-        <option value="TLSv1.3">TLS 1.3</option>
+        <option value="TLSv1.2">{t('tls_1_2')}</option>
+        <option value="TLSv1.3">{t('tls_1_3')}</option>
       </Select>
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -1071,7 +1080,7 @@ function UpdatesSection(): JSX.Element {
     const validationErrors = validateConfigSection('updates', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -1090,7 +1099,7 @@ function UpdatesSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Checkbox
         id="updatesEnabled"
-        label="Enable auto-updates"
+        label={t('enable_updates')}
         checked={form.enabled}
         onChange={(e) => {
           setForm({ ...form, enabled: e.target.checked });
@@ -1100,7 +1109,7 @@ function UpdatesSection(): JSX.Element {
 
       <Select
         id="channel"
-        label="Update channel"
+        label={t('update_channel')}
         value={form.channel}
         onChange={(e) => {
           setForm({ ...form, channel: e.target.value as 'stable' | 'beta' });
@@ -1108,13 +1117,13 @@ function UpdatesSection(): JSX.Element {
         }}
         error={errors.channel}
       >
-        <option value="stable">Stable</option>
-        <option value="beta">Beta</option>
+        <option value="stable">{t('channel_stable')}</option>
+        <option value="beta">{t('channel_beta')}</option>
       </Select>
 
       <Input
         id="scheduleCron"
-        label="Schedule (cron format)"
+        label={t('schedule_cron')}
         value={form.scheduleCron}
         onChange={(e) => {
           setForm({ ...form, scheduleCron: e.target.value });
@@ -1126,7 +1135,7 @@ function UpdatesSection(): JSX.Element {
 
       <Input
         id="githubRepo"
-        label="GitHub repository"
+        label={t('github_repo')}
         value={form.githubRepo}
         onChange={(e) => {
           setForm({ ...form, githubRepo: e.target.value });
@@ -1138,7 +1147,7 @@ function UpdatesSection(): JSX.Element {
 
       <Checkbox
         id="autoRestart"
-        label="Auto-restart after update"
+        label={t('auto_restart')}
         checked={form.autoRestart}
         onChange={(e) => {
           setForm({ ...form, autoRestart: e.target.checked });
@@ -1148,7 +1157,7 @@ function UpdatesSection(): JSX.Element {
 
       <Checkbox
         id="rollbackOnFailure"
-        label="Rollback on health check failure"
+        label={t('rollback_failure')}
         checked={form.rollbackOnFailure}
         onChange={(e) => {
           setForm({ ...form, rollbackOnFailure: e.target.checked });
@@ -1158,7 +1167,7 @@ function UpdatesSection(): JSX.Element {
 
       <Input
         id="healthTimeoutS"
-        label="Health check timeout (seconds)"
+        label={t('health_timeout')}
         type="number"
         value={form.healthTimeoutS}
         onChange={(e) => {
@@ -1171,7 +1180,7 @@ function UpdatesSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -1211,7 +1220,7 @@ function DhcpSection(): JSX.Element {
     const validationErrors = validateConfigSection('dhcp', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -1228,9 +1237,21 @@ function DhcpSection(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        Stated up front because the setting is otherwise easy to read as a general DHCP
+        server. `dhcp-config-manager.ts` binds dnsmasq with `interface=<tnc>` plus
+        `bind-interfaces`, so it can never answer on the LAN — the note describes an
+        invariant of the generated config, not a convention.
+      */}
+      <div className="rounded-md border border-accent/30 bg-accent/5 px-4 py-3">
+        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+          {t('dhcp_tnc_only_title')}
+        </p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('dhcp_tnc_only_body')}</p>
+      </div>
       <Checkbox
         id="dhcpEnabled"
-        label="Enable DHCP"
+        label={t('enable_dhcp')}
         checked={form.enabled}
         onChange={(e) => {
           setForm({ ...form, enabled: e.target.checked });
@@ -1240,7 +1261,7 @@ function DhcpSection(): JSX.Element {
 
       <Input
         id="dhcpRange"
-        label="IP range (e.g., 192.168.42.100-192.168.42.199)"
+        label={t('dhcp_range')}
         value={form.range}
         onChange={(e) => {
           setForm({ ...form, range: e.target.value });
@@ -1251,7 +1272,7 @@ function DhcpSection(): JSX.Element {
 
       <Input
         id="dhcpLeaseTime"
-        label="Lease time (e.g., 12h, 30m, infinite)"
+        label={t('lease_time')}
         value={form.leaseTime}
         onChange={(e) => {
           setForm({ ...form, leaseTime: e.target.value });
@@ -1262,7 +1283,7 @@ function DhcpSection(): JSX.Element {
 
       <Input
         id="dhcpDns"
-        label="DNS server"
+        label={t('dns_server')}
         value={form.dns}
         onChange={(e) => {
           setForm({ ...form, dns: e.target.value });
@@ -1273,7 +1294,7 @@ function DhcpSection(): JSX.Element {
 
       <Input
         id="dhcpGateway"
-        label="Gateway (optional)"
+        label={t('gateway_optional')}
         value={form.gateway ?? ''}
         onChange={(e) => {
           setForm({ ...form, gateway: e.target.value || undefined });
@@ -1284,7 +1305,7 @@ function DhcpSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -1324,7 +1345,7 @@ function LoggingSection(): JSX.Element {
     const validationErrors = validateConfigSection('logging', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -1343,7 +1364,7 @@ function LoggingSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Select
         id="logLevel"
-        label="Log level"
+        label={t('log_level')}
         value={form.level}
         onChange={(e) => {
           setForm({
@@ -1354,17 +1375,17 @@ function LoggingSection(): JSX.Element {
         }}
         error={errors.level}
       >
-        <option value="trace">Trace</option>
-        <option value="debug">Debug</option>
-        <option value="info">Info</option>
-        <option value="warn">Warn</option>
-        <option value="error">Error</option>
-        <option value="fatal">Fatal</option>
+        <option value="trace">{t('log_trace')}</option>
+        <option value="debug">{t('log_debug')}</option>
+        <option value="info">{t('log_info')}</option>
+        <option value="warn">{t('log_warn')}</option>
+        <option value="error">{t('log_error')}</option>
+        <option value="fatal">{t('log_fatal')}</option>
       </Select>
 
       <Input
         id="retainDays"
-        label="Retain logs (days)"
+        label={t('retain_logs')}
         type="number"
         value={form.retainDays}
         onChange={(e) => {
@@ -1377,7 +1398,7 @@ function LoggingSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -1417,7 +1438,7 @@ function MonitoringSection(): JSX.Element {
     const validationErrors = validateConfigSection('monitoring', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      onError(new Error('Validation failed'));
+      onError(new Error(t('validation_failed')));
       return;
     }
     setErrors({});
@@ -1436,7 +1457,7 @@ function MonitoringSection(): JSX.Element {
     <div className="flex flex-col gap-4">
       <Input
         id="sampleInterval"
-        label="Sample interval (seconds)"
+        label={t('sample_interval')}
         type="number"
         value={form.sampleIntervalS}
         onChange={(e) => {
@@ -1449,7 +1470,7 @@ function MonitoringSection(): JSX.Element {
 
       <Input
         id="diskWarnPct"
-        label="Disk warning threshold (%)"
+        label={t('disk_warn_threshold')}
         type="number"
         value={form.diskWarnPct}
         onChange={(e) => {
@@ -1462,7 +1483,7 @@ function MonitoringSection(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          Save
+          {t('save_button')}
         </Button>
         {banner}
       </div>
@@ -1492,14 +1513,14 @@ export function ConfigPage(): JSX.Element {
               { id: 'network', label: t('network'), content: <NetworkSection /> },
               { id: 'smb', label: 'SMB', content: <SmbSection /> },
               { id: 'dhcp', label: t('dhcp'), content: <DhcpSection /> },
-              { id: 'shares', label: 'Shares', content: <SharesSection /> },
-              { id: 'sync', label: 'Sync', content: <SyncSection /> },
-              { id: 'locking', label: 'Locking', content: <LockingSection /> },
-              { id: 'versioning', label: 'Versioning', content: <VersioningSection /> },
-              { id: 'security', label: 'Security', content: <SecuritySection /> },
-              { id: 'updates', label: 'Updates', content: <UpdatesSection /> },
-              { id: 'logging', label: 'Logging', content: <LoggingSection /> },
-              { id: 'monitoring', label: 'Monitoring', content: <MonitoringSection /> },
+              { id: 'shares', label: t('tab_shares'), content: <SharesSection /> },
+              { id: 'sync', label: t('tab_sync'), content: <SyncSection /> },
+              { id: 'locking', label: t('tab_locking'), content: <LockingSection /> },
+              { id: 'versioning', label: t('tab_versioning'), content: <VersioningSection /> },
+              { id: 'security', label: t('tab_security'), content: <SecuritySection /> },
+              { id: 'updates', label: t('tab_updates'), content: <UpdatesSection /> },
+              { id: 'logging', label: t('tab_logging'), content: <LoggingSection /> },
+              { id: 'monitoring', label: t('tab_monitoring'), content: <MonitoringSection /> },
             ]}
           />
         </CardBody>

@@ -159,13 +159,34 @@ export function SystemUpdates(): JSX.Element {
           <CardHeader title={t('check_for_updates_title')} />
           <CardBody>
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {status?.lastCheckAt
-                  ? t('last_checked', {
+              {/*
+                A finished check that found nothing has to say so. Showing only the
+                timestamp left the operator unable to tell "you are current" from "the
+                check silently did nothing" — the two look identical when the only thing
+                that changes on screen is a date. `lastCheckAt` gates it: before the
+                first check there is no basis for the claim.
+              */}
+              {status?.lastCheckAt && !status.available ? (
+                <div className="rounded-md border border-status-ok/40 bg-status-ok/5 px-4 py-3">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {t('up_to_date_title')}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    {t('up_to_date_body', {
+                      version: status.currentVersion,
                       date: new Date(status.lastCheckAt * 1000).toLocaleString(),
-                    })
-                  : t('no_checks_yet')}
-              </p>
+                    })}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {status?.lastCheckAt
+                    ? t('last_checked', {
+                        date: new Date(status.lastCheckAt * 1000).toLocaleString(),
+                      })
+                    : t('no_checks_yet')}
+                </p>
+              )}
               <Button
                 size="sm"
                 loading={checking}

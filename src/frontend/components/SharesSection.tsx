@@ -7,6 +7,7 @@ import { EmptyState } from './ui/EmptyState';
 import { FullPageSpinner } from './ui/Spinner';
 import { Table, type Column } from './ui/Table';
 import { useApiQuery } from '../hooks/useApi';
+import { useTranslation } from '../hooks/useTranslation';
 import { ShareEdit } from './ShareEdit';
 
 function statusTone(status: string): BadgeTone {
@@ -27,6 +28,7 @@ function statusTone(status: string): BadgeTone {
 }
 
 export function SharesSection(): JSX.Element {
+  const t = useTranslation('shares');
   const shares = useApiQuery('shares.list', { query: {} }, { pollMs: 15_000 });
   const [editingId, setEditingId] = useState<number>();
 
@@ -41,31 +43,31 @@ export function SharesSection(): JSX.Element {
   const shareColumns: readonly Column<ShareRuntime>[] = [
     {
       key: 'name',
-      header: 'Share Name',
+      header: t('col_name'),
       render: (s) => <span className="font-medium">{s.name}</span>,
     },
     {
       key: 'path',
-      header: 'Server Path',
+      header: t('col_server_path'),
       render: (s) => <span className="font-mono text-xs text-slate-500">{s.serverUnc}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('col_status'),
       render: (s) => <Badge tone={statusTone(s.status)}>{s.status}</Badge>,
     },
     {
       key: 'files',
-      header: 'Files',
+      header: t('col_files'),
       render: (s) => (
         <span className="text-xs text-slate-600 dark:text-slate-400">
-          {s.filesIndexed} indexed, {s.filesPending} pending
+          {t('files_summary', { indexed: s.filesIndexed, pending: s.filesPending })}
         </span>
       ),
     },
     {
       key: 'throughput',
-      header: 'Throughput',
+      header: t('col_throughput'),
       render: (s) => {
         const mbIn = (s.bytesInPerSec / 1024 / 1024).toFixed(1);
         const mbOut = (s.bytesOutPerSec / 1024 / 1024).toFixed(1);
@@ -78,10 +80,10 @@ export function SharesSection(): JSX.Element {
     },
     {
       key: 'readOnly',
-      header: 'Mode',
+      header: t('col_mode'),
       render: (s) => (
         <Badge tone={s.effectiveReadOnly ? 'warn' : 'ok'}>
-          {s.effectiveReadOnly ? 'Read-only' : 'RW'}
+          {s.effectiveReadOnly ? t('read_only') : t('read_write')}
         </Badge>
       ),
     },
@@ -90,7 +92,7 @@ export function SharesSection(): JSX.Element {
       header: '',
       render: (s) => (
         <Button size="sm" variant="ghost" onClick={() => setEditingId(s.id)}>
-          Settings
+          {t('settings_button')}
         </Button>
       ),
     },
@@ -102,26 +104,23 @@ export function SharesSection(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Shares</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Manage synchronized shares and per-share settings.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
         </div>
         <Button size="sm" onClick={handleCreateClick}>
-          + New Share
+          {t('new_share')}
         </Button>
       </div>
 
       <Card>
         <CardHeader
-          title="Active shares"
-          subtitle={`${data?.total ?? 0} share${data?.total === 1 ? '' : 's'}`}
+          title={t('active_shares')}
+          subtitle={
+            data?.total === 1 ? t('share_count_one') : t('share_count', { count: data?.total ?? 0 })
+          }
         />
         {data?.items.length === 0 ? (
-          <EmptyState
-            title="No shares configured"
-            description="Create your first share to begin synchronizing files."
-          />
+          <EmptyState title={t('none_title')} description={t('none_description')} />
         ) : (
           <Table columns={shareColumns} rows={data?.items ?? []} rowKey={(s) => s.id} />
         )}
