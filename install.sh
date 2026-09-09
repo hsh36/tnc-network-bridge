@@ -409,16 +409,27 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 # root operations through 'sudo ${HELPER_PATH}', and NoNewPrivileges makes any setuid
 # binary - sudo included - fail. Setting it would not harden the service, it would break
 # every network, SMB and firewall change and leave the UI reporting mysterious errors.
+#
+# ProtectSystem and ProtectKernelTunables are off for the same reason. A process started
+# through sudo inherits this unit's mount namespace, so a read-only /etc is read-only for
+# the helper too — which is the one process whose entire job is writing /etc/samba,
+# /etc/dnsmasq.d and /etc/nftables.d as root:
+#
+#   ENOENT: no such file or directory, mkdir '/etc/nftables.d'
+#
+# What keeps the service away from those paths is not the namespace, it is that the
+# service runs as ${SERVICE_USER} and does not own them. The namespace only ever stopped
+# the helper.
 PrivateTmp=yes
-ProtectSystem=strict
 ProtectHome=yes
-ProtectKernelTunables=yes
 ProtectControlGroups=yes
 RestrictSUIDSGID=no
 RestrictNamespaces=yes
 LockPersonality=yes
-# ProtectSystem=strict mounts the whole filesystem read-only; these are the four paths
-# the service legitimately writes to. The install directory is not among them.
+# ProtectHome hides /home; these are the paths the service itself writes to, listed so
+# that a later tightening of ProtectSystem does not have to rediscover them. The install
+# directory is deliberately not among them — the service reads its own code, never
+# writes it.
 ReadWritePaths=${STATE_DIR} ${LOG_DIR} ${CONFIG_DIR} ${CACHE_DIR}
 
 [Install]
