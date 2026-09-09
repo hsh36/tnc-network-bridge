@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { type Conflict, type Lock } from '../../shared';
 import { ActiveLocksTable } from '../components/ActiveLocksTable';
 import { ConflictDetail } from '../components/ConflictDetail';
@@ -23,6 +24,7 @@ import { api, ApiError } from '../lib/api-client';
  */
 
 export function LocksConflictsPage(): JSX.Element {
+  const t = useTranslation('locks');
   // Locks state and hooks
   const locks = useLocks();
   const [releaseConfirm, setReleaseConfirm] = useState<Lock>();
@@ -59,12 +61,12 @@ export function LocksConflictsPage(): JSX.Element {
       query: { reason: 'Force-released from dashboard' },
     })
       .then(() => {
-        setNotice(`Lock released`);
+        setNotice(t('lock_released'));
         setReleaseConfirm(undefined);
         void locks.refresh();
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'Could not release the lock');
+        setError(err instanceof ApiError ? err.message : t('lock_release_error'));
       })
       .finally(() => setReleasingId(undefined));
   };
@@ -74,11 +76,11 @@ export function LocksConflictsPage(): JSX.Element {
     setAcknowledgingId(conflictId);
     api('conflicts.acknowledge', { params: { id: conflictId } })
       .then(() => {
-        setNotice('Conflict acknowledged');
+        setNotice(t('conflict_acknowledged'));
         void conflicts.refresh();
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'Could not acknowledge the conflict');
+        setError(err instanceof ApiError ? err.message : t('conflict_acknowledge_error'));
       })
       .finally(() => setAcknowledgingId(undefined));
   };
@@ -95,15 +97,16 @@ export function LocksConflictsPage(): JSX.Element {
     })
       .then((result) => {
         setNotice(
-          `Restored version ${String(result.restoredTo)}. The content it replaced was saved as version ${String(
-            result.preRestoreVersionId,
-          )}.`,
+          t('conflict_restore_success', {
+            restoredTo: result.restoredTo,
+            preRestoreVersionId: result.preRestoreVersionId,
+          }),
         );
         setConflictShown(undefined);
         void conflicts.refresh();
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'Could not restore the version');
+        setError(err instanceof ApiError ? err.message : t('conflict_restore_error'));
       })
       .finally(() => setIsRestoringConflict(false));
   };
@@ -123,7 +126,7 @@ export function LocksConflictsPage(): JSX.Element {
         URL.revokeObjectURL(url);
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'Could not download the version');
+        setError(err instanceof ApiError ? err.message : t('conflict_download_error'));
       })
       .finally(() => setIsDownloadingConflict(false));
   };
@@ -131,13 +134,13 @@ export function LocksConflictsPage(): JSX.Element {
   // Build tab items
   const activeLocksTab: React.ComponentProps<typeof Tabs>['items'][0] = {
     id: 'active-locks',
-    label: `Active Locks (${String(locks.active.length)})`,
+    label: t('active_locks_tab', { count: locks.active.length }),
     content: locks.loading ? (
       <div className="flex justify-center py-8">
         <Spinner />
       </div>
     ) : locks.active.length === 0 ? (
-      <EmptyState title="No active locks" />
+      <EmptyState title={t('no_locks')} />
     ) : (
       <Card>
         <CardBody>
@@ -157,7 +160,7 @@ export function LocksConflictsPage(): JSX.Element {
 
   const lockHistoryTab: React.ComponentProps<typeof Tabs>['items'][0] = {
     id: 'lock-history',
-    label: `Lock History (${String(locks.history.length)})`,
+    label: t('lock_history_tab', { count: locks.history.length }),
     content: locks.loading ? (
       <div className="flex justify-center py-8">
         <Spinner />
@@ -174,18 +177,18 @@ export function LocksConflictsPage(): JSX.Element {
   const unresolvedCount = conflicts.unresolved.length;
   const conflictsTab: React.ComponentProps<typeof Tabs>['items'][0] = {
     id: 'conflicts',
-    label: `Conflicts (${String(unresolvedCount)} unresolved)`,
+    label: t('conflicts_tab', { count: unresolvedCount }),
     content: conflicts.loading ? (
       <div className="flex justify-center py-8">
         <Spinner />
       </div>
     ) : conflicts.unresolved.length === 0 && conflicts.resolved.length === 0 ? (
-      <EmptyState title="No conflicts" description="Great! Everything is in sync." />
+      <EmptyState title={t('no_conflicts')} description={t('great_in_sync')} />
     ) : (
       <div className="flex flex-col gap-6">
         {conflicts.unresolved.length > 0 && (
           <Card>
-            <CardHeader title={`Unresolved (${String(conflicts.unresolved.length)})`} />
+            <CardHeader title={t('unresolved_conflicts', { count: conflicts.unresolved.length })} />
             <CardBody>
               <ConflictsList
                 conflicts={conflicts.unresolved}
@@ -199,7 +202,7 @@ export function LocksConflictsPage(): JSX.Element {
 
         {conflicts.resolved.length > 0 && (
           <Card>
-            <CardHeader title={`Resolved (${String(conflicts.resolved.length)})`} />
+            <CardHeader title={t('resolved_conflicts', { count: conflicts.resolved.length })} />
             <CardBody>
               <ConflictsList
                 conflicts={conflicts.resolved}
@@ -219,10 +222,10 @@ export function LocksConflictsPage(): JSX.Element {
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          Locks & Conflicts
+          {t('title')}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Manage file locks across machines and resolve any conflicts.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -237,7 +240,7 @@ export function LocksConflictsPage(): JSX.Element {
             onClick={() => setNotice(undefined)}
             className="float-right font-medium hover:underline"
           >
-            Dismiss
+            {t('common:dismiss')}
           </button>
         </div>
       )}
@@ -251,7 +254,7 @@ export function LocksConflictsPage(): JSX.Element {
             onClick={() => setError(undefined)}
             className="float-right font-medium hover:underline"
           >
-            Dismiss
+            {t('common:dismiss')}
           </button>
         </div>
       )}
@@ -282,3 +285,5 @@ export function LocksConflictsPage(): JSX.Element {
     </div>
   );
 }
+
+

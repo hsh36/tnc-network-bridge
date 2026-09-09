@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
@@ -23,16 +24,7 @@ const STATE_TONE: Record<string, BadgeTone> = {
   excluded: 'idle',
 };
 
-const STATE_LABEL: Record<string, string> = {
-  new: 'New',
-  synced: 'Synced',
-  pending_push: 'Pending push',
-  pending_pull: 'Pending pull',
-  conflict: 'Conflict',
-  deferred_locked: 'Locked',
-  error: 'Error',
-  excluded: 'Excluded',
-};
+// STATE_LABEL is initialized in the component to use translations
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -54,6 +46,19 @@ interface FilterState {
 }
 
 export function FilesBrowserPage(): JSX.Element {
+  const t = useTranslation('files');
+
+  const STATE_LABEL: Record<string, string> = {
+    new: t('status_new'),
+    synced: t('status_synced'),
+    pending_push: t('status_pending_push'),
+    pending_pull: t('status_pending_pull'),
+    conflict: t('status_conflict'),
+    deferred_locked: t('status_locked'),
+    error: t('status_error'),
+    excluded: t('status_excluded'),
+  };
+
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
   const [filters, setFilters] = useState<FilterState>({
     share: 1,
@@ -116,9 +121,9 @@ export function FilesBrowserPage(): JSX.Element {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">File Browser</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('title')}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Browse synchronized files and their version history
+          {t('subtitle')}
         </p>
       </div>
 
@@ -138,9 +143,9 @@ export function FilesBrowserPage(): JSX.Element {
             <CardHeader
               title={
                 <div className="flex items-center justify-between">
-                  <span>Files</span>
+                  <span>{t('files_header')}</span>
                   <span className="text-xs font-normal text-slate-500">
-                    {files.data?.total ?? 0} total
+                    {t('total_count', { total: files.data?.total ?? 0 })}
                   </span>
                 </div>
               }
@@ -149,8 +154,8 @@ export function FilesBrowserPage(): JSX.Element {
               {fileItems.length === 0 ? (
                 <div className="p-8">
                   <EmptyState
-                    title="No files found"
-                    description="Try adjusting your filters or search query"
+                    title={t('no_files')}
+                    description={t('no_files_description')}
                   />
                 </div>
               ) : viewMode === 'tree' ? (
@@ -165,16 +170,16 @@ export function FilesBrowserPage(): JSX.Element {
                     <thead>
                       <tr className="border-b border-border dark:border-border-dark">
                         <th className="px-4 py-3 text-left font-medium text-slate-600 dark:text-slate-400">
-                          Path
+                          {t('path_header')}
                         </th>
                         <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-400">
-                          Size
+                          {t('size_header')}
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-slate-600 dark:text-slate-400">
-                          Status
+                          {t('status_header')}
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-slate-600 dark:text-slate-400">
-                          Modified
+                          {t('modified_header')}
                         </th>
                       </tr>
                     </thead>
@@ -219,10 +224,10 @@ export function FilesBrowserPage(): JSX.Element {
           {selectedFile ? (
             <>
               <Card>
-                <CardHeader title="File Details" />
+                <CardHeader title={t('file_details')} />
                 <CardBody className="space-y-3 text-sm">
                   <div>
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Path</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t('path_label')}</p>
                     <p className="mt-1 break-all font-mono text-xs text-slate-900 dark:text-slate-100">
                       {selectedFile.relPath}
                     </p>
@@ -230,7 +235,7 @@ export function FilesBrowserPage(): JSX.Element {
 
                   <div>
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Status
+                      {t('status_label')}
                     </p>
                     <Badge tone={STATE_TONE[selectedFile.state] ?? 'idle'}>
                       {STATE_LABEL[selectedFile.state] ?? selectedFile.state}
@@ -240,7 +245,7 @@ export function FilesBrowserPage(): JSX.Element {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        Size
+                        {t('size_label')}
                       </p>
                       <p className="mt-1 text-xs">
                         {formatBytes(selectedFile.local?.size ?? selectedFile.remote?.size ?? 0)}
@@ -248,16 +253,16 @@ export function FilesBrowserPage(): JSX.Element {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        Type
+                        {t('type_label')}
                       </p>
-                      <p className="mt-1 text-xs">{selectedFile.isDir ? 'Directory' : 'File'}</p>
+                      <p className="mt-1 text-xs">{selectedFile.isDir ? t('directory') : t('file')}</p>
                     </div>
                   </div>
 
                   {selectedFile.lastSyncAt && (
                     <div>
                       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        Last Synced
+                        {t('last_synced')}
                       </p>
                       <p className="mt-1 text-xs">
                         {new Date(selectedFile.lastSyncAt * 1000).toLocaleString()}
@@ -267,7 +272,7 @@ export function FilesBrowserPage(): JSX.Element {
 
                   {selectedFile.lastError && (
                     <div className="rounded border border-status-error/20 bg-status-error/5 p-2">
-                      <p className="text-xs font-semibold text-status-error">Error</p>
+                      <p className="text-xs font-semibold text-status-error">{t('error_label')}</p>
                       <p className="mt-1 text-xs text-status-error/80">{selectedFile.lastError}</p>
                     </div>
                   )}
@@ -277,7 +282,7 @@ export function FilesBrowserPage(): JSX.Element {
               {!selectedFile.isDir && (
                 <>
                   <Button size="sm" onClick={() => setPreviewFile(selectedFile)} className="w-full">
-                    Preview
+                    {t('preview_button')}
                   </Button>
 
                   {previewFile && (
@@ -292,8 +297,8 @@ export function FilesBrowserPage(): JSX.Element {
             <Card>
               <CardBody>
                 <EmptyState
-                  title="Select a file"
-                  description="Click a file to view details and version history"
+                  title={t('select_file')}
+                  description={t('select_file_description')}
                 />
               </CardBody>
             </Card>
@@ -303,3 +308,5 @@ export function FilesBrowserPage(): JSX.Element {
     </div>
   );
 }
+
+

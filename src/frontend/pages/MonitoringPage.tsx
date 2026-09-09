@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { type TimeRange } from '../../shared';
 import { CPUMemChart } from '../components/CPUMemChart';
 import { DiskUsageChart } from '../components/DiskUsageChart';
@@ -25,6 +26,7 @@ const METRICS_TO_FETCH = [
 ];
 
 export function MonitoringPage(): JSX.Element {
+  const t = useTranslation('monitoring');
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [customFrom, setCustomFrom] = useState<number | undefined>(undefined);
   const [customTo, setCustomTo] = useState<number | undefined>(undefined);
@@ -80,9 +82,9 @@ export function MonitoringPage(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Monitoring</h1>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Real-time metrics and system health overview
+          {t('subtitle')}
         </p>
       </div>
 
@@ -90,7 +92,7 @@ export function MonitoringPage(): JSX.Element {
         <Card className="border-status-error/40">
           <CardBody>
             <p className="text-sm text-status-error">
-              Could not load metrics: {metrics.error.message}
+              {t('load_error', { message: metrics.error.message })}
             </p>
           </CardBody>
         </Card>
@@ -142,3 +144,5 @@ export function MonitoringPage(): JSX.Element {
     </div>
   );
 }
+
+

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
@@ -16,6 +17,7 @@ import { useUpdateStatus } from '../hooks/useUpdateStatus';
  * updates. Progress is designed to survive service restarts via SSE reconnect.
  */
 export function SystemUpdates(): JSX.Element {
+  const t = useTranslation('updates');
   const {
     status,
     history,
@@ -41,20 +43,20 @@ export function SystemUpdates(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">System Updates</h1>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Check for updates, review changelogs, and manage automatic update scheduling.
+          {t('subtitle')}
         </p>
       </div>
 
       {/* Current version */}
       <Card>
-        <CardHeader title="Current Version" />
+        <CardHeader title={t('current_version_title')} />
         <CardBody>
           {loading && !status ? (
             <div className="flex items-center gap-2">
               <Spinner />
-              <span className="text-sm text-slate-500">Loading...</span>
+              <span className="text-sm text-slate-500">{t('loading')}</span>
             </div>
           ) : (
             <div className="flex items-center justify-between">
@@ -63,7 +65,7 @@ export function SystemUpdates(): JSX.Element {
                   {status?.currentVersion ?? '—'}
                 </span>
                 {status?.rollbackVersion && (
-                  <Badge tone="warn">Rollback available ({status.rollbackVersion})</Badge>
+                  <Badge tone="warn">{t('rollback_available', { version: status.rollbackVersion })}</Badge>
                 )}
               </div>
               {status?.rollbackVersion && (
@@ -74,7 +76,7 @@ export function SystemUpdates(): JSX.Element {
                   onClick={() => void rollback()}
                   disabled={isUpdating || applying || checking}
                 >
-                  Rollback
+                  {t('rollback_button')}
                 </Button>
               )}
             </div>
@@ -85,20 +87,20 @@ export function SystemUpdates(): JSX.Element {
       {/* Available version */}
       {status?.available && (
         <Card>
-          <CardHeader title="Available Update" />
+          <CardHeader title={t('available_update')} />
           <CardBody>
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                  Version {status.available.version}
+                  {t('version_label', { version: status.available.version })}
                 </span>
-                <Badge tone="accent">Available</Badge>
+                <Badge tone="accent">{t('available_badge')}</Badge>
               </div>
 
               {status.available.notes && (
                 <div className="rounded-md bg-slate-50 p-4 dark:bg-slate-800">
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Release Notes
+                    {t('release_notes')}
                   </p>
                   <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                     <pre className="whitespace-pre-wrap font-sans">{status.available.notes}</pre>
@@ -113,7 +115,7 @@ export function SystemUpdates(): JSX.Element {
                   onClick={() => void apply(status.available!.version)}
                   disabled={isUpdating || checking || rolling}
                 >
-                  Apply Update
+                  {t('apply_update')}
                 </Button>
                 <Button
                   size="sm"
@@ -122,7 +124,7 @@ export function SystemUpdates(): JSX.Element {
                   onClick={() => void check()}
                   disabled={isUpdating || applying || rolling}
                 >
-                  Check Again
+                  {t('check_again')}
                 </Button>
               </div>
 
@@ -139,7 +141,7 @@ export function SystemUpdates(): JSX.Element {
       {/* Update progress */}
       {status && (
         <Card>
-          <CardHeader title="Update Progress" />
+          <CardHeader title={t('update_progress')} />
           <CardBody>
             <UpdateProgress status={status} />
             {rollbackError && (
@@ -154,13 +156,13 @@ export function SystemUpdates(): JSX.Element {
       {/* Check for updates */}
       {!status?.available && (
         <Card>
-          <CardHeader title="Check for Updates" />
+          <CardHeader title={t('check_for_updates_title')} />
           <CardBody>
             <div className="flex flex-col gap-4">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {status?.lastCheckAt
-                  ? `Last checked: ${new Date(status.lastCheckAt * 1000).toLocaleString()}`
-                  : 'No checks performed yet'}
+                  ? t('last_checked', { date: new Date(status.lastCheckAt * 1000).toLocaleString() })
+                  : t('no_checks_yet')}
               </p>
               <Button
                 size="sm"
@@ -168,7 +170,7 @@ export function SystemUpdates(): JSX.Element {
                 onClick={() => void check()}
                 disabled={isUpdating || applying || rolling}
               >
-                Check for Updates
+                {t('check_updates_button')}
               </Button>
               {checkError && (
                 <div className="rounded-md bg-red-50 p-3 dark:bg-red-950">
@@ -182,12 +184,12 @@ export function SystemUpdates(): JSX.Element {
 
       {/* Update schedule */}
       <Card>
-        <CardHeader title="Automatic Updates" />
+        <CardHeader title={t('automatic_updates')} />
         <CardBody>
           <div className="flex flex-col gap-4">
             {!showScheduleEditor ? (
               <Button size="sm" variant="secondary" onClick={() => setShowScheduleEditor(true)}>
-                Configure Schedule
+                {t('configure_schedule')}
               </Button>
             ) : (
               <>
@@ -198,12 +200,12 @@ export function SystemUpdates(): JSX.Element {
                   }}
                 />
                 <Button size="sm" variant="ghost" onClick={() => setShowScheduleEditor(false)}>
-                  Cancel
+                  {t('cancel_button')}
                 </Button>
               </>
             )}
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Automatic updates can be scheduled to run at a specific time each week.
+              {t('schedule_note')}
             </p>
           </div>
         </CardBody>
@@ -211,7 +213,7 @@ export function SystemUpdates(): JSX.Element {
 
       {/* Update history */}
       <Card>
-        <CardHeader title="Update History" />
+        <CardHeader title={t('update_history')} />
         <CardBody>
           <UpdateHistory entries={history} />
         </CardBody>
@@ -219,3 +221,4 @@ export function SystemUpdates(): JSX.Element {
     </div>
   );
 }
+

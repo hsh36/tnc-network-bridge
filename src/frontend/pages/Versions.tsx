@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { type FileVersion } from '../../shared';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -62,13 +63,7 @@ const ORIGIN_TONE: Record<FileVersion['origin'], BadgeTone> = {
   conflict_loser: 'error',
 };
 
-const ORIGIN_LABEL: Record<FileVersion['origin'], string> = {
-  server: 'From server',
-  tnc: 'From machine',
-  restore: 'Pre-restore image',
-  initial: 'Initial import',
-  conflict_loser: 'Lost a conflict',
-};
+// ORIGIN_LABEL is initialized in the component to use translations
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) {
@@ -108,6 +103,16 @@ interface ConfirmState {
 }
 
 export function Versions(): JSX.Element {
+  const t = useTranslation('versions');
+
+  const ORIGIN_LABEL: Record<FileVersion['origin'], string> = {
+    server: t('origin_server'),
+    tnc: t('origin_tnc'),
+    restore: t('origin_restore'),
+    initial: t('origin_initial'),
+    conflict_loser: t('origin_conflict'),
+  };
+
   const [shareId, setShareId] = useState('1');
   const [path, setPath] = useState('');
   const [applied, setApplied] = useState<{ share: number; path: string }>({ share: 1, path: '' });
@@ -176,15 +181,16 @@ export function Versions(): JSX.Element {
     })
       .then((result) => {
         setNotice(
-          `Restored ${result.restoredTo}. The content it replaced was saved as version ${String(
-            result.preRestoreVersionId,
-          )}, so this can be undone.`,
+          t('restore_success', {
+            restoredTo: result.restoredTo,
+            preRestoreVersionId: result.preRestoreVersionId,
+          }),
         );
         setConfirm(undefined);
         versions.refresh();
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : 'The restore did not complete'),
+        setError(err instanceof ApiError ? err.message : t('restore_error')),
       )
       .finally(() => setBusyId(undefined));
   };
@@ -194,7 +200,7 @@ export function Versions(): JSX.Element {
     api('versions.pin', { params: { id: version.id }, body: { pinned: !version.pinned } })
       .then(() => versions.refresh())
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : 'Could not change the pin'),
+        setError(err instanceof ApiError ? err.message : t('pin_change_error')),
       )
       .finally(() => setBusyId(undefined));
   };
@@ -204,11 +210,11 @@ export function Versions(): JSX.Element {
     setError(undefined);
     api('versions.delete', { params: { id: version.id } })
       .then(() => {
-        setNotice(`Deleted version ${String(version.id)}.`);
+        setNotice(t('delete_success', { id: version.id }));
         versions.refresh();
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : 'Could not delete the version'),
+        setError(err instanceof ApiError ? err.message : t('delete_error')),
       )
       .finally(() => setBusyId(undefined));
   };
@@ -224,7 +230,7 @@ export function Versions(): JSX.Element {
         const text = await (blob as Blob).text();
         setPreview({ id: version.id, text });
       })
-      .catch(() => setError('Could not read that version'))
+      .catch(() => setError(t('preview_error')))
       .finally(() => setBusyId(undefined));
   };
 
@@ -234,37 +240,36 @@ export function Versions(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Versions</h1>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Every version captured before content was overwritten, and the ability to put any of it
-          back.
+          {t('subtitle')}
         </p>
       </div>
 
       <Card>
         <CardHeader
-          title="Find a file"
-          subtitle="Leave the path empty to see the whole share's history"
+          title={t('find_file')}
+          subtitle={t('find_file_subtitle')}
         />
         <CardBody>
           <form onSubmit={handleFilter} className="flex flex-wrap items-end gap-3">
             <Input
               id="versionShare"
-              label="Share ID"
+              label={t('share_id_label')}
               value={shareId}
               onChange={(e) => setShareId(e.target.value)}
               className="w-24"
             />
             <Input
               id="versionPath"
-              label="Path"
+              label={t('path_label')}
               value={path}
               onChange={(e) => setPath(e.target.value)}
-              placeholder="PGM/PART1.H"
+              placeholder={t('path_placeholder')}
               className="min-w-[16rem] flex-1"
             />
             <Button type="submit" loading={versions.loading}>
-              Show history
+              {t('show_history')}
             </Button>
           </form>
         </CardBody>
@@ -272,35 +277,34 @@ export function Versions(): JSX.Element {
 
       {policy !== undefined && (
         <Card>
-          <CardHeader title="Retention policy" />
+          <CardHeader title={t('retention_policy')} />
           <CardBody className="flex flex-wrap gap-6 text-sm">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Kept per file
+                {t('kept_per_file')}
               </p>
               <p className="font-medium text-slate-900 dark:text-slate-100">
-                {policy.keepCount ?? '—'} versions
+                {t('version_count', { count: policy.keepCount ?? '—' })}
               </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Age limit
+                {t('age_limit')}
               </p>
               <p className="font-medium text-slate-900 dark:text-slate-100">
-                {policy.keepDays ?? '—'} days
+                {t('age_days', { count: policy.keepDays ?? '—' })}
               </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Store ceiling
+                {t('store_ceiling')}
               </p>
               <p className="font-medium text-slate-900 dark:text-slate-100">
-                {policy.maxStoreGb ?? '—'} GB
+                {t('store_gb', { count: policy.maxStoreGb ?? '—' })}
               </p>
             </div>
             <p className="w-full text-xs text-slate-500 dark:text-slate-400">
-              Pinned versions and versions referenced by a conflict are never pruned, and the newest
-              version of a file is always kept.
+              {t('retention_note')}
             </p>
           </CardBody>
         </Card>
@@ -324,11 +328,11 @@ export function Versions(): JSX.Element {
       )}
 
       <Card>
-        <CardHeader title="History" subtitle={`${String(versions.data?.total ?? 0)} versions`} />
+        <CardHeader title={t('history_title')} subtitle={t('history_total', { count: versions.data?.total ?? 0 })} />
         {items.length === 0 ? (
           <EmptyState
-            title="No versions yet"
-            description="Versions appear here once the bridge has captured content that was about to be overwritten."
+            title={t('no_versions')}
+            description={t('no_versions_description')}
           />
         ) : (
           <ol className="flex flex-col">
@@ -349,8 +353,8 @@ export function Versions(): JSX.Element {
                         <Badge tone={ORIGIN_TONE[version.origin]}>
                           {ORIGIN_LABEL[version.origin]}
                         </Badge>
-                        {version.pinned && <Badge tone="warn">Pinned</Badge>}
-                        {isCurrent && <Badge tone="idle">Current</Badge>}
+                        {version.pinned && <Badge tone="warn">{t('pinned_badge')}</Badge>}
+                        {isCurrent && <Badge tone="idle">{t('current_badge')}</Badge>}
                       </div>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {formatAge(version.createdAt)} ·{' '}
@@ -373,7 +377,7 @@ export function Versions(): JSX.Element {
                           loading={busy}
                           onClick={() => handlePreview(version)}
                         >
-                          {preview?.id === version.id ? 'Hide' : 'Preview'}
+                          {preview?.id === version.id ? t('hide_preview') : t('preview_button')}
                         </Button>
                       )}
                       <Button
@@ -382,26 +386,26 @@ export function Versions(): JSX.Element {
                         loading={busy}
                         onClick={() => handlePin(version)}
                       >
-                        {version.pinned ? 'Unpin' : 'Pin'}
+                        {version.pinned ? t('unpin_button') : t('pin_button')}
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
                         disabled={isCurrent}
-                        title={isCurrent ? 'This is the file as it stands now' : undefined}
+                        title={isCurrent ? t('restore_disabled_title') : undefined}
                         onClick={() => setConfirm({ version, targetPath: '' })}
                       >
-                        Restore
+                        {t('restore_button')}
                       </Button>
                       <Button
                         size="sm"
                         variant="danger"
                         loading={busy}
                         disabled={version.pinned}
-                        title={version.pinned ? 'Unpin before deleting' : undefined}
+                        title={version.pinned ? t('delete_disabled_title') : undefined}
                         onClick={() => handleDelete(version)}
                       >
-                        Delete
+                        {t('delete_button')}
                       </Button>
                     </div>
                   </div>
@@ -426,36 +430,34 @@ export function Versions(): JSX.Element {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
         >
           <Card className="w-full max-w-lg">
-            <CardHeader title={<span id="restore-title">Restore this version?</span>} />
+            <CardHeader title={<span id="restore-title">{t('restore_dialog_title')}</span>} />
             <CardBody className="flex flex-col gap-4 text-sm">
               <p className="text-slate-700 dark:text-slate-200">
-                This writes the content of{' '}
-                <span className="font-mono">{confirm.version.relPath}</span> as it was on{' '}
-                <strong>{new Date(confirm.version.createdAt * 1000).toLocaleString()}</strong> back
-                into the share.
+                {t('restore_dialog_message', {
+                  path: confirm.version.relPath,
+                  date: new Date(confirm.version.createdAt * 1000).toLocaleString(),
+                })}
               </p>
               <p className="rounded-md bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                The file&apos;s current content is saved as a new version first, so this restore can
-                itself be undone. If the file is open on a machine, the restore waits for the lock
-                to clear.
+                {t('restore_dialog_note')}
               </p>
               <Input
                 id="restoreTarget"
-                label="Restore to a different path (optional)"
+                label={t('restore_path_label')}
                 value={confirm.targetPath}
                 onChange={(e) => setConfirm({ ...confirm, targetPath: e.target.value })}
                 placeholder={confirm.version.relPath}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setConfirm(undefined)}>
-                  Cancel
+                  {t('restore_cancel')}
                 </Button>
                 <Button
                   variant="danger"
                   loading={busyId === confirm.version.id}
                   onClick={handleRestore}
                 >
-                  Restore
+                  {t('restore_confirm')}
                 </Button>
               </div>
             </CardBody>
@@ -465,3 +467,4 @@ export function Versions(): JSX.Element {
     </div>
   );
 }
+

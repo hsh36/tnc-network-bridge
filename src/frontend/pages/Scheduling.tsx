@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { SCHEDULE_KINDS, type Schedule, type ScheduleKind } from '../../shared';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -25,35 +26,7 @@ import { api, ApiError } from '../lib/api-client';
  *   failing silently every night is apparent at a glance rather than on investigation.
  */
 
-const KIND_LABEL: Record<ScheduleKind, string> = {
-  lock: 'Lock files',
-  unlock: 'Unlock files',
-  update: 'Check for updates',
-  restart: 'Restart service',
-  prune: 'Prune old versions',
-  scan: 'Rescan share',
-  backup: 'Back up database',
-};
-
-const KIND_HELP: Record<ScheduleKind, string> = {
-  lock: 'Holds a lock over matching paths so the machines cannot change them.',
-  unlock: 'Releases locks that a lock window took.',
-  update: 'Polls GitHub for a new release on the configured channel.',
-  restart: 'Restarts the bridge service. Sync pauses for a few seconds.',
-  prune: 'Applies the version retention policy and frees disk.',
-  scan: 'Forces a full rescan instead of waiting for the next interval.',
-  backup: 'Checkpoints and copies the SQLite database.',
-};
-
-/** Presets that cover the schedules this product is actually asked for. */
-const PRESETS: readonly { label: string; cron: string }[] = [
-  { label: 'Every night at 03:00', cron: '0 3 * * *' },
-  { label: 'Every hour', cron: '0 * * * *' },
-  { label: 'Every 15 minutes', cron: '*/15 * * * *' },
-  { label: 'Sundays at 04:00', cron: '0 4 * * 0' },
-  { label: 'Weeknights at 22:00', cron: '0 22 * * 1-5' },
-  { label: 'First of the month, 02:00', cron: '0 2 1 * *' },
-];
+// KIND_LABEL, KIND_HELP and PRESETS are initialized in the component to use translations
 
 const RESULT_TONE: Record<string, BadgeTone> = {
   ok: 'ok',
@@ -61,25 +34,56 @@ const RESULT_TONE: Record<string, BadgeTone> = {
   skipped: 'warn',
 };
 
-export function formatNextRun(nextRunAt: number | null, now: number = Date.now()): string {
+export function formatNextRun(nextRunAt: number | null, t: any, now: number = Date.now()): string {
   if (nextRunAt === null) {
-    return 'never';
+    return t('next_run_never');
   }
   const seconds = nextRunAt - Math.floor(now / 1000);
   if (seconds <= 0) {
-    return 'due now';
+    return t('next_run_now');
   }
   if (seconds < 3600) {
-    return `in ${String(Math.round(seconds / 60))} min`;
+    return t('next_run_min', { count: Math.round(seconds / 60) });
   }
   if (seconds < 86_400) {
-    return `in ${String(Math.round(seconds / 3600))} h`;
+    return t('next_run_hour', { count: Math.round(seconds / 3600) });
   }
-  return `in ${String(Math.round(seconds / 86_400))} d`;
+  return t('next_run_day', { count: Math.round(seconds / 86_400) });
 }
 
 export function Scheduling(): JSX.Element {
+  const t = useTranslation('scheduling');
   const schedules = useApiQuery('schedules.list', { query: { limit: 100 } }, { pollMs: 30_000 });
+
+  // Initialize KIND_LABEL, KIND_HELP and PRESETS with translations
+  const KIND_LABEL: Record<ScheduleKind, string> = {
+    lock: t('lock_files'),
+    unlock: t('unlock_files'),
+    update: t('check_updates'),
+    restart: t('restart_service'),
+    prune: t('prune_versions'),
+    scan: t('rescan_share'),
+    backup: t('backup_database'),
+  };
+
+  const KIND_HELP: Record<ScheduleKind, string> = {
+    lock: t('lock_help'),
+    unlock: t('unlock_help'),
+    update: t('update_help'),
+    restart: t('restart_help'),
+    prune: t('prune_help'),
+    scan: t('scan_help'),
+    backup: t('backup_help'),
+  };
+
+  const PRESETS: readonly { label: string; cron: string }[] = [
+    { label: t('preset_night'), cron: '0 3 * * *' },
+    { label: t('preset_hour'), cron: '0 * * * *' },
+    { label: t('preset_15min'), cron: '*/15 * * * *' },
+    { label: t('preset_sunday'), cron: '0 4 * * 0' },
+    { label: t('preset_weeknight'), cron: '0 22 * * 1-5' },
+    { label: t('preset_month'), cron: '0 2 1 * *' },
+  ];
 
   const [name, setName] = useState('');
   const [kind, setKind] = useState<ScheduleKind>('prune');
@@ -100,7 +104,7 @@ export function Scheduling(): JSX.Element {
     api('schedules.preview', { body: { cron } })
       .then((result) => setNextRuns(result.nextRuns))
       .catch((err: unknown) =>
-        setPreviewError(err instanceof ApiError ? err.message : 'Could not read that expression'),
+        setPreviewError(err instanceof ApiError ? err.message : t('cron_preview_error')),
       );
   };
 
@@ -121,11 +125,11 @@ export function Scheduling(): JSX.Element {
         setName('');
         setPathGlob('');
         setNextRuns(undefined);
-        setNotice('Schedule created.');
+        setNotice(t('schedule_created'));
         schedules.refresh();
       })
       .catch((err: unknown) =>
-        setFormError(err instanceof ApiError ? err.message : 'Could not create the schedule'),
+        setFormError(err instanceof ApiError ? err.message : t('schedule_create_error')),
       )
       .finally(() => setBusy(false));
   };
@@ -138,7 +142,7 @@ export function Scheduling(): JSX.Element {
     })
       .then(() => schedules.refresh())
       .catch((err: unknown) =>
-        setFormError(err instanceof ApiError ? err.message : `Could not change "${schedule.name}"`),
+        setFormError(err instanceof ApiError ? err.message : t('schedule_change_error', { name: schedule.name })),
       )
       .finally(() => setRunningId(undefined));
   };
@@ -148,11 +152,11 @@ export function Scheduling(): JSX.Element {
     setNotice(undefined);
     api('schedules.run', { params: { id: schedule.id } })
       .then((result) => {
-        setNotice(`"${schedule.name}" ran with result: ${result.result}.`);
+        setNotice(t('schedule_run_result', { name: schedule.name, result: result.result }));
         schedules.refresh();
       })
       .catch((err: unknown) =>
-        setFormError(err instanceof ApiError ? err.message : 'The run did not start'),
+        setFormError(err instanceof ApiError ? err.message : t('schedule_run_error')),
       )
       .finally(() => setRunningId(undefined));
   };
@@ -161,11 +165,11 @@ export function Scheduling(): JSX.Element {
     setRunningId(schedule.id);
     api('schedules.delete', { params: { id: schedule.id } })
       .then(() => {
-        setNotice(`Deleted "${schedule.name}".`);
+        setNotice(t('schedule_deleted', { name: schedule.name }));
         schedules.refresh();
       })
       .catch((err: unknown) =>
-        setFormError(err instanceof ApiError ? err.message : `Could not delete "${schedule.name}"`),
+        setFormError(err instanceof ApiError ? err.message : t('schedule_delete_error', { name: schedule.name })),
       )
       .finally(() => setRunningId(undefined));
   };
@@ -175,9 +179,9 @@ export function Scheduling(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Scheduling</h1>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Recurring jobs: lock windows, version pruning, rescans, backups and updates.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -192,8 +196,8 @@ export function Scheduling(): JSX.Element {
 
       <Card>
         <CardHeader
-          title="New schedule"
-          subtitle="Pick a preset, or write cron and check it before saving"
+          title={t('new_schedule')}
+          subtitle={t('new_schedule_subtitle')}
         />
         <CardBody>
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
@@ -233,11 +237,11 @@ export function Scheduling(): JSX.Element {
             {needsGlob && (
               <Input
                 id="schedulePathGlob"
-                label="Which paths"
+                label={t('which_paths')}
                 value={pathGlob}
                 onChange={(e) => setPathGlob(e.target.value)}
-                placeholder="**/*.H"
-                hint="A lock or unlock window must say which files it applies to."
+                placeholder={t('paths_placeholder')}
+                hint={t('paths_hint')}
               />
             )}
 
@@ -261,7 +265,7 @@ export function Scheduling(): JSX.Element {
             <div className="flex flex-wrap items-end gap-3">
               <Input
                 id="scheduleCron"
-                label="Cron expression"
+                label={t('cron_label')}
                 value={cron}
                 onChange={(e) => {
                   setCron(e.target.value);
@@ -269,17 +273,17 @@ export function Scheduling(): JSX.Element {
                 }}
                 className="min-w-[12rem] font-mono"
                 error={formError}
-                hint="minute hour day month weekday"
+                hint={t('cron_hint')}
               />
               <Button type="button" variant="secondary" onClick={handlePreview}>
-                Check
+                {t('check_button')}
               </Button>
               <Button
                 type="submit"
                 loading={busy}
                 disabled={name.trim().length === 0 || (needsGlob && pathGlob.trim().length === 0)}
               >
-                Create
+                {t('create_button')}
               </Button>
             </div>
 
@@ -291,7 +295,7 @@ export function Scheduling(): JSX.Element {
             {nextRuns !== undefined && (
               <div className="rounded-md bg-slate-50 p-3 text-xs dark:bg-slate-900">
                 <p className="font-medium text-slate-700 dark:text-slate-200">
-                  This will next run:
+                  {t('next_run_label')}
                 </p>
                 <ul className="mt-1 flex flex-col gap-0.5 text-slate-600 dark:text-slate-300">
                   {nextRuns.map((ts) => (
@@ -305,11 +309,11 @@ export function Scheduling(): JSX.Element {
       </Card>
 
       <Card>
-        <CardHeader title="Schedules" subtitle={`${String(schedules.data?.total ?? 0)} defined`} />
+        <CardHeader title={t('schedules_title')} subtitle={t('schedules_defined', { count: schedules.data?.total ?? 0 })} />
         {items.length === 0 ? (
           <EmptyState
-            title="No schedules yet"
-            description="Nothing runs automatically until you add a schedule."
+            title={t('no_schedules')}
+            description={t('no_schedules_description')}
           />
         ) : (
           <ul className="flex flex-col">
@@ -324,7 +328,7 @@ export function Scheduling(): JSX.Element {
                       {schedule.name}
                     </span>
                     <Badge tone="accent">{KIND_LABEL[schedule.kind]}</Badge>
-                    {!schedule.enabled && <Badge tone="idle">Disabled</Badge>}
+                    {!schedule.enabled && <Badge tone="idle">{t('disabled_badge')}</Badge>}
                     {schedule.lastResult !== null && (
                       <Badge tone={RESULT_TONE[schedule.lastResult] ?? 'idle'}>
                         {schedule.lastResult}
@@ -333,7 +337,7 @@ export function Scheduling(): JSX.Element {
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     <span className="font-mono">{schedule.cron}</span>
-                    {schedule.enabled && <> · next {formatNextRun(schedule.nextRunAt)}</>}
+                    {schedule.enabled && <> · next {formatNextRun(schedule.nextRunAt, t)}</>}
                     {schedule.target?.pathGlob !== undefined && <> · {schedule.target.pathGlob}</>}
                   </p>
                   {schedule.lastError !== null && (
@@ -348,7 +352,7 @@ export function Scheduling(): JSX.Element {
                     loading={runningId === schedule.id}
                     onClick={() => handleRunNow(schedule)}
                   >
-                    Run now
+                    {t('run_now')}
                   </Button>
                   <Button
                     size="sm"
@@ -356,7 +360,7 @@ export function Scheduling(): JSX.Element {
                     loading={runningId === schedule.id}
                     onClick={() => handleToggle(schedule)}
                   >
-                    {schedule.enabled ? 'Disable' : 'Enable'}
+                    {schedule.enabled ? t('disable_button') : t('enable_button')}
                   </Button>
                   <Button
                     size="sm"
@@ -364,7 +368,7 @@ export function Scheduling(): JSX.Element {
                     loading={runningId === schedule.id}
                     onClick={() => handleDelete(schedule)}
                   >
-                    Delete
+                    {t('delete_button')}
                   </Button>
                 </div>
               </li>
@@ -375,3 +379,4 @@ export function Scheduling(): JSX.Element {
     </div>
   );
 }
+
