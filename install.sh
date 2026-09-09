@@ -62,19 +62,27 @@ check_os() {
   fi
 }
 
-# Check prerequisites
-check_prerequisites() {
-  log_info "Checking system requirements..."
+# Install prerequisites
+install_prerequisites() {
+  log_info "Installing system requirements..."
 
-  # Check for required tools
-  local required_tools=("curl" "git")
-  for tool in "${required_tools[@]}"; do
-    if ! command -v "$tool" &> /dev/null; then
-      die "Required tool not found: $tool. Please install it and try again."
-    fi
-  done
+  # Update package lists
+  if command -v apt-get &> /dev/null; then
+    sudo apt-get update || true
 
-  log_success "System requirements met"
+    # Install required tools
+    local required_tools=("curl" "git")
+    for tool in "${required_tools[@]}"; do
+      if ! command -v "$tool" &> /dev/null; then
+        log_info "Installing $tool..."
+        sudo apt-get install -y "$tool" || die "Failed to install $tool"
+      fi
+    done
+  else
+    die "apt-get not found. This script requires Debian/Ubuntu-based systems."
+  fi
+
+  log_success "System requirements installed"
 }
 
 # Check and install Node.js 18+
@@ -262,7 +270,7 @@ main() {
   fi
 
   check_os
-  check_prerequisites
+  install_prerequisites
   install_nodejs
   clone_repository
   build_application
