@@ -99,7 +99,7 @@ describe('validation', () => {
     } catch (err) {
       error = err as ConfigValidationError;
     }
-    expect(error?.message).toMatch(/must be different/);
+    expect(error?.message).toMatch(/must not share an untagged interface/);
   });
 
   it('leaves the stored value untouched when validation fails', () => {

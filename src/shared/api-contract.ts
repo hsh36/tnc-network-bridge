@@ -36,6 +36,7 @@ import {
   loginRequestSchema,
   metricsQuerySchema,
   metricsResponseSchema,
+  networkInterfacesResponseSchema,
   paginated,
   paginationQuerySchema,
   previewScheduleRequestSchema,
@@ -605,6 +606,17 @@ export const apiContract = {
     auth: 'session-or-token',
     query: updateHistoryQuerySchema,
     response: paginated(updateHistoryEntrySchema),
+  },
+
+  // -------------------------------------------------------------------------
+  // Network interfaces
+  // -------------------------------------------------------------------------
+  'network.interfaces': {
+    method: 'GET',
+    path: '/network/interfaces',
+    summary: 'Every NIC on the machine, with its stored desired-state configuration.',
+    auth: 'session',
+    response: networkInterfacesResponseSchema,
   },
 
   // -------------------------------------------------------------------------

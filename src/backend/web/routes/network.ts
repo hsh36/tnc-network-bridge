@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   applyNetworkConfigRequestSchema,
+  defaultInterfaceNetworkConfig,
+  type InterfaceNetworkConfig,
   applyNetworkConfigResponseSchema,
   confirmNetworkChangeRequestSchema,
   pendingNetworkChangeResponseSchema,
@@ -10,6 +12,7 @@ import {
 } from '../../../shared';
 import { type AppContext } from '../context';
 import { ok, requireSession } from '../middleware';
+import { discoverInterfaces } from '../../network/interface-discovery';
 
 /**
  * `/network/*` endpoints (T34): Network interface management and configuration.
@@ -28,14 +31,16 @@ export function networkRoutes(ctx: AppContext): Router {
    * their current kernel name, state, speed, and stored configuration.
    */
   router.get('/network/interfaces', requireSession(ctx), (_req, res) => {
-    // In production, this would:
-    // 1. Call manager.discoverInterfaces() to get live interface state
-    // 2. For each interface, call manager.getConfig(mac) to get stored config
-    // 3. Combine them into the response
-
-    // For now, return an empty list
+    // Discovery is unprivileged and reads sysfs directly (see interface-discovery.ts):
+    // the NIC an operator most needs to see here is the unconfigured one, which the
+    // address-based enumeration used elsewhere in the backend cannot show.
     const response: NetworkInterfacesResponse = {
-      interfaces: [],
+      interfaces: discoverInterfaces().map((discovery) => ({
+        discovery,
+        // No stored per-interface config yet is not an error — it is the state every
+        // interface starts in, and the default describes it exactly.
+        config: readStoredConfig(ctx, discovery.mac),
+      })),
     };
 
     ok(res, response);
@@ -241,4 +246,25 @@ export function networkRoutes(ctx: AppContext): Router {
   });
 
   return router;
+}
+
+/**
+ * The stored desired-state for one interface, or the default when it has never been
+ * configured. A parse failure falls back to the default rather than throwing: one
+ * corrupt row must not make the whole interface list unreachable, which would take the
+ * operator's only means of fixing it with it.
+ */
+function readStoredConfig(ctx: AppContext, mac: string): InterfaceNetworkConfig {
+  const row = ctx.db.get<{ config: string }>(
+    'SELECT config FROM network_interface_config WHERE mac = @mac',
+    { mac },
+  );
+  if (row === undefined) {
+    return defaultInterfaceNetworkConfig();
+  }
+  try {
+    return JSON.parse(row.config) as InterfaceNetworkConfig;
+  } catch {
+    return defaultInterfaceNetworkConfig();
+  }
 }

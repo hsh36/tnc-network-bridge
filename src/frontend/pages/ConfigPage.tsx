@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import {
   type ConflictMode,
   type DhcpConfig,
+  type InterfaceDiscovery,
   type LoggingConfig,
   type LockingConfig,
   type MonitoringConfig,
   type NetworkConfig,
+  type NetworkSide,
   type SecurityConfig,
   type SmbConfig,
   type SyncConfig,
@@ -83,9 +85,148 @@ function validateConfigSection<K extends keyof typeof configSectionSchemas>(
 // Network Settings
 // ---------------------------------------------------------------------------
 
+/**
+ * One side of the bridge, rendered identically for LAN and TNC.
+ *
+ * A single component rather than two: the sides differ in which network they face, not
+ * in what an operator can set, and two near-copies would drift the moment one gained a
+ * field. The differences that are real — the TNC side needs no gateway, because this
+ * bridge is the gateway there — are the only things branched on.
+ */
+function NetworkSideFields({
+  side,
+  value,
+  interfaces,
+  errors,
+  onChange,
+}: {
+  readonly side: 'lan' | 'tnc';
+  readonly value: NetworkSide;
+  readonly interfaces: readonly InterfaceDiscovery[];
+  readonly errors: Record<string, string>;
+  readonly onChange: (next: NetworkSide) => void;
+}): JSX.Element {
+  const t = useTranslation('config');
+  const set = (patch: Partial<NetworkSide>): void => onChange({ ...value, ...patch });
+  const err = (field: string): string | undefined => errors[`${side}.${field}`];
+
+  // An interface configured before the NIC was swapped is no longer in the list.
+  // Offering it anyway keeps the form honest about what is stored, rather than silently
+  // rebinding the side to whichever card happens to sort first.
+  const known = interfaces.some((i) => i.name === value.interface);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Select
+        id={`${side}Interface`}
+        label={t('interface_label')}
+        value={value.interface}
+        onChange={(e) => set({ interface: e.target.value })}
+        error={err('interface')}
+      >
+        {!known && <option value={value.interface}>{value.interface}</option>}
+        {interfaces.map((i) => (
+          <option key={i.mac} value={i.name}>
+            {i.name} — {i.state === 'up' ? t('link_up') : t('link_down')}
+            {i.speedMbps === null ? '' : ` · ${String(i.speedMbps)} Mbit/s`}
+            {i.driver === null ? '' : ` · ${i.driver}`}
+          </option>
+        ))}
+      </Select>
+
+      <Select
+        id={`${side}Method`}
+        label={t('addressing')}
+        value={value.method}
+        onChange={(e) => set({ method: e.target.value as NetworkSide['method'] })}
+        error={err('method')}
+      >
+        <option value="dhcp">DHCP</option>
+        <option value="static">{t('static')}</option>
+      </Select>
+
+      {value.method === 'static' && (
+        <>
+          <Input
+            id={`${side}Address`}
+            label={t('address_cidr')}
+            placeholder="192.168.1.10/24"
+            value={value.address ?? ''}
+            onChange={(e) => set({ address: e.target.value === '' ? undefined : e.target.value })}
+            error={err('address')}
+          />
+          {side === 'lan' && (
+            <Input
+              id={`${side}Gateway`}
+              label={t('gateway')}
+              placeholder="192.168.1.1"
+              value={value.gateway ?? ''}
+              onChange={(e) => set({ gateway: e.target.value === '' ? undefined : e.target.value })}
+              error={err('gateway')}
+            />
+          )}
+          <Input
+            id={`${side}Dns1`}
+            label={t('dns_primary')}
+            value={value.dns[0] ?? ''}
+            onChange={(e) => set({ dns: joinDns(e.target.value, value.dns[1]) })}
+            error={err('dns')}
+          />
+          <Input
+            id={`${side}Dns2`}
+            label={t('dns_secondary')}
+            value={value.dns[1] ?? ''}
+            onChange={(e) => set({ dns: joinDns(value.dns[0], e.target.value) })}
+          />
+        </>
+      )}
+
+      <Input
+        id={`${side}Vlan`}
+        label={t('vlan_id')}
+        hint={t('vlan_hint')}
+        type="number"
+        min={1}
+        max={4094}
+        value={value.vlan ?? ''}
+        onChange={(e) => set({ vlan: e.target.value === '' ? null : Number(e.target.value) })}
+        error={err('vlan')}
+      />
+
+      <Input
+        id={`${side}Mtu`}
+        label={t('mtu_bytes')}
+        type="number"
+        min={576}
+        max={9000}
+        value={value.mtu}
+        onChange={(e) => set({ mtu: Number(e.target.value) })}
+        error={err('mtu')}
+      />
+
+      <Checkbox
+        id={`${side}Ipv6`}
+        label={t('enable_ipv6')}
+        checked={value.ipv6}
+        onChange={(e) => set({ ipv6: e.target.checked })}
+      />
+    </div>
+  );
+}
+
+/**
+ * Keeps the two resolver inputs as one ordered array without letting an empty primary
+ * leave a hole: `['', '9.9.9.9']` would fail validation on a field the operator never
+ * touched.
+ */
+function joinDns(primary: string | undefined, secondary: string | undefined): string[] {
+  return [primary ?? '', secondary ?? ''].map((s) => s.trim()).filter((s) => s !== '');
+}
+
 function NetworkSection(): JSX.Element {
   const t = useTranslation('config');
   const [form, setForm] = useState<NetworkConfig>();
+  const [interfaces, setInterfaces] = useState<InterfaceDiscovery[]>([]);
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -95,6 +236,11 @@ function NetworkSection(): JSX.Element {
     void api('config.get', { params: { section: 'network' } }).then((data) =>
       setForm(data as NetworkConfig),
     );
+    // A failure here is not fatal: the picker falls back to showing the stored name, so
+    // the section still works on a host whose sysfs cannot be read.
+    void api('network.interfaces')
+      .then((data) => setInterfaces(data.interfaces.map((entry) => entry.discovery)))
+      .catch(() => setInterfaces([]));
   }, []);
 
   useEffect(() => {
@@ -126,105 +272,51 @@ function NetworkSection(): JSX.Element {
       .finally(() => setSaving(false));
   };
 
+  const update =
+    (side: 'lan' | 'tnc') =>
+    (next: NetworkSide): void => {
+      setForm({ ...form, [side]: next });
+      setIsDirty(true);
+    };
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
-          id="lanIf"
-          label={t('lan_interface')}
-          value={form.lan.interface}
-          onChange={(e) => {
-            setForm({ ...form, lan: { ...form.lan, interface: e.target.value } });
-            setIsDirty(true);
-          }}
-          error={errors['lan.interface']}
-        />
-        <Input
-          id="tncIf"
-          label={t('tnc_interface')}
-          value={form.tnc.interface}
-          onChange={(e) => {
-            setForm({ ...form, tnc: { ...form.tnc, interface: e.target.value } });
-            setIsDirty(true);
-          }}
-          error={errors['tnc.interface']}
-        />
+      {/* Side by side, LAN left and TNC right, so the asymmetry between the two legs of
+          the bridge is visible at a glance rather than inferred from field order. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="flex flex-col gap-4 rounded-lg border border-border p-4 dark:border-border-dark">
+          <header>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {t('lan_side')}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('lan_side_hint')}</p>
+          </header>
+          <NetworkSideFields
+            side="lan"
+            value={form.lan}
+            interfaces={interfaces}
+            errors={errors}
+            onChange={update('lan')}
+          />
+        </section>
+
+        <section className="flex flex-col gap-4 rounded-lg border border-border p-4 dark:border-border-dark">
+          <header>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {t('tnc_side_title')}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('tnc_side_hint')}</p>
+          </header>
+          <NetworkSideFields
+            side="tnc"
+            value={form.tnc}
+            interfaces={interfaces}
+            errors={errors}
+            onChange={update('tnc')}
+          />
+        </section>
       </div>
-      <Select
-        id="lanMethod"
-        label={t('lan_addressing')}
-        value={form.lan.method}
-        onChange={(e) => {
-          setForm({ ...form, lan: { ...form.lan, method: e.target.value as 'dhcp' | 'static' } });
-          setIsDirty(true);
-        }}
-        error={errors['lan.method']}
-        className="w-40"
-      >
-        <option value="dhcp">DHCP</option>
-        <option value="static">{t('static')}</option>
-      </Select>
-      {form.lan.method === 'static' && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            id="lanAddress"
-            label={t('lan_address_cidr')}
-            value={form.lan.address ?? ''}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                lan: { ...form.lan, address: e.target.value || undefined },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['lan.address']}
-          />
-          <Input
-            id="lanGateway"
-            label={t('gateway')}
-            value={form.lan.gateway ?? ''}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                lan: { ...form.lan, gateway: e.target.value || undefined },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['lan.gateway']}
-          />
-        </div>
-      )}
-      <Input
-        id="tncAddress"
-        label={t('tnc_address_cidr')}
-        value={form.tnc.address}
-        onChange={(e) => {
-          setForm({ ...form, tnc: { ...form.tnc, address: e.target.value } });
-          setIsDirty(true);
-        }}
-        error={errors['tnc.address']}
-      />
-      <Input
-        id="mtu"
-        label={t('mtu_bytes')}
-        type="number"
-        value={form.mtu}
-        onChange={(e) => {
-          setForm({ ...form, mtu: Number(e.target.value) });
-          setIsDirty(true);
-        }}
-        error={errors.mtu}
-        className="w-40"
-      />
-      <Checkbox
-        id="ipv6"
-        label={t('enable_ipv6')}
-        checked={form.ipv6.enabled}
-        onChange={(e) => {
-          setForm({ ...form, ipv6: { enabled: e.target.checked } });
-          setIsDirty(true);
-        }}
-      />
+
       <div className="flex items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
           {t('save_button')}

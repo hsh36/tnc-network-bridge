@@ -196,7 +196,20 @@
     "tab_monitoring": "Monitoring",
     "dhcp_tnc_only_title": "Applies to the TNC side only",
     "dhcp_tnc_only_body": "This DHCP server is bound exclusively to the TNC interface and never answers on the LAN. It hands addresses to the CNC machines behind the bridge.",
-    "smb_credentials_note": "Default service account for every share. A share can override it in its own settings."
+    "smb_credentials_note": "Default service account for every share. A share can override it in its own settings.",
+    "lan_side": "LAN side",
+    "lan_side_hint": "Faces the corporate network and the modern SMB server.",
+    "tnc_side_title": "TNC side",
+    "tnc_side_hint": "Faces the CNC machines. This bridge is their gateway.",
+    "interface_label": "Interface",
+    "addressing": "Addressing",
+    "address_cidr": "IP address (CIDR)",
+    "dns_primary": "DNS server 1",
+    "dns_secondary": "DNS server 2",
+    "vlan_id": "VLAN ID",
+    "vlan_hint": "Leave empty for untagged",
+    "link_up": "link up",
+    "link_down": "link down"
   },
   "locks": {
     "title": "Locks & Conflicts",

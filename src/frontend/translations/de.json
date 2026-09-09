@@ -196,7 +196,20 @@
     "tab_monitoring": "Überwachung",
     "dhcp_tnc_only_title": "Gilt ausschließlich für die TNC-Seite",
     "dhcp_tnc_only_body": "Dieser DHCP-Server ist fest an die TNC-Schnittstelle gebunden und antwortet nie im LAN. Er vergibt Adressen an die CNC-Maschinen hinter der Bridge.",
-    "smb_credentials_note": "Vorgabe-Dienstkonto für alle Freigaben. Eine Freigabe kann es in ihren eigenen Einstellungen überschreiben."
+    "smb_credentials_note": "Vorgabe-Dienstkonto für alle Freigaben. Eine Freigabe kann es in ihren eigenen Einstellungen überschreiben.",
+    "lan_side": "LAN-Seite",
+    "lan_side_hint": "Zum Firmennetz und zum modernen SMB-Server.",
+    "tnc_side_title": "TNC-Seite",
+    "tnc_side_hint": "Zu den CNC-Maschinen. Diese Bridge ist deren Gateway.",
+    "interface_label": "Schnittstelle",
+    "addressing": "Adressierung",
+    "address_cidr": "IP-Adresse (CIDR)",
+    "dns_primary": "DNS-Server 1",
+    "dns_secondary": "DNS-Server 2",
+    "vlan_id": "VLAN-ID",
+    "vlan_hint": "Leer lassen für untagged",
+    "link_up": "Verbindung aktiv",
+    "link_down": "keine Verbindung"
   },
   "locks": {
     "title": "Dateisperren",

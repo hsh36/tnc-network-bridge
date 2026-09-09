@@ -28,53 +28,89 @@ import {
 
 export const ipv4MethodSchema = z.enum(['dhcp', 'static']);
 
+/**
+ * One side of the bridge.
+ *
+ * The two sides are described by the same shape rather than by two hand-written ones.
+ * They are not the same *kind* of network — one faces a corporate LAN, the other a
+ * machine segment — but every knob an operator can turn applies to both, and a field
+ * that existed on only one side was invariably an oversight rather than a decision:
+ * before this, MTU and IPv6 were single global values and VLAN did not exist at all,
+ * so a bridge whose two NICs needed different framing could not be expressed.
+ */
+export const networkSideSchema = z.object({
+  interface: interfaceNameSchema,
+  method: ipv4MethodSchema.default('dhcp'),
+  /** Required when `method` is `static`; ignored by DHCP. */
+  address: ipv4CidrSchema.optional(),
+  gateway: ipv4Schema.optional(),
+  /** Primary and secondary resolver, in that order. */
+  dns: z.array(ipAddressSchema).max(2).default([]),
+  /** 802.1Q tag, or `null` for untagged. */
+  vlan: z.number().int().min(1).max(4094).nullable().default(null),
+  mtu: z.number().int().min(576).max(9000).default(1500),
+  ipv6: z.boolean().default(false),
+});
+
+export type NetworkSide = z.infer<typeof networkSideSchema>;
+
+/** Adds the `static`-implies-address-and-gateway rule to one side. */
+function checkStaticAddressing(
+  side: NetworkSide,
+  which: 'lan' | 'tnc',
+  ctx: z.RefinementCtx,
+): void {
+  if (side.method !== 'static') {
+    return;
+  }
+  if (side.address === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [which, 'address'],
+      message: 'A static configuration requires an address',
+    });
+  }
+  // The TNC side is a self-contained segment whose gateway *is* this bridge, so
+  // demanding one there would be demanding the operator point it at itself.
+  if (which === 'lan' && side.gateway === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [which, 'gateway'],
+      message: 'A static LAN configuration requires a gateway',
+    });
+  }
+}
+
 export const networkConfigSchema = z
   .object({
-    lan: z
-      .object({
-        interface: interfaceNameSchema.default('eth0'),
-        method: ipv4MethodSchema.default('dhcp'),
-        address: ipv4CidrSchema.optional(),
-        gateway: ipv4Schema.optional(),
-        dns: z.array(ipAddressSchema).max(3).default([]),
-      })
-      .default({}),
-    tnc: z
-      .object({
+    lan: networkSideSchema.extend({ interface: interfaceNameSchema.default('eth0') }).default({}),
+    tnc: networkSideSchema
+      .extend({
         interface: interfaceNameSchema.default('eth1'),
+        method: ipv4MethodSchema.default('static'),
         /** The bridge's own address on the machine segment; also the TNC-side gateway. */
         address: ipv4CidrSchema.default('192.168.42.1/24'),
       })
       .default({}),
-    ipv6: z
-      .object({
-        enabled: z.boolean().default(false),
-      })
-      .default({}),
-    mtu: z.number().int().min(576).max(9000).default(1500),
   })
   .superRefine((cfg, ctx) => {
-    if (cfg.lan.method === 'static' && cfg.lan.address === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['lan', 'address'],
-        message: 'A static LAN configuration requires an address',
-      });
-    }
-    if (cfg.lan.method === 'static' && cfg.lan.gateway === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['lan', 'gateway'],
-        message: 'A static LAN configuration requires a gateway',
-      });
-    }
+    checkStaticAddressing(cfg.lan, 'lan', ctx);
+    checkStaticAddressing(cfg.tnc, 'tnc', ctx);
+
+    // Sharing a NIC is only safe when 802.1Q keeps the two segments in separate
+    // broadcast domains. Untagged, it would put SMB1 on the corporate LAN — which is
+    // the one outcome this product exists to prevent.
     if (cfg.lan.interface === cfg.tnc.interface) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['tnc', 'interface'],
-        message:
-          'The LAN and TNC interfaces must be different. Bridging both segments onto one NIC would expose SMB1 to the LAN.',
-      });
+      const separated =
+        cfg.lan.vlan !== null && cfg.tnc.vlan !== null && cfg.lan.vlan !== cfg.tnc.vlan;
+      if (!separated) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['tnc', 'interface'],
+          message:
+            'The LAN and TNC sides must not share an untagged interface. Give each side its own NIC, or a different VLAN id on this one.',
+        });
+      }
     }
   });
 

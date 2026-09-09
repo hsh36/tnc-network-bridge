@@ -67,6 +67,7 @@ const SPEC_ENDPOINTS = [
   'POST /update/apply',
   'POST /update/rollback',
   'GET /update/history',
+  'GET /network/interfaces',
   'GET /certificates',
   'POST /certificates',
   'POST /certificates/regenerate',

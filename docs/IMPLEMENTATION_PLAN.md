@@ -391,6 +391,7 @@ All bodies validated by shared Zod schemas; the same schemas type the frontend c
 | GET | `/system` | Disk, CPU, memory, SoC temp, uptime, interfaces, throttling flags |
 | GET/POST/PATCH/DELETE | `/schedules[/:id]` · POST `/schedules/preview` · POST `/schedules/:id/run` | Cron entries, next-run preview, run now |
 | GET | `/update/status` · POST `/update/{check,apply,rollback}` · GET `/update/history` | Self-update |
+| GET | `/network/interfaces` | NICs present on the machine, with stored desired-state |
 | GET/POST | `/certificates` · POST `/certificates/regenerate` | TLS material |
 | GET/PUT | `/firewall` · POST `/firewall/reset` | nftables rules |
 | GET | `/fail2ban/status` · POST `/fail2ban/unban` | Ban management |
@@ -407,8 +408,13 @@ OpenAPI 3.1 is generated from the Zod schemas (`zod-to-openapi`) and served at `
 
 ```
 network.lan.interface        eth0        network.tnc.interface       eth1
-network.tnc.address          192.168.42.1/24
-network.ipv6.enabled         false       network.mtu                 1500
+network.lan.method           dhcp        network.tnc.method          static
+network.lan.address          (unset)     network.tnc.address         192.168.42.1/24
+network.lan.gateway          (unset)     network.tnc.gateway         (unset)
+network.lan.dns              []          network.tnc.dns             []
+network.lan.vlan             null        network.tnc.vlan            null
+network.lan.mtu              1500        network.tnc.mtu             1500
+network.lan.ipv6             false       network.tnc.ipv6            false
 dhcp.enabled                 false       dhcp.range                  192.168.42.100-192.168.42.199
 dhcp.lease_time              12h         dhcp.dns                    192.168.42.1
 

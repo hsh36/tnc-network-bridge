@@ -221,7 +221,8 @@ describe('POST /certificates', () => {
     const material = generateSelfSignedCertificate({ commonName: 'orphan.example' });
     // The dev server proxies through Vite and owns no HttpsServerManager. Storing a
     // certificate there would claim a change that only takes effect on a restart.
-    ctx = { ...buildContext(), httpsManager: undefined };
+    const { httpsManager: _omitted, ...withoutManager } = buildContext();
+    ctx = withoutManager;
     app = createApp(ctx);
     const { agent, csrf } = await loginAgent();
 

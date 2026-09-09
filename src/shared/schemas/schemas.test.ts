@@ -122,6 +122,73 @@ describe('network configuration cross-field rules', () => {
   it('rejects a TNC address that is not CIDR-qualified', () => {
     expect(networkConfigSchema.safeParse({ tnc: { address: '192.168.42.1' } }).success).toBe(false);
   });
+
+  it('allows one interface when 802.1Q keeps the two segments apart', () => {
+    // A single-NIC bridge is a legitimate deployment as long as the machine segment is
+    // tagged onto its own VLAN; that is what stops SMB1 reaching the corporate LAN.
+    const result = networkConfigSchema.safeParse({
+      lan: { interface: 'eth0', vlan: 10 },
+      tnc: { interface: 'eth0', vlan: 20 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('still refuses one interface when both sides carry the same VLAN', () => {
+    const result = networkConfigSchema.safeParse({
+      lan: { interface: 'eth0', vlan: 10 },
+      tnc: { interface: 'eth0', vlan: 10 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('still refuses one interface when only one side is tagged', () => {
+    const result = networkConfigSchema.safeParse({
+      lan: { interface: 'eth0', vlan: 10 },
+      tnc: { interface: 'eth0' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('requires an address for a static TNC side but not a gateway', () => {
+    // The bridge is the gateway on the machine segment, so asking for one would be
+    // asking the operator to point it at this device.
+    expect(networkConfigSchema.safeParse({ tnc: { method: 'static' } }).success).toBe(true);
+    expect(
+      networkConfigSchema.safeParse({ tnc: { method: 'static', address: undefined } }).success,
+    ).toBe(true);
+  });
+
+  it('defaults each side independently', () => {
+    const parsed = networkConfigSchema.parse({});
+    expect(parsed.lan).toMatchObject({ method: 'dhcp', vlan: null, mtu: 1500, ipv6: false });
+    expect(parsed.tnc).toMatchObject({ method: 'static', address: '192.168.42.1/24', mtu: 1500 });
+  });
+
+  it('accepts a jumbo-frame LAN alongside a standard TNC segment', () => {
+    // The case the old single global MTU could not express at all.
+    const result = networkConfigSchema.safeParse({
+      lan: { method: 'dhcp', mtu: 9000 },
+      tnc: { mtu: 1500 },
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.lan.mtu).toBe(9000);
+  });
+
+  it('takes at most two resolvers per side', () => {
+    expect(networkConfigSchema.safeParse({ lan: { dns: ['1.1.1.1', '9.9.9.9'] } }).success).toBe(
+      true,
+    );
+    expect(
+      networkConfigSchema.safeParse({ lan: { dns: ['1.1.1.1', '9.9.9.9', '8.8.8.8'] } }).success,
+    ).toBe(false);
+  });
+
+  it('bounds the VLAN id to the 802.1Q range', () => {
+    expect(networkConfigSchema.safeParse({ lan: { vlan: 1 } }).success).toBe(true);
+    expect(networkConfigSchema.safeParse({ lan: { vlan: 4094 } }).success).toBe(true);
+    expect(networkConfigSchema.safeParse({ lan: { vlan: 0 } }).success).toBe(false);
+    expect(networkConfigSchema.safeParse({ lan: { vlan: 4095 } }).success).toBe(false);
+  });
 });
 
 describe('relPathSchema', () => {
