@@ -34,7 +34,11 @@ const RESULT_TONE: Record<string, BadgeTone> = {
   skipped: 'warn',
 };
 
-export function formatNextRun(nextRunAt: number | null, t: any, now: number = Date.now()): string {
+export function formatNextRun(
+  nextRunAt: number | null,
+  t: (key: string, variables?: Record<string, string | number>) => string,
+  now: number = Date.now(),
+): string {
   if (nextRunAt === null) {
     return t('next_run_never');
   }
