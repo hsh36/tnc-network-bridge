@@ -8,6 +8,7 @@ import { API_BASE_PATH } from '../../shared';
 import { type AppContext } from './context';
 import { errorHandler, notFoundHandler, requestIdMiddleware } from './middleware';
 import { authRoutes } from './routes/auth';
+import { certificateRoutes } from './routes/certificates';
 import { configRoutes } from './routes/config';
 import { dhcpRoutes } from './routes/dhcp';
 import { eventsRoutes } from './routes/events';
@@ -117,6 +118,7 @@ export function createApp(ctx: AppContext, options: AppOptions = {}): Express {
   router.use(metricsRoutes(ctx));
   router.use(eventsRoutes(ctx));
   router.use(networkRoutes(ctx));
+  router.use(certificateRoutes(ctx));
   app.use(API_BASE_PATH, router);
 
   if (options.staticDir !== undefined) {

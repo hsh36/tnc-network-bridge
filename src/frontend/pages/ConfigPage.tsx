@@ -18,6 +18,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Checkbox, Input, Select } from '../components/ui/Input';
 import { Tabs } from '../components/ui/Tabs';
 import { FullPageSpinner } from '../components/ui/Spinner';
+import { CertificateManager } from '../components/CertificateManager';
 import { SharesSection } from '../components/SharesSection';
 import { useTranslation } from '../hooks/useTranslation';
 import { api, ApiError } from '../lib/api-client';
@@ -1044,6 +1045,13 @@ function SecuritySection(): JSX.Element {
         </Button>
         {banner}
       </div>
+
+      {/*
+        Outside the form above on purpose: the certificate is installed by its own
+        endpoints the moment the operator confirms, not by this section's Save button.
+        Putting it inside would suggest the two are saved together.
+      */}
+      <CertificateManager />
     </div>
   );
 }
