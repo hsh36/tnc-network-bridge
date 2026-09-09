@@ -391,7 +391,17 @@ SyslogIdentifier=tnc-bridge
 
 # Binding 443 as a non-root user needs this one capability and nothing else.
 AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# CapabilityBoundingSet is deliberately NOT narrowed to that one capability, for the
+# same reason NoNewPrivileges is off below. The bounding set caps what *any* process in
+# this unit may ever hold, sudo included — and sudo is setuid-root, so with a bounding
+# set of CAP_NET_BIND_SERVICE alone it cannot even change to the root gid:
+#
+#   sudo: unable to change to root gid: Operation not permitted
+#
+# Every privileged operation the bridge performs goes through 'sudo ${HELPER_PATH}', so
+# narrowing it does not harden the service, it silently disables network changes, Samba
+# and dnsmasq configuration, the firewall and certificate installation.
 
 # Security hardening.
 #
