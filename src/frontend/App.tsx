@@ -4,6 +4,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { FullPageSpinner } from './components/ui/Spinner';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { SetupProvider, useSetupStatus } from './hooks/useSetupStatus';
 import { ConfigPage } from './pages/ConfigPage';
 import { Dashboard } from './pages/Dashboard';
 import { FilesBrowserPage } from './pages/FilesBrowserPage';
@@ -13,8 +14,11 @@ import { Logs } from './pages/Logs';
 import { Machines } from './pages/Machines';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { Scheduling } from './pages/Scheduling';
+import { Setup } from './pages/Setup';
 import { SystemUpdates } from './pages/SystemUpdates';
 import { Versions } from './pages/Versions';
+
+const SETUP_PATH = '/setup';
 
 /** Redirects to `/login` when there is no session, preserving the intended route (T32's AC). */
 function RequireAuth({ children }: { readonly children: ReactNode }): JSX.Element {
@@ -32,9 +36,38 @@ function RequireAuth({ children }: { readonly children: ReactNode }): JSX.Elemen
   return <Layout>{children}</Layout>;
 }
 
+/**
+ * Sends every route to the wizard until setup is finished, and keeps it out of reach
+ * afterwards.
+ *
+ * This sits above the auth guard rather than beside it: before the wizard runs there is
+ * no password to sign in with, so `/login` is a dead end and redirecting there would
+ * strand the operator. It renders nothing of its own once setup is complete.
+ */
+function SetupGate({ children }: { readonly children: ReactNode }): JSX.Element {
+  const { status, loading } = useSetupStatus();
+  const location = useLocation();
+
+  if (loading) {
+    return <FullPageSpinner />;
+  }
+
+  const onSetupRoute = location.pathname === SETUP_PATH;
+  const pending = status !== undefined && !status.completed;
+
+  if (pending && !onSetupRoute) {
+    return <Navigate to={SETUP_PATH} replace />;
+  }
+  if (!pending && onSetupRoute) {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
 function AppRoutes(): JSX.Element {
   return (
     <Routes>
+      <Route path={SETUP_PATH} element={<Setup />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/"
@@ -125,9 +158,13 @@ export function App(): JSX.Element {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <SetupProvider>
+          <AuthProvider>
+            <SetupGate>
+              <AppRoutes />
+            </SetupGate>
+          </AuthProvider>
+        </SetupProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

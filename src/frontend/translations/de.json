@@ -503,5 +503,20 @@
     "invalid_cron": "Ungültiger Cron-Ausdruck",
     "password_too_short": "Passwort muss mindestens 8 Zeichen lang sein",
     "passwords_dont_match": "Passwörter stimmen nicht überein"
+  },
+  "setup": {
+    "subtitle": "Ersteinrichtung",
+    "finish_subtitle": "Fast geschafft",
+    "password_intro": "Es ist noch kein Administrator-Passwort gesetzt. Vergeben Sie jetzt eines — bis dahin könnte jeder, der diese Bridge erreicht, es setzen.",
+    "new_password": "Neues Passwort",
+    "confirm_password": "Passwort bestätigen",
+    "password_hint": "Mindestens {min} Zeichen",
+    "password_too_short": "Das Passwort muss mindestens {min} Zeichen lang sein",
+    "passwords_differ": "Die beiden Passwörter stimmen nicht überein",
+    "set_password": "Passwort setzen",
+    "finish_intro": "Ihr Passwort ist gesetzt und Sie sind als \"admin\" angemeldet.",
+    "finish_next": "Mit dem Abschluss wird der öffentliche Setup-Endpunkt dauerhaft geschlossen. Netzwerkschnittstellen, das AD-Dienstkonto und Freigaben richten Sie danach unter Einstellungen ein.",
+    "finish": "Einrichtung abschließen",
+    "connection_error": "Die Bridge ist nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen."
   }
 }

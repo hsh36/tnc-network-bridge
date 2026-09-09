@@ -503,5 +503,20 @@
     "invalid_cron": "Invalid cron expression",
     "password_too_short": "Password must be at least 8 characters",
     "passwords_dont_match": "Passwords do not match"
+  },
+  "setup": {
+    "subtitle": "First-time setup",
+    "finish_subtitle": "Almost done",
+    "password_intro": "No administrator password has been set yet. Choose one now — until you do, anyone who can reach this bridge could set it.",
+    "new_password": "New password",
+    "confirm_password": "Confirm password",
+    "password_hint": "At least {min} characters",
+    "password_too_short": "Password must be at least {min} characters",
+    "passwords_differ": "The two passwords do not match",
+    "set_password": "Set password",
+    "finish_intro": "Your password is set and you are signed in as \"admin\".",
+    "finish_next": "Finishing closes the public setup endpoint for good. Network interfaces, the AD service account and shares are configured afterwards under Settings.",
+    "finish": "Finish setup",
+    "connection_error": "Could not reach the bridge. Check the connection and try again."
   }
 }

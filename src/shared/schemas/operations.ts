@@ -226,6 +226,7 @@ export const setupStatusSchema = z.object({
   currentStep: setupStepSchema,
   completedSteps: z.array(setupStepSchema),
 });
+export type SetupStatus = z.infer<typeof setupStatusSchema>;
 
 /** First step: replace the install-time password before anything else is configured. */
 export const setupPasswordRequestSchema = z
