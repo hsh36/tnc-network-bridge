@@ -249,6 +249,27 @@ export class ConfigManager {
   }
 
   /**
+   * Encrypts a secret that lives outside the `config` table — currently a share's own
+   * SMB password.
+   *
+   * The key itself stays private to this class. Handing it out would mean every caller
+   * that wants to store one string also holds the key that decrypts the AD service
+   * account, and the narrow surface here is the entire reason that stays true.
+   *
+   * `aad` binds the ciphertext to where it is stored (`shares.7.smbPassword`), so an
+   * envelope copied from one row into another fails authentication rather than
+   * silently granting one share another's credentials.
+   */
+  encryptFor(aad: string, plaintext: string): string {
+    return encryptSecret(plaintext, this.secretKey, aad);
+  }
+
+  /** Inverse of {@link encryptFor}. Throws if `aad` does not match what was encrypted. */
+  decryptFor(aad: string, envelope: string): string {
+    return decryptSecret(envelope, this.secretKey, aad);
+  }
+
+  /**
    * Replaces a section.
    *
    * A secret arriving as {@link SECRET_SENTINEL} means "unchanged" — which is what

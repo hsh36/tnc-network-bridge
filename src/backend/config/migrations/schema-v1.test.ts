@@ -54,9 +54,10 @@ const expectConstraintViolation = (fn: () => unknown): void => {
 };
 
 describe('migration application', () => {
-  it('reaches schema version 4', () => {
-    // 001_init, 002_network_config, 003_dhcp, 004_network_per_side.
-    expect(db.userVersion).toBe(4);
+  it('reaches schema version 5', () => {
+    // 001_init, 002_network_config, 003_dhcp, 004_network_per_side,
+    // 005_share_credentials.
+    expect(db.userVersion).toBe(5);
   });
 
   it('creates all fourteen tables from §2, plus the log sink and the ledger', () => {

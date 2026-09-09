@@ -18,6 +18,7 @@ import { logsRoutes } from './routes/logs';
 import { metricsRoutes } from './routes/metrics';
 import { networkRoutes } from './routes/network';
 import { schedulesRoutes } from './routes/schedules';
+import { sharesRoutes } from './routes/shares';
 import { statusRoutes } from './routes/status';
 import { systemRoutes } from './routes/system';
 import { tokensRoutes } from './routes/tokens';
@@ -119,6 +120,7 @@ export function createApp(ctx: AppContext, options: AppOptions = {}): Express {
   router.use(eventsRoutes(ctx));
   router.use(networkRoutes(ctx));
   router.use(certificateRoutes(ctx));
+  router.use(sharesRoutes(ctx));
   app.use(API_BASE_PATH, router);
 
   if (options.staticDir !== undefined) {

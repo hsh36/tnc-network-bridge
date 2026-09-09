@@ -1,0 +1,13 @@
+-- Schema v5 — per-share SMB credentials
+--
+-- Wrapped in a transaction by the migration runner; this file must not open one.
+--
+-- `createShareRequestSchema` has accepted `smbPassword` since the schema was written,
+-- and `smb_domain`/`smb_user` have had columns all along — but there was nowhere to put
+-- the password, so a share could name an account it could not authenticate as. Every
+-- share therefore had to fall back to the single global service account.
+--
+-- The value is an AES-256-GCM envelope (`secrets.ts`), never plaintext. Its associated
+-- data binds it to this column and this row, so an envelope lifted from one share
+-- cannot be pasted into another.
+ALTER TABLE shares ADD COLUMN smb_password TEXT;

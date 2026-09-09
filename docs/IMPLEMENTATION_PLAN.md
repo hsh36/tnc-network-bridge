@@ -418,6 +418,7 @@ network.lan.ipv6             false       network.tnc.ipv6            false
 dhcp.enabled                 false       dhcp.range                  192.168.42.100-192.168.42.199
 dhcp.lease_time              12h         dhcp.dns                    192.168.42.1
 
+# Per-share smb_domain/smb_user/smb_password override the account below (schema v5).
 smb.server.min_protocol      SMB3_11     smb.server.seal             true
 smb.tnc.max_protocol         SMB3        smb.tnc.min_protocol        NT1
 smb.tnc.ntlm_auth            true        smb.tnc.lanman_auth         false

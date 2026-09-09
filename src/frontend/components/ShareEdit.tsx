@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { type ConflictMode } from '../../shared';
+import { ShareSides, type ShareSidesValue } from './ShareSides';
 import { Button } from './ui/Button';
 import { Card, CardBody, CardHeader } from './ui/Card';
 import { Checkbox, Input, Select, Textarea } from './ui/Input';
@@ -12,13 +13,41 @@ interface ShareEditProps {
   readonly onRefresh: () => void;
 }
 
-interface ShareForm {
+interface ShareForm extends ShareSidesValue {
   conflictMode: ConflictMode;
   excludePatterns: string;
   bandwidthLimitKbps: number | null;
   readOnly: boolean;
   scanIntervalMs: number;
   maxFileSizeMb: number;
+}
+
+type LoadedShare = NonNullable<ReturnType<typeof useApiQuery<'shares.get'>>['data']>;
+
+/**
+ * The stored share as this form holds it.
+ *
+ * `smbPassword` starts empty rather than showing the redaction sentinel: the field means
+ * "type a new one, or leave it alone", and pre-filling it with asterisks would invite an
+ * operator to select-all and retype, storing the asterisks.
+ */
+function toForm(share: LoadedShare): ShareForm {
+  return {
+    name: share.name,
+    serverUnc: share.serverUnc,
+    smbDomain: share.smbDomain ?? '',
+    smbUser: share.smbUser ?? '',
+    smbPassword: '',
+    smbVersion: share.smbVersion,
+    smbSeal: share.smbSeal,
+    tncGuestOk: share.tncGuestOk,
+    conflictMode: share.conflictMode,
+    excludePatterns: share.excludePatterns.join('\n'),
+    bandwidthLimitKbps: share.bandwidthLimitKbps,
+    readOnly: share.readOnly,
+    scanIntervalMs: share.scanIntervalMs,
+    maxFileSizeMb: share.maxFileSizeMb,
+  };
 }
 
 export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.Element {
@@ -31,14 +60,7 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
 
   useEffect(() => {
     if (share.data !== undefined) {
-      setForm({
-        conflictMode: share.data.conflictMode,
-        excludePatterns: share.data.excludePatterns.join('\n'),
-        bandwidthLimitKbps: share.data.bandwidthLimitKbps,
-        readOnly: share.data.readOnly,
-        scanIntervalMs: share.data.scanIntervalMs,
-        maxFileSizeMb: share.data.maxFileSizeMb,
-      });
+      setForm(toForm(share.data));
     }
   }, [share.data]);
 
@@ -84,6 +106,15 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
     api('shares.update', {
       params: { id: shareId },
       body: {
+        serverUnc: form.serverUnc.trim(),
+        smbDomain: form.smbDomain.trim() === '' ? null : form.smbDomain.trim(),
+        smbUser: form.smbUser.trim() === '' ? null : form.smbUser.trim(),
+        // Omitted when blank: the backend reads that as "leave the stored password
+        // alone", which is what lets this dialog round-trip without ever holding it.
+        ...(form.smbPassword === '' ? {} : { smbPassword: form.smbPassword }),
+        smbVersion: form.smbVersion,
+        smbSeal: form.smbSeal,
+        tncGuestOk: form.tncGuestOk,
         conflictMode: form.conflictMode,
         excludePatterns: patterns,
         bandwidthLimitKbps: form.bandwidthLimitKbps,
@@ -104,14 +135,7 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
 
   const handleReset = (): void => {
     if (share.data !== undefined) {
-      setForm({
-        conflictMode: share.data.conflictMode,
-        excludePatterns: share.data.excludePatterns.join('\n'),
-        bandwidthLimitKbps: share.data.bandwidthLimitKbps,
-        readOnly: share.data.readOnly,
-        scanIntervalMs: share.data.scanIntervalMs,
-        maxFileSizeMb: share.data.maxFileSizeMb,
-      });
+      setForm(toForm(share.data));
     }
   };
 
@@ -143,6 +167,13 @@ export function ShareEdit({ shareId, onClose, onRefresh }: ShareEditProps): JSX.
               <p className="text-sm text-status-ok">Settings saved successfully</p>
             </div>
           )}
+
+          <ShareSides
+            value={form}
+            onChange={(patch) => setForm({ ...form, ...patch })}
+            nameEditable={false}
+            passwordStored={share.data.smbUser !== null}
+          />
 
           <Card>
             <CardHeader title="Sync Behavior" />

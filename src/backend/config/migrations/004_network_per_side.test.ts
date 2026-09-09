@@ -101,7 +101,8 @@ describe('004_network_per_side', () => {
     runMigrations(db);
 
     expect(readConfig('network.lan.mtu')).toBeUndefined();
-    expect(db.userVersion).toBe(4);
+    // The whole ledger is applied here, so this tracks the newest migration, not 004.
+    expect(db.userVersion).toBeGreaterThanOrEqual(4);
   });
 
   it('leaves the config readable, with the carried values in force', () => {

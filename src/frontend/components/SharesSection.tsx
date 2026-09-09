@@ -8,6 +8,7 @@ import { FullPageSpinner } from './ui/Spinner';
 import { Table, type Column } from './ui/Table';
 import { useApiQuery } from '../hooks/useApi';
 import { useTranslation } from '../hooks/useTranslation';
+import { ShareCreate } from './ShareCreate';
 import { ShareEdit } from './ShareEdit';
 
 function statusTone(status: string): BadgeTone {
@@ -31,14 +32,13 @@ export function SharesSection(): JSX.Element {
   const t = useTranslation('shares');
   const shares = useApiQuery('shares.list', { query: {} }, { pollMs: 15_000 });
   const [editingId, setEditingId] = useState<number>();
+  const [creating, setCreating] = useState(false);
 
   if (shares.loading && shares.data === undefined) {
     return <FullPageSpinner />;
   }
 
-  const handleCreateClick = (): void => {
-    // Will implement create share dialog
-  };
+  const handleCreateClick = (): void => setCreating(true);
 
   const shareColumns: readonly Column<ShareRuntime>[] = [
     {
@@ -125,6 +125,10 @@ export function SharesSection(): JSX.Element {
           <Table columns={shareColumns} rows={data?.items ?? []} rowKey={(s) => s.id} />
         )}
       </Card>
+
+      {creating && (
+        <ShareCreate onClose={() => setCreating(false)} onCreated={() => shares.refresh()} />
+      )}
 
       {editingId !== undefined && (
         <ShareEdit

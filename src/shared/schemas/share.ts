@@ -17,6 +17,7 @@ export type ShareStatus = z.infer<typeof shareStatusSchema>;
 
 /** Dialect used for the LAN-side mount. */
 export const smbVersionSchema = z.enum(['3.1.1', '3.0', '2.1']);
+export type ShareSmbVersion = z.infer<typeof smbVersionSchema>;
 
 /** A share exactly as stored in the `shares` table. */
 export const shareSchema = z.object({
