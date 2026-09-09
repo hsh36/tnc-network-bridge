@@ -25,6 +25,9 @@ import { api, ApiError } from '../lib/api-client';
 
 export function LocksConflictsPage(): JSX.Element {
   const t = useTranslation('locks');
+  // `useTranslation` is scoped to one namespace, so a shared string needs its own hook.
+  // Writing `t('common:dismiss')` looks like it would work and silently does not.
+  const tCommon = useTranslation('common');
   // Locks state and hooks
   const locks = useLocks();
   const [releaseConfirm, setReleaseConfirm] = useState<Lock>();
@@ -236,7 +239,7 @@ export function LocksConflictsPage(): JSX.Element {
             onClick={() => setNotice(undefined)}
             className="float-right font-medium hover:underline"
           >
-            {t('common:dismiss')}
+            {tCommon('dismiss')}
           </button>
         </div>
       )}
@@ -250,7 +253,7 @@ export function LocksConflictsPage(): JSX.Element {
             onClick={() => setError(undefined)}
             className="float-right font-medium hover:underline"
           >
-            {t('common:dismiss')}
+            {tCommon('dismiss')}
           </button>
         </div>
       )}

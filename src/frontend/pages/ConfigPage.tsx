@@ -49,10 +49,10 @@ function useSaveBanner(t: ReturnType<typeof useTranslation>): {
           {message.text}
         </p>
       ),
-    onSaved: () => setMessage({ text: t('config:saved_message'), tone: 'ok' }),
+    onSaved: () => setMessage({ text: t('saved_message'), tone: 'ok' }),
     onError: (err) =>
       setMessage({
-        text: err instanceof ApiError ? err.message : t('config:save_error'),
+        text: err instanceof ApiError ? err.message : t('save_error'),
         tone: 'error',
       }),
   };
