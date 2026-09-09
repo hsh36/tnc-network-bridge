@@ -300,6 +300,8 @@ export interface ApplyNetworkRequest {
   readonly dns: readonly string[];
   readonly mtu: number;
   readonly ipv6Enabled: boolean;
+  /** 802.1Q tag, or null for untagged. */
+  readonly vlan: number | null;
   /** Reverts unless confirmed within this many seconds. 0 disables the timer. */
   readonly revertAfterSeconds: number;
 }
@@ -498,6 +500,10 @@ export function validateRequest(raw: unknown, options: ValidateOptions = {}): Pr
         dns: dnsRaw.map((entry) => validateIpAddress(verb, entry, 'dns')),
         mtu: requireInteger(verb, 'mtu', input.mtu ?? 1500, 576, 9000),
         ipv6Enabled: requireBoolean(verb, 'ipv6Enabled', input.ipv6Enabled ?? false),
+        vlan:
+          input.vlan === undefined || input.vlan === null
+            ? null
+            : requireInteger(verb, 'vlan', input.vlan, 1, 4094),
         revertAfterSeconds: requireInteger(
           verb,
           'revertAfterSeconds',

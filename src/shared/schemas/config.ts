@@ -92,6 +92,17 @@ export const networkConfigSchema = z
         address: ipv4CidrSchema.default('192.168.42.1/24'),
       })
       .default({}),
+    /**
+     * How long an unconfirmed change to the side the operator is connected over stays
+     * in force before it is rolled back.
+     *
+     * Five minutes rather than the one that first suggests itself. The session cookie is
+     * host-scoped, so a new address is a new origin: the operator has to find the new
+     * URL, accept the self-signed certificate again, log in again, and only then can
+     * confirm. A minute is not enough time to do that, and a window that expires while
+     * they are still logging in reverts a change that was working.
+     */
+    applyRevertSeconds: z.number().int().min(30).max(3600).default(300),
   })
   .superRefine((cfg, ctx) => {
     checkStaticAddressing(cfg.lan, 'lan', ctx);

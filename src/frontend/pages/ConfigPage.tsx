@@ -21,6 +21,7 @@ import { Checkbox, Input, Select } from '../components/ui/Input';
 import { Tabs } from '../components/ui/Tabs';
 import { FullPageSpinner } from '../components/ui/Spinner';
 import { CertificateManager } from '../components/CertificateManager';
+import { NetworkApplyBanner } from '../components/NetworkApplyBanner';
 import { SharesSection } from '../components/SharesSection';
 import { useTranslation } from '../hooks/useTranslation';
 import { api, ApiError } from '../lib/api-client';
@@ -228,7 +229,10 @@ function NetworkSection(): JSX.Element {
   const [form, setForm] = useState<NetworkConfig>();
   const [interfaces, setInterfaces] = useState<InterfaceDiscovery[]>([]);
   const [saving, setSaving] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyNotice, setApplyNotice] = useState<string>();
   const [isDirty, setIsDirty] = useState(false);
+  const [pendingKey, setPendingKey] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { banner, onSaved, onError } = useSaveBanner(t);
 
@@ -267,9 +271,38 @@ function NetworkSection(): JSX.Element {
         setForm(data as NetworkConfig);
         setIsDirty(false);
         onSaved();
+        // The machine segment is applied straight away: this browser is not on it, so
+        // there is nothing to lose by acting, and nothing for the operator to confirm.
+        // The LAN side is the one that can cut this connection, and waits for its own
+        // button — a half-typed DNS entry must not be able to take the bridge away.
+        return api('network.apply', { body: { side: 'tnc' } });
       })
+      .then(() => setApplyNotice(t('tnc_applied')))
       .catch(onError)
       .finally(() => setSaving(false));
+  };
+
+  /** Applies the saved LAN configuration, arming the rollback the backend decides on. */
+  const applyLan = (): void => {
+    setApplyNotice(undefined);
+    setApplying(true);
+    api('network.apply', { body: { side: 'lan' } })
+      .then((result) => {
+        if (result.status === 'pending_confirmation') {
+          setApplyNotice(
+            result.expectedUrl === null
+              ? t('lan_pending_dhcp')
+              : t('lan_pending', { url: result.expectedUrl }),
+          );
+          // Makes the countdown banner re-read the pending change immediately rather
+          // than on the next page load.
+          setPendingKey((key) => key + 1);
+          return;
+        }
+        setApplyNotice(t('lan_applied'));
+      })
+      .catch(onError)
+      .finally(() => setApplying(false));
   };
 
   const update =
@@ -281,6 +314,8 @@ function NetworkSection(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-4">
+      <NetworkApplyBanner key={pendingKey} onConfirmed={() => setApplyNotice(t('lan_confirmed'))} />
+
       {/* Side by side, LAN left and TNC right, so the asymmetry between the two legs of
           the bridge is visible at a glance rather than inferred from field order. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -317,12 +352,27 @@ function NetworkSection(): JSX.Element {
         </section>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
           {t('save_button')}
         </Button>
+        <Button
+          variant="ghost"
+          onClick={applyLan}
+          loading={applying}
+          disabled={isDirty || applying}
+          className="w-fit"
+        >
+          {t('apply_lan_button')}
+        </Button>
         {banner}
       </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{t('apply_lan_hint')}</p>
+      {applyNotice !== undefined && (
+        <p className="text-sm text-status-ok" role="status">
+          {applyNotice}
+        </p>
+      )}
     </div>
   );
 }

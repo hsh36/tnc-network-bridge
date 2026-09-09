@@ -480,7 +480,14 @@ function applyNetwork(
       : ['ipv4.method', 'auto', 'ipv4.addresses', '', 'ipv4.gateway', '', 'ipv4.dns', ''];
 
   settings.push('ipv6.method', request.ipv6Enabled ? 'auto' : 'disabled');
-  settings.push('802-3-ethernet.mtu', String(request.mtu));
+
+  // MTU lives on a different setting for a VLAN connection than for a plain Ethernet
+  // one: NetworkManager rejects `802-3-ethernet.mtu` on a `vlan` profile outright, so
+  // sending the wrong one turns every tagged apply into a failure.
+  settings.push(request.vlan === null ? '802-3-ethernet.mtu' : 'vlan.mtu', String(request.mtu));
+  if (request.vlan !== null) {
+    settings.push('vlan.id', String(request.vlan));
+  }
 
   log.exec([nmcli, 'con', 'mod', connection, ...settings]);
   log.exec([nmcli, 'con', 'up', connection]);

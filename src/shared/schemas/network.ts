@@ -193,3 +193,30 @@ export const networkInterfacesResponseSchema = z.object({
 });
 
 export type NetworkInterfacesResponse = z.infer<typeof networkInterfacesResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Applying a saved side (see backend/network/apply-service.ts)
+// ---------------------------------------------------------------------------
+
+export const networkSideNameSchema = z.enum(['lan', 'tnc']);
+
+/**
+ * Which side to apply or confirm.
+ *
+ * Side rather than MAC: the MAC is the right storage key because it survives a NIC
+ * being renamed, but an operator knows which cable goes where, not which card holds
+ * which address.
+ */
+export const applyNetworkSideRequestSchema = z.object({ side: networkSideNameSchema }).strict();
+export type ApplyNetworkSideRequest = z.infer<typeof applyNetworkSideRequestSchema>;
+
+export const applyNetworkSideResponseSchema = z.object({
+  side: networkSideNameSchema,
+  interface: interfaceNameSchema,
+  /** `applied` when this connection was never at risk; otherwise a timer is running. */
+  status: z.enum(['applied', 'pending_confirmation']),
+  expiresAt: unixSecondsSchema.nullable(),
+  /** Where to look for the interface afterwards, when a static address makes that knowable. */
+  expectedUrl: z.string().nullable(),
+});
+export type ApplyNetworkSideResponse = z.infer<typeof applyNetworkSideResponseSchema>;

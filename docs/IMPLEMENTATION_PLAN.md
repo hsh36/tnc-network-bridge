@@ -392,6 +392,7 @@ All bodies validated by shared Zod schemas; the same schemas type the frontend c
 | GET/POST/PATCH/DELETE | `/schedules[/:id]` · POST `/schedules/preview` · POST `/schedules/:id/run` | Cron entries, next-run preview, run now |
 | GET | `/update/status` · POST `/update/{check,apply,rollback}` · GET `/update/history` | Self-update |
 | GET | `/network/interfaces` | NICs present on the machine, with stored desired-state |
+| POST | `/network/{apply,confirm}` · GET `/network/pending` | Apply a side with rollback, confirm it, see the countdown |
 | GET/POST | `/certificates` · POST `/certificates/regenerate` | TLS material |
 | GET/PUT | `/firewall` · POST `/firewall/reset` | nftables rules |
 | GET | `/fail2ban/status` · POST `/fail2ban/unban` | Ban management |

@@ -37,6 +37,9 @@ import {
   metricsQuerySchema,
   metricsResponseSchema,
   networkInterfacesResponseSchema,
+  applyNetworkSideRequestSchema,
+  applyNetworkSideResponseSchema,
+  pendingNetworkChangeResponseSchema,
   paginated,
   paginationQuerySchema,
   previewScheduleRequestSchema,
@@ -611,6 +614,32 @@ export const apiContract = {
   // -------------------------------------------------------------------------
   // Network interfaces
   // -------------------------------------------------------------------------
+  'network.apply': {
+    method: 'POST',
+    path: '/network/apply',
+    summary:
+      'Apply the saved configuration for one side, arming a rollback if it risks this connection.',
+    auth: 'session',
+    body: applyNetworkSideRequestSchema,
+    response: applyNetworkSideResponseSchema,
+    mutates: true,
+  },
+  'network.confirm': {
+    method: 'POST',
+    path: '/network/confirm',
+    summary: 'Confirm an applied change, stopping the rollback timer.',
+    auth: 'session',
+    body: applyNetworkSideRequestSchema,
+    response: acknowledgedSchema,
+    mutates: true,
+  },
+  'network.pending': {
+    method: 'GET',
+    path: '/network/pending',
+    summary: 'The change awaiting confirmation, and how long is left on its timer.',
+    auth: 'session',
+    response: pendingNetworkChangeResponseSchema,
+  },
   'network.interfaces': {
     method: 'GET',
     path: '/network/interfaces',

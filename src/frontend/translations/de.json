@@ -209,7 +209,19 @@
     "vlan_id": "VLAN-ID",
     "vlan_hint": "Leer lassen für untagged",
     "link_up": "Verbindung aktiv",
-    "link_down": "keine Verbindung"
+    "link_down": "keine Verbindung",
+    "apply_lan_button": "LAN übernehmen",
+    "apply_lan_hint": "Speichern übernimmt die TNC-Seite sofort — dieser Browser hängt nicht daran. Die LAN-Seite wird separat übernommen, mit Rückfall, falls sie Ihre Verbindung kappt.",
+    "tnc_applied": "Gespeichert. Die TNC-Seite ist aktiv.",
+    "lan_applied": "Die LAN-Einstellungen sind aktiv. Ihre Verbindung war nicht betroffen.",
+    "lan_pending": "Übernommen. Verbinden Sie sich neu auf {url}, melden Sie sich erneut an und bestätigen Sie — sonst kommen die vorherigen Einstellungen automatisch zurück.",
+    "lan_pending_dhcp": "Übernommen. Die neue Adresse kommt per DHCP; suchen Sie sie auf Ihrem Router, melden Sie sich erneut an und bestätigen Sie — sonst kommen die vorherigen Einstellungen automatisch zurück.",
+    "lan_confirmed": "Bestätigt. Die neuen LAN-Einstellungen bleiben bestehen.",
+    "pending_title": "Eine Netzwerkänderung wartet auf Bestätigung",
+    "pending_body": "Bestätigen Sie nicht innerhalb von {time}, werden die vorherigen Einstellungen automatisch wiederhergestellt. Bestätigen Sie erst, wenn Sie sicher sind, diese Bridge weiterhin zu erreichen.",
+    "pending_expired": "Das Zeitfenster ist abgelaufen. Die vorherigen Einstellungen sollten zurück sein; laden Sie diese Seite auf der alten Adresse neu.",
+    "confirm_button": "Bestätigen, Einstellungen behalten",
+    "confirm_error": "Die Änderung konnte nicht bestätigt werden."
   },
   "locks": {
     "title": "Dateisperren",

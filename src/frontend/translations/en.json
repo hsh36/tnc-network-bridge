@@ -209,7 +209,19 @@
     "vlan_id": "VLAN ID",
     "vlan_hint": "Leave empty for untagged",
     "link_up": "link up",
-    "link_down": "link down"
+    "link_down": "link down",
+    "apply_lan_button": "Apply LAN settings",
+    "apply_lan_hint": "Saving applies the TNC side immediately — this browser is not on it. The LAN side is applied separately, with a rollback in case it cuts your connection.",
+    "tnc_applied": "Saved. The TNC side is now live.",
+    "lan_applied": "The LAN settings are live. Your connection was not affected.",
+    "lan_pending": "Applied. Reconnect at {url}, sign in again and confirm — otherwise the previous settings come back automatically.",
+    "lan_pending_dhcp": "Applied. The new address comes from DHCP; find it on your router, sign in again and confirm — otherwise the previous settings come back automatically.",
+    "lan_confirmed": "Confirmed. The new LAN settings are permanent.",
+    "pending_title": "A network change is waiting for confirmation",
+    "pending_body": "If you do not confirm within {time}, the previous settings are restored automatically. Confirm only once you are sure you can still reach this bridge.",
+    "pending_expired": "The window has passed. The previous settings should be back; reload this page on the old address.",
+    "confirm_button": "Confirm, keep these settings",
+    "confirm_error": "The change could not be confirmed."
   },
   "locks": {
     "title": "Locks & Conflicts",

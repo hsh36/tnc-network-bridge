@@ -17,6 +17,7 @@ import { filesRoutes } from './routes/files';
 import { locksRoutes } from './routes/locks';
 import { logsRoutes } from './routes/logs';
 import { metricsRoutes } from './routes/metrics';
+import { networkApplyRoutes } from './routes/network-apply';
 import { networkRoutes } from './routes/network';
 import { schedulesRoutes } from './routes/schedules';
 import { sharesRoutes } from './routes/shares';
@@ -123,6 +124,7 @@ export function createApp(ctx: AppContext, options: AppOptions = {}): Express {
   router.use(metricsRoutes(ctx));
   router.use(eventsRoutes(ctx));
   router.use(networkRoutes(ctx));
+  router.use(networkApplyRoutes(ctx));
   router.use(certificateRoutes(ctx));
   router.use(sharesRoutes(ctx));
   app.use(API_BASE_PATH, router);
