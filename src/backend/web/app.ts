@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { join, sep } from 'node:path';
+
 import cookieParser from 'cookie-parser';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
@@ -19,16 +22,27 @@ import { systemRoutes } from './routes/system';
 import { tokensRoutes } from './routes/tokens';
 import { versionsRoutes } from './routes/versions';
 
+export interface AppOptions {
+  /**
+   * Directory holding the built browser bundle (`dist/frontend`).
+   *
+   * Set by the service, which is the only origin the admin UI is served from. Omitted by
+   * the dev server — there Vite serves the frontend and proxies the API here — and by
+   * tests, which exercise the API alone.
+   */
+  readonly staticDir?: string;
+}
+
 /**
  * Assembles the Express app (T29/T30): security headers, body parsing, every route
- * module mounted under {@link API_BASE_PATH}, and the error handler last so nothing
- * mounted after it is ever reachable.
+ * module mounted under {@link API_BASE_PATH}, the admin UI if a bundle was given, and
+ * the error handler last so nothing mounted after it is ever reachable.
  *
  * `createApp` takes an {@link AppContext} rather than building its own dependencies —
  * exactly what makes it possible to stand this up in a test against an in-memory
  * database and a fresh set of managers (see `app.test.ts`) instead of the real process.
  */
-export function createApp(ctx: AppContext): Express {
+export function createApp(ctx: AppContext, options: AppOptions = {}): Express {
   const app = express();
 
   app.disable('x-powered-by');
@@ -105,8 +119,66 @@ export function createApp(ctx: AppContext): Express {
   router.use(networkRoutes(ctx));
   app.use(API_BASE_PATH, router);
 
+  if (options.staticDir !== undefined) {
+    mountAdminUi(app, options.staticDir);
+  }
+
   app.use(notFoundHandler);
   app.use(errorHandler(ctx));
 
   return app;
+}
+
+/** Vite emits content-hashed asset filenames, so a hit under `assets/` never goes stale. */
+const ASSET_MAX_AGE_S = 31_536_000;
+
+/**
+ * Serves the admin UI from the same origin as the API.
+ *
+ * Same-origin is not incidental: the CSP above is `'self'`-only and the session cookie is
+ * host-scoped, so a bundle served from anywhere else would be blocked and unauthenticated
+ * in the same breath.
+ */
+function mountAdminUi(app: Express, staticDir: string): void {
+  const indexHtml = join(staticDir, 'index.html');
+  if (!existsSync(indexHtml)) {
+    // Fail here rather than answering every page load with a 500. A missing bundle means
+    // the release was built without `npm run build:frontend`, and saying so at startup is
+    // the difference between a one-line fix and an afternoon in the browser console.
+    throw new Error(
+      `The admin UI bundle is missing: ${indexHtml} does not exist. Run \`npm run build\`.`,
+    );
+  }
+
+  app.use(
+    express.static(staticDir, {
+      // `index.html` is served by the fallback below so that it gets `no-cache` even when
+      // requested as `/`; letting express.static answer `/` would cache the entry point.
+      index: false,
+      setHeaders: (res, filePath) => {
+        const hashed = filePath.includes(`${sep}assets${sep}`);
+        res.setHeader(
+          'Cache-Control',
+          hashed ? `public, max-age=${ASSET_MAX_AGE_S}, immutable` : 'no-cache',
+        );
+      },
+    }),
+  );
+
+  // The admin UI is a single-page app: reloading the browser on `/config` must return the
+  // bundle and let the client router render the page, not a 404. API paths are excluded
+  // so that an unknown endpoint still answers with the JSON error envelope rather than
+  // with HTML that a fetch() caller cannot parse.
+  app.get('*', (req, res, next) => {
+    if (req.path === API_BASE_PATH || req.path.startsWith(`${API_BASE_PATH}/`)) {
+      next();
+      return;
+    }
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(indexHtml, (error?: Error) => {
+      if (error) {
+        next(error);
+      }
+    });
+  });
 }

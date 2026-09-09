@@ -1,40 +1,22 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { PRODUCT_NAME } from '../shared/constants';
-import { bootstrap, bootstrapLogger, installSignalHandlers, type Service } from './index';
-import { createApp } from './web/app';
-import { type AppContext } from './web/context';
-import { AuthManager } from './web/auth';
-import { EventBus } from './web/event-bus';
-import { ensureCertificate, HttpsServerManager } from './web/https-setup';
-import { ConflictResolver } from './locking/conflict-resolver';
-import { LockManager } from './locking/lock-manager';
-import { ScheduleLockWindowManager } from './locking/schedule-windows';
-import { createShareCacheRootResolver } from './config/share-paths';
-import { createBridgeMetrics } from './monitoring/registry';
-import { MetricsCollector } from './monitoring/collector';
-import { JobRegistry } from './scheduling/jobs';
-import { Scheduler } from './scheduling/scheduler';
-import { AuditLog, installAuditGuards } from './security/audit-log';
-import { BlobStore } from './versioning/blob-store';
-import { VersionCleanup } from './versioning/cleanup';
-import { VersionStore } from './versioning/version-store';
-import { VersioningEngine } from './versioning/versioning-engine';
+
+import { writeSecretKeyFile } from './config/secrets';
+import { bootstrapLogger, installSignalHandlers } from './index';
+import { startServer } from './server';
 
 /**
- * Development/standalone entrypoint.
+ * Development entrypoint.
  *
- * `bootstrap()`/`index.ts` (T8) is deliberately left untouched by this file — every
- * default path it uses (`/var/lib/tnc-bridge`, `/var/log/tnc-bridge`, …) is a
- * production/systemd path, and its test suite proves the lifecycle contract against
- * those exact defaults. Wiring the still-in-progress HTTPS server (T27) into that
- * shared function would mean every one of those tests now also has to stand up a real
- * TLS listener on a real port, for no benefit to what they are actually proving.
+ * The wiring itself lives in `server.ts` and is shared with the systemd service, so that
+ * what `npm run dev` exercises is the same composition root that ships. This file only
+ * substitutes the two things that legitimately differ in development: a data directory
+ * under the working tree instead of `/var/lib` and friends, and an unprivileged port.
  *
- * This file instead does the same bootstrap with dev-friendly local paths, adds the
- * managers `AppContext` needs, and serves `createApp()` over HTTPS on the port the
- * Vite dev proxy expects (`vite.config.ts` → `https://127.0.0.1:8443`). It is the
- * `npm run dev:backend` target — not something `index.ts`'s consumers (systemd, tests)
- * ever import.
+ * The frontend is deliberately not served from here — Vite serves it and proxies the API
+ * to `https://127.0.0.1:8443` (`vite.config.ts`), which is what makes hot reload work.
  */
 
 const DEV_ROOT = join(process.cwd(), '.dev-data');
@@ -42,151 +24,42 @@ const DEV_HTTPS_PORT = Number(process.env.TNC_DEV_PORT ?? 8443);
 
 async function main(): Promise<void> {
   const boot = bootstrapLogger(false);
+  const secretKeyPath = join(DEV_ROOT, 'secret.key');
 
-  const service: Service = await bootstrap({
-    dbPath: join(DEV_ROOT, 'tnc-bridge.db'),
-    logDir: join(DEV_ROOT, 'log'),
-    secretKeyPath: join(DEV_ROOT, 'secret.key'),
+  // Generated on demand here and nowhere else. In production the installer creates the
+  // key once; a service that quietly minted a new one on a failed read would not recover
+  // from a missing mount, it would turn every stored credential into undecryptable bytes.
+  if (!existsSync(secretKeyPath)) {
+    writeSecretKeyFile(secretKeyPath);
+    boot.info('generated a development secret key', { path: secretKeyPath });
+  }
+
+  const running = await startServer({
+    port: DEV_HTTPS_PORT,
+    paths: {
+      dbPath: join(DEV_ROOT, 'tnc-bridge.db'),
+      logDir: join(DEV_ROOT, 'log'),
+      secretKeyPath,
+      certDir: join(DEV_ROOT, 'tls'),
+      blobRoot: join(DEV_ROOT, 'versions'),
+      cacheRoot: join(DEV_ROOT, 'cache'),
+    },
   });
 
-  const auth = new AuthManager({
-    db: service.db,
-    config: service.config,
-    logger: service.logging.logger,
-  });
-  const locks = new LockManager({
-    db: service.db,
-    config: service.config,
-    logger: service.logging.logger,
-  });
-  const conflicts = new ConflictResolver(service.db, service.logging.logger);
-  const events = new EventBus();
-
-  locks.onLockEvent(({ action, lock }) => {
-    events.publish({ type: 'lock', ts: Date.now(), action, lock });
-  });
-
-  const certDir = join(DEV_ROOT, 'tls');
-  const material = ensureCertificate(certDir);
-
-  installAuditGuards(service.db);
-  const audit = new AuditLog(service.db, service.logging.logger);
-  const blobRoot = join(DEV_ROOT, 'versions');
-  const versions = new VersionStore({
-    db: service.db,
-    blobs: new BlobStore({ root: blobRoot }),
-    logger: service.logging.logger,
-  });
-
-  // Versioning engine initialized for demo (not used in development)
-  void new VersioningEngine({
-    store: versions,
-    blobRoot,
-    logger: service.logging.logger,
-  });
-
-  const cleanup = new VersionCleanup({
-    versions,
-    policy: () => service.config.get('versioning'),
-    logger: service.logging.logger,
-    audit,
-  });
-
-  // The scheduler knows *when*; the registry supplies *what*. A kind with no handler
-  // registered is recorded as skipped rather than failing, so this list can grow
-  // incrementally without the scheduler needing to know.
-  const jobs = new JobRegistry().register('prune', cleanup.asJobHandler());
-
-  const schedules = new Scheduler({
-    db: service.db,
-    jobs,
-    logger: service.logging.logger,
-    audit,
-  });
-
-  // Wire up lock/unlock schedule window handlers (T42)
-  new ScheduleLockWindowManager({
-    db: service.db,
-    locks,
-    scheduler: schedules,
-    logger: service.logging.logger,
-  });
-
-  const metrics = createBridgeMetrics();
-
-  const ctx: AppContext = {
-    db: service.db,
-    config: service.config,
-    auth,
-    locks,
-    conflicts,
-    events,
-    versions,
-    schedules,
-    metrics,
-    audit,
-    shareCacheRoot: createShareCacheRootResolver(service.db),
-    logger: service.logging.logger,
-    certDir,
-    version: process.env.npm_package_version ?? '0.0.0-dev',
-    startedAt: Date.now(),
-    now: () => Date.now(),
-  };
-
-  // Metrics sampling and rollup (T45)
-  const cachePath = join(DEV_ROOT, 'cache', 'shared');
-
-  const collector = new MetricsCollector({
-    db: service.db,
-    metrics,
-    cachePath,
-    logger: service.logging.logger,
-    startedAt: Date.now(),
-  });
-
-  // Sample metrics every 10 seconds
-  collector.start(10_000);
-
-  // Register rollup job (consolidate old samples to hourly buckets)
-  jobs.register('prune', () => {
-    // Rollup samples older than 7 days (604,800 seconds) into hourly buckets
-    const result = collector.rollUp(7 * 24 * 60 * 60);
-    return {
-      detail: `rolled up ${result.rolledUp} samples, deleted ${result.deleted} old samples`,
-    };
-  });
-
-  const app = createApp(ctx);
-  const https = HttpsServerManager.create(app, {
-    material,
-    tlsMin: service.config.get('security').tlsMin,
-  });
-  ctx.httpsManager = https;
-
-  const heartbeat = setInterval(() => {
-    events.publish({ type: 'heartbeat', ts: Date.now() });
-  }, 20_000);
-
-  await https.listen(DEV_HTTPS_PORT);
   boot.info(`${PRODUCT_NAME} dev server listening`, {
-    url: `https://127.0.0.1:${DEV_HTTPS_PORT}`,
+    url: `https://127.0.0.1:${running.port}`,
     dataDir: DEV_ROOT,
   });
 
   installSignalHandlers(
-    {
-      shutdown: async (reason) => {
-        clearInterval(heartbeat);
-        collector.stop();
-        await https.close();
-        await service.shutdown(reason);
-      },
-    },
+    { shutdown: (reason) => running.shutdown(reason) },
     { logger: boot, onComplete: () => process.exit(0) },
   );
 }
 
-main().catch((err: unknown) => {
-  process.stderr.write(`${PRODUCT_NAME} dev server failed to start: ${String(err)}\n`);
+main().catch((error: unknown) => {
+  process.stderr.write(
+    `${PRODUCT_NAME} dev server failed to start: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
   process.exitCode = 1;
 });

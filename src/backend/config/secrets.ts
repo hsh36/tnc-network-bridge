@@ -40,10 +40,11 @@ export function generateSecretKey(): Buffer {
 /**
  * Reads the key from disk.
  *
- * The file is written by the installer as `0600 root:tncbridge`. If the mode is wider
- * than that on Linux this throws rather than warns: a world-readable key is
- * indistinguishable from no encryption at all, and silently continuing would leave
- * the operator believing their credentials are protected.
+ * The file is written by the installer as `0600 tncbridge:tncbridge` — owned by the
+ * service account, because the check below leaves no group bit for it to read through.
+ * If the mode is wider than that on Linux this throws rather than warns: a
+ * world-readable key is indistinguishable from no encryption at all, and silently
+ * continuing would leave the operator believing their credentials are protected.
  */
 export function loadSecretKey(path: string = DEFAULT_SECRET_KEY_PATH): Buffer {
   let raw: Buffer;
