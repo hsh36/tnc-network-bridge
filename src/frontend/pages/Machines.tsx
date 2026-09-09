@@ -87,7 +87,9 @@ export function Machines(): JSX.Element {
       header: t('status'),
       render: (m) => {
         const isOnline = m.lastSeenAt !== null && Date.now() / 1000 - m.lastSeenAt < 300;
-        return <Badge tone={isOnline ? 'ok' : 'idle'}>{isOnline ? t('online') : t('offline')}</Badge>;
+        return (
+          <Badge tone={isOnline ? 'ok' : 'idle'}>{isOnline ? t('online') : t('offline')}</Badge>
+        );
       },
     },
     {
@@ -112,16 +114,17 @@ export function Machines(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('subtitle')}
-        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
       </div>
 
       {data !== undefined && selectedMachines.size > 0 && (
         <Card className="border-accent/40">
           <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              {t('machines_selected', { count: selectedMachines.size, plural: selectedMachines.size === 1 ? '' : 's' })}
+              {t('machines_selected', {
+                count: selectedMachines.size,
+                plural: selectedMachines.size === 1 ? '' : 's',
+              })}
             </p>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost">
@@ -138,7 +141,10 @@ export function Machines(): JSX.Element {
       <Card>
         <CardHeader
           title={t('discovered_machines')}
-          subtitle={t('found_count', { total: data?.total ?? 0, plural: (data?.total ?? 0) === 1 ? '' : 's' })}
+          subtitle={t('found_count', {
+            total: data?.total ?? 0,
+            plural: (data?.total ?? 0) === 1 ? '' : 's',
+          })}
         />
         {data?.items.length === 0 ? (
           <EmptyState
@@ -160,5 +166,3 @@ export function Machines(): JSX.Element {
     </div>
   );
 }
-
-

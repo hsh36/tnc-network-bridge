@@ -44,9 +44,7 @@ export function SystemUpdates(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('subtitle')}
-        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
       </div>
 
       {/* Current version */}
@@ -65,7 +63,9 @@ export function SystemUpdates(): JSX.Element {
                   {status?.currentVersion ?? '—'}
                 </span>
                 {status?.rollbackVersion && (
-                  <Badge tone="warn">{t('rollback_available', { version: status.rollbackVersion })}</Badge>
+                  <Badge tone="warn">
+                    {t('rollback_available', { version: status.rollbackVersion })}
+                  </Badge>
                 )}
               </div>
               {status?.rollbackVersion && (
@@ -161,7 +161,9 @@ export function SystemUpdates(): JSX.Element {
             <div className="flex flex-col gap-4">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {status?.lastCheckAt
-                  ? t('last_checked', { date: new Date(status.lastCheckAt * 1000).toLocaleString() })
+                  ? t('last_checked', {
+                      date: new Date(status.lastCheckAt * 1000).toLocaleString(),
+                    })
                   : t('no_checks_yet')}
               </p>
               <Button
@@ -204,9 +206,7 @@ export function SystemUpdates(): JSX.Element {
                 </Button>
               </>
             )}
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {t('schedule_note')}
-            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('schedule_note')}</p>
           </div>
         </CardBody>
       </Card>
@@ -221,4 +221,3 @@ export function SystemUpdates(): JSX.Element {
     </div>
   );
 }
-

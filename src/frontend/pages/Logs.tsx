@@ -232,7 +232,8 @@ export function Logs(): JSX.Element {
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {logs.live ? t('live_tail') : t('historical_logs')} — {logs.total.toLocaleString()} {t('total_entries')}
+            {logs.live ? t('live_tail') : t('historical_logs')} — {logs.total.toLocaleString()}{' '}
+            {t('total_entries')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -349,7 +350,9 @@ export function Logs(): JSX.Element {
         <Card>
           <CardBody className="flex items-center justify-between gap-3">
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              {searchTotal === 0 ? t('no_matches') : t('match_count', { current: searchMatch + 1, total: searchTotal })}
+              {searchTotal === 0
+                ? t('no_matches')
+                : t('match_count', { current: searchMatch + 1, total: searchTotal })}
             </div>
             <div className="flex gap-2">
               <Button
@@ -376,7 +379,10 @@ export function Logs(): JSX.Element {
       <Card>
         <CardHeader
           title={t('entries_title')}
-          subtitle={t('entries_displayed', { count: filteredLogs.length, selected: selectedIds.size > 0 ? `, ${selectedIds.size} selected` : '' })}
+          subtitle={t('entries_displayed', {
+            count: filteredLogs.length,
+            selected: selectedIds.size > 0 ? `, ${selectedIds.size} selected` : '',
+          })}
         />
         <CardBody className="space-y-3">
           <Input
@@ -418,10 +424,7 @@ export function Logs(): JSX.Element {
 
           <div ref={listRef} className="overflow-auto max-h-[600px]">
             {filteredLogs.length === 0 ? (
-              <EmptyState
-                title={t('no_log_entries')}
-                description={t('no_log_description')}
-              />
+              <EmptyState title={t('no_log_entries')} description={t('no_log_description')} />
             ) : (
               <div className="space-y-0">
                 {filteredLogs.map((log) => (
@@ -476,7 +479,10 @@ export function Logs(): JSX.Element {
                       <div className="border-b border-border bg-slate-50 px-6 py-3 dark:border-border-dark dark:bg-slate-900/50">
                         <div className="space-y-2 font-mono text-xs">
                           <div>
-                            <span className="text-slate-500 dark:text-slate-400">{t('log_id')}</span> {log.id}
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {t('log_id')}
+                            </span>{' '}
+                            {log.id}
                           </div>
                           <div>
                             <span className="text-slate-500 dark:text-slate-400">
@@ -496,13 +502,17 @@ export function Logs(): JSX.Element {
                           )}
                           {log.shareId && (
                             <div>
-                              <span className="text-slate-500 dark:text-slate-400">{t('share_id')}</span>{' '}
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {t('share_id')}
+                              </span>{' '}
                               {log.shareId}
                             </div>
                           )}
                           {log.context && (
                             <div>
-                              <span className="text-slate-500 dark:text-slate-400">{t('context')}</span>
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {t('context')}
+                              </span>
                               <pre className="mt-1 overflow-auto bg-slate-200 p-2 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
                                 {JSON.stringify(log.context, null, 2)}
                               </pre>
@@ -532,5 +542,3 @@ export function Logs(): JSX.Element {
     </div>
   );
 }
-
-

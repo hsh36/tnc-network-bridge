@@ -51,7 +51,10 @@ function useSaveBanner(t: ReturnType<typeof useTranslation>): {
       ),
     onSaved: () => setMessage({ text: t('config:saved_message'), tone: 'ok' }),
     onError: (err) =>
-      setMessage({ text: err instanceof ApiError ? err.message : t('config:save_error'), tone: 'error' }),
+      setMessage({
+        text: err instanceof ApiError ? err.message : t('config:save_error'),
+        tone: 'error',
+      }),
   };
 }
 
@@ -1476,10 +1479,10 @@ export function ConfigPage(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('page_title')}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('page_subtitle')}
-        </p>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+          {t('page_title')}
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('page_subtitle')}</p>
       </div>
       <Card>
         <CardHeader title={t('settings_title')} />

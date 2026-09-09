@@ -189,9 +189,7 @@ export function Versions(): JSX.Element {
         setConfirm(undefined);
         versions.refresh();
       })
-      .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : t('restore_error')),
-      )
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : t('restore_error')))
       .finally(() => setBusyId(undefined));
   };
 
@@ -213,9 +211,7 @@ export function Versions(): JSX.Element {
         setNotice(t('delete_success', { id: version.id }));
         versions.refresh();
       })
-      .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : t('delete_error')),
-      )
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : t('delete_error')))
       .finally(() => setBusyId(undefined));
   };
 
@@ -241,16 +237,11 @@ export function Versions(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('subtitle')}
-        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
       </div>
 
       <Card>
-        <CardHeader
-          title={t('find_file')}
-          subtitle={t('find_file_subtitle')}
-        />
+        <CardHeader title={t('find_file')} subtitle={t('find_file_subtitle')} />
         <CardBody>
           <form onSubmit={handleFilter} className="flex flex-wrap items-end gap-3">
             <Input
@@ -328,12 +319,12 @@ export function Versions(): JSX.Element {
       )}
 
       <Card>
-        <CardHeader title={t('history_title')} subtitle={t('history_total', { count: versions.data?.total ?? 0 })} />
+        <CardHeader
+          title={t('history_title')}
+          subtitle={t('history_total', { count: versions.data?.total ?? 0 })}
+        />
         {items.length === 0 ? (
-          <EmptyState
-            title={t('no_versions')}
-            description={t('no_versions_description')}
-          />
+          <EmptyState title={t('no_versions')} description={t('no_versions_description')} />
         ) : (
           <ol className="flex flex-col">
             {items.map((version) => {
@@ -467,4 +458,3 @@ export function Versions(): JSX.Element {
     </div>
   );
 }
-

@@ -142,7 +142,11 @@ export function Scheduling(): JSX.Element {
     })
       .then(() => schedules.refresh())
       .catch((err: unknown) =>
-        setFormError(err instanceof ApiError ? err.message : t('schedule_change_error', { name: schedule.name })),
+        setFormError(
+          err instanceof ApiError
+            ? err.message
+            : t('schedule_change_error', { name: schedule.name }),
+        ),
       )
       .finally(() => setRunningId(undefined));
   };
@@ -169,7 +173,11 @@ export function Scheduling(): JSX.Element {
         schedules.refresh();
       })
       .catch((err: unknown) =>
-        setFormError(err instanceof ApiError ? err.message : t('schedule_delete_error', { name: schedule.name })),
+        setFormError(
+          err instanceof ApiError
+            ? err.message
+            : t('schedule_delete_error', { name: schedule.name }),
+        ),
       )
       .finally(() => setRunningId(undefined));
   };
@@ -180,9 +188,7 @@ export function Scheduling(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('subtitle')}
-        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
       </div>
 
       {notice !== undefined && (
@@ -195,10 +201,7 @@ export function Scheduling(): JSX.Element {
       )}
 
       <Card>
-        <CardHeader
-          title={t('new_schedule')}
-          subtitle={t('new_schedule_subtitle')}
-        />
+        <CardHeader title={t('new_schedule')} subtitle={t('new_schedule_subtitle')} />
         <CardBody>
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div className="flex flex-wrap items-end gap-3">
@@ -309,12 +312,12 @@ export function Scheduling(): JSX.Element {
       </Card>
 
       <Card>
-        <CardHeader title={t('schedules_title')} subtitle={t('schedules_defined', { count: schedules.data?.total ?? 0 })} />
+        <CardHeader
+          title={t('schedules_title')}
+          subtitle={t('schedules_defined', { count: schedules.data?.total ?? 0 })}
+        />
         {items.length === 0 ? (
-          <EmptyState
-            title={t('no_schedules')}
-            description={t('no_schedules_description')}
-          />
+          <EmptyState title={t('no_schedules')} description={t('no_schedules_description')} />
         ) : (
           <ul className="flex flex-col">
             {items.map((schedule) => (
@@ -379,4 +382,3 @@ export function Scheduling(): JSX.Element {
     </div>
   );
 }
-

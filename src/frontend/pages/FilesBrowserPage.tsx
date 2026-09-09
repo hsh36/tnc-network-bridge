@@ -122,9 +122,7 @@ export function FilesBrowserPage(): JSX.Element {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('title')}</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {t('subtitle')}
-        </p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
       </div>
 
       {/* Filter bar */}
@@ -153,10 +151,7 @@ export function FilesBrowserPage(): JSX.Element {
             <CardBody className="p-0">
               {fileItems.length === 0 ? (
                 <div className="p-8">
-                  <EmptyState
-                    title={t('no_files')}
-                    description={t('no_files_description')}
-                  />
+                  <EmptyState title={t('no_files')} description={t('no_files_description')} />
                 </div>
               ) : viewMode === 'tree' ? (
                 <FileTree
@@ -227,7 +222,9 @@ export function FilesBrowserPage(): JSX.Element {
                 <CardHeader title={t('file_details')} />
                 <CardBody className="space-y-3 text-sm">
                   <div>
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t('path_label')}</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                      {t('path_label')}
+                    </p>
                     <p className="mt-1 break-all font-mono text-xs text-slate-900 dark:text-slate-100">
                       {selectedFile.relPath}
                     </p>
@@ -255,7 +252,9 @@ export function FilesBrowserPage(): JSX.Element {
                       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                         {t('type_label')}
                       </p>
-                      <p className="mt-1 text-xs">{selectedFile.isDir ? t('directory') : t('file')}</p>
+                      <p className="mt-1 text-xs">
+                        {selectedFile.isDir ? t('directory') : t('file')}
+                      </p>
                     </div>
                   </div>
 
@@ -296,10 +295,7 @@ export function FilesBrowserPage(): JSX.Element {
           ) : (
             <Card>
               <CardBody>
-                <EmptyState
-                  title={t('select_file')}
-                  description={t('select_file_description')}
-                />
+                <EmptyState title={t('select_file')} description={t('select_file_description')} />
               </CardBody>
             </Card>
           )}
@@ -308,5 +304,3 @@ export function FilesBrowserPage(): JSX.Element {
     </div>
   );
 }
-
-

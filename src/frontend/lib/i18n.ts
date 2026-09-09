@@ -103,11 +103,7 @@ export class I18nManager {
    * Translate a key in a namespace with optional variable substitution.
    * @example t('dashboard', 'title') or t('dashboard', 'welcome', { name: 'John' })
    */
-  translate(
-    namespace: string,
-    key: string,
-    variables?: Record<string, string | number>,
-  ): string {
+  translate(namespace: string, key: string, variables?: Record<string, string | number>): string {
     const ns = this.translations[this.currentLanguage]?.[namespace];
     if (!ns) {
       return `[${namespace}:${key}]`; // Fallback for missing namespace

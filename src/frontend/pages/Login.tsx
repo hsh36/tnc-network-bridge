@@ -32,11 +32,7 @@ export function Login(): JSX.Element {
         void navigate(state?.from ?? '/', { replace: true });
       })
       .catch((err: unknown) => {
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : t('connection_error'),
-        );
+        setError(err instanceof ApiError ? err.message : t('connection_error'));
       })
       .finally(() => setSubmitting(false));
   };
@@ -52,9 +48,7 @@ export function Login(): JSX.Element {
             <h1 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
               {PRODUCT_NAME}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t('manage_bridge')}
-            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('manage_bridge')}</p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Input

@@ -22,7 +22,10 @@ export function LanguagePicker({ className = '' }: LanguagePickerProps): JSX.Ele
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <label htmlFor="language-select" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+      <label
+        htmlFor="language-select"
+        className="text-sm font-medium text-slate-700 dark:text-slate-300"
+      >
         {t('language')}:
       </label>
       <select

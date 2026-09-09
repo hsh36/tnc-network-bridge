@@ -221,12 +221,8 @@ export function LocksConflictsPage(): JSX.Element {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          {t('title')}
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('subtitle')}
-        </p>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('subtitle')}</p>
       </div>
 
       {/* Alerts */}
@@ -285,5 +281,3 @@ export function LocksConflictsPage(): JSX.Element {
     </div>
   );
 }
-
-

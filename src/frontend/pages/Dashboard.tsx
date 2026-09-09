@@ -37,7 +37,11 @@ function getLockColumns(t: ReturnType<typeof useTranslation>): readonly Column<L
       header: t('dashboard:table_origin'),
       render: (l) => <Badge tone={l.origin === 'tnc' ? 'accent' : 'idle'}>{l.origin}</Badge>,
     },
-    { key: 'owner', header: t('dashboard:table_owner'), render: (l) => l.ownerLabel ?? l.tncIp ?? '—' },
+    {
+      key: 'owner',
+      header: t('dashboard:table_owner'),
+      render: (l) => l.ownerLabel ?? l.tncIp ?? '—',
+    },
     {
       key: 'age',
       header: t('dashboard:table_acquired'),
@@ -71,14 +75,14 @@ export function Dashboard(): JSX.Element {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('dashboard:title')}</h1>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            {t('dashboard:title')}
+          </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {t('dashboard:live_status', { version: data?.version ?? '—' })}
           </p>
         </div>
-        <Badge tone={connectionTone(sse.state)}>
-          {getConnectionStatus()}
-        </Badge>
+        <Badge tone={connectionTone(sse.state)}>{getConnectionStatus()}</Badge>
       </div>
 
       {status.error !== undefined && (
@@ -131,7 +135,11 @@ export function Dashboard(): JSX.Element {
               label={t('dashboard:disk_used')}
               value={disk !== undefined ? `${disk.usedPct}%` : '—'}
               tone={disk !== undefined && disk.usedPct >= 85 ? 'warn' : 'default'}
-              hint={disk !== undefined ? t('dashboard:free', { size: bytesToHuman(disk.freeBytes) }) : undefined}
+              hint={
+                disk !== undefined
+                  ? t('dashboard:free', { size: bytesToHuman(disk.freeBytes) })
+                  : undefined
+              }
             />
             <StatCard
               label={t('dashboard:memory_used')}
@@ -167,10 +175,7 @@ export function Dashboard(): JSX.Element {
       </Card>
 
       <Card>
-        <CardHeader
-          title={t('dashboard:recent_events')}
-          subtitle={t('dashboard:event_bus')}
-        />
+        <CardHeader title={t('dashboard:recent_events')} subtitle={t('dashboard:event_bus')} />
         <CardBody className="max-h-72 overflow-y-auto p-0">
           {sse.events.length === 0 ? (
             <EmptyState
