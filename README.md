@@ -29,7 +29,7 @@ This solves the security challenge of bridging legacy SMB 1.0 CNC machines with 
 
 ## Software Prerequisites
 
-- Node.js 18+
+- Node.js 22+ (installed by the script if missing)
 - Git
 - Samba/SMB utilities
 - systemd (included in RPi OS)
@@ -43,26 +43,26 @@ curl -fsSL https://raw.githubusercontent.com/hsh36/tnc-network-bridge/main/insta
 ```
 
 This will:
-- Clone the repository
-- Install all dependencies
-- Configure systemd service
-- Start the bridge and web interface
-- Open setup wizard at https://localhost:443
+- Install Node.js and the packages the bridge drives (Samba, nftables, dnsmasq, Fail2Ban)
+- Clone and build the application into `/opt/tnc-bridge`
+- Create the `tncbridge` service account and the privileged helper
+- Configure and start the systemd service
+- Open setup wizard at https://localhost/
+
+Run it as a normal user with sudo rights, not as root — it uses sudo for the
+steps that need it.
 
 **Manual Installation:**
 
 ```bash
 git clone https://github.com/hsh36/tnc-network-bridge.git
 cd tnc-network-bridge
-npm install
-npm run build
-sudo npm run install:service
-sudo systemctl start tnc-bridge
+./install.sh
 ```
 
 ## Web Interface
 
-Access the management interface at: **https://localhost:443**
+Access the management interface at: **https://localhost/** (port 443)
 
 ### Features
 - **Dashboard**: Live status, connection health, performance metrics
