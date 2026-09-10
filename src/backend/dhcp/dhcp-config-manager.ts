@@ -25,7 +25,6 @@ export interface DnsmasqConfig {
   readonly rangeEnd: string;
   readonly leaseTime: string; // e.g., "12h"
   readonly gateway: string;
-  readonly dns: string; // single IP or multiple space-separated
   readonly domain: string;
   readonly enabled: boolean;
 }
@@ -49,9 +48,12 @@ bind-interfaces
 # DHCP range and timing
 dhcp-range={{rangeStart}},{{rangeEnd}},{{leaseTime}}
 
-# Gateway and DNS
+# Gateway
 dhcp-option=option:router,{{gateway}}
-dhcp-option=option:dns-server,{{dns}}
+# No DNS server is offered. A TNC reaches the bridge by address and has nothing to
+# resolve; an empty option:dns-server is dnsmasq's documented way of telling a client
+# not to expect one, as opposed to omitting the line, which makes dnsmasq offer itself.
+dhcp-option=option:dns-server
 dhcp-option=option:domain-name,{{domain}}
 
 # Static reservations
@@ -82,7 +84,6 @@ export function renderDnsmasqConf(
     rangeEnd: config.rangeEnd,
     leaseTime: config.leaseTime,
     gateway: config.gateway,
-    dns: config.dns,
     domain: config.domain,
     reservations: reservations.map((r) => ({
       mac: r.mac.toLowerCase(),
@@ -138,7 +139,6 @@ export class DHCPConfigManager {
       rangeEnd,
       leaseTime: dhcpConfig.leaseTime,
       gateway: dhcpConfig.gateway ?? this.extractGatewayFromTncInterface(networkConfig.tnc.address),
-      dns: dhcpConfig.dns,
       domain: 'tnc.local',
       enabled: dhcpConfig.enabled,
     };

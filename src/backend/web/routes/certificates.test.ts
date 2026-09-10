@@ -129,6 +129,42 @@ describe('GET /certificates', () => {
   });
 });
 
+describe('GET /certificates/download', () => {
+  it('needs a session', async () => {
+    expect((await request(app).get('/api/v1/certificates/download')).status).toBe(401);
+  });
+
+  it('hands over the certificate as a file', async () => {
+    // The point of the endpoint: on a self-signed appliance this is how the operator
+    // gets the certificate into their own trust store without reaching for SSH.
+    const material = generateSelfSignedCertificate({ commonName: 'bridge.example' });
+    saveCertificateMaterial(certDir, material);
+    const { agent } = await loginAgent();
+
+    const res = await agent.get('/api/v1/certificates/download').expect(200);
+
+    expect(res.headers['content-disposition']).toContain('tnc-bridge-cert.pem');
+    expect(res.text).toContain('BEGIN CERTIFICATE');
+  });
+
+  it('never sends the private key', async () => {
+    // The key has no reason to leave the appliance. An endpoint that can be asked for
+    // it is an endpoint that can be tricked into handing it over.
+    const material = generateSelfSignedCertificate({ commonName: 'bridge.example' });
+    saveCertificateMaterial(certDir, material);
+    const { agent } = await loginAgent();
+
+    const res = await agent.get('/api/v1/certificates/download').expect(200);
+
+    expect(res.text).not.toContain('PRIVATE KEY');
+  });
+
+  it('answers 404 when nothing is installed', async () => {
+    const { agent } = await loginAgent();
+    expect((await agent.get('/api/v1/certificates/download')).status).toBe(404);
+  });
+});
+
 describe('POST /certificates/regenerate', () => {
   it('installs a fresh self-signed pair and hot-reloads it', async () => {
     const { agent, csrf } = await loginAgent();

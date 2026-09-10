@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { type CertificateInfo } from '../../shared';
+import { API_BASE_PATH, type CertificateInfo } from '../../shared';
 import { useTranslation } from '../hooks/useTranslation';
 import { ApiError, api } from '../lib/api-client';
 import { Badge } from './ui/Badge';
@@ -195,6 +195,25 @@ export function CertificateManager(): JSX.Element {
           >
             {t('regenerate_button')}
           </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border pt-4 dark:border-border-dark">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {t('download_title')}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t('download_hint')}</p>
+          {/*
+            A plain link, not an api() call. The browser has the session cookie and knows
+            how to save a file; routing the bytes through fetch and a blob would add a
+            copy in memory and a second way for it to go wrong.
+          */}
+          <a
+            className="w-fit rounded-md border border-border px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-border-dark dark:text-slate-100 dark:hover:bg-slate-800"
+            href={`${API_BASE_PATH}/certificates/download`}
+            download="tnc-bridge-cert.pem"
+          >
+            {t('download_button')}
+          </a>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border pt-4 dark:border-border-dark">

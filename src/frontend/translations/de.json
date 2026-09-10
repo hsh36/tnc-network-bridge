@@ -641,6 +641,9 @@
     "chain_pem": "Zwischenzertifikate (PEM)",
     "chain_pem_hint": "Optional. Nötig, wenn die ausstellende CA bei Ihren Clients nicht als Wurzel bekannt ist.",
     "install_button": "Prüfen und installieren",
-    "cancel_button": "Abbrechen"
+    "cancel_button": "Abbrechen",
+    "download_title": "Zertifikat herunterladen",
+    "download_hint": "Installieren Sie dieses Zertifikat auf Ihrem Rechner, um die Browser-Warnung zu beenden. Der private Schlüssel verlässt das Gerät nie.",
+    "download_button": "Zertifikat herunterladen (.pem)"
   }
 }

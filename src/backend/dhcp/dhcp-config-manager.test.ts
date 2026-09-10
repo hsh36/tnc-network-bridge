@@ -13,7 +13,6 @@ describe('renderDnsmasqConf', () => {
       rangeEnd: '192.168.42.199',
       leaseTime: '12h',
       gateway: '192.168.42.1',
-      dns: '192.168.42.1',
       domain: 'tnc.local',
       enabled: true,
     };
@@ -24,7 +23,11 @@ describe('renderDnsmasqConf', () => {
     expect(content).toContain('bind-interfaces');
     expect(content).toContain('dhcp-range=192.168.42.100,192.168.42.199,12h');
     expect(content).toContain('dhcp-option=option:router,192.168.42.1');
-    expect(content).toContain('dhcp-option=option:dns-server,192.168.42.1');
+    // No DNS server, and specifically an *empty* option rather than a missing line:
+    // omitting it makes dnsmasq offer itself as the resolver, which is exactly what a
+    // bridge on the machine segment must not do.
+    expect(content).toMatch(/dhcp-option=option:dns-server$/m);
+    expect(content).not.toMatch(/dhcp-option=option:dns-server,/);
     expect(content).toContain('dhcp-option=option:domain-name,tnc.local');
   });
 
@@ -35,7 +38,6 @@ describe('renderDnsmasqConf', () => {
       rangeEnd: '192.168.42.199',
       leaseTime: '12h',
       gateway: '192.168.42.1',
-      dns: '192.168.42.1',
       domain: 'tnc.local',
       enabled: true,
     };
@@ -58,7 +60,6 @@ describe('renderDnsmasqConf', () => {
       rangeEnd: '192.168.42.199',
       leaseTime: '12h',
       gateway: '192.168.42.1',
-      dns: '192.168.42.1',
       domain: 'tnc.local',
       enabled: true,
     };
@@ -77,7 +78,6 @@ describe('renderDnsmasqConf', () => {
       rangeEnd: '192.168.42.199',
       leaseTime: '12h',
       gateway: '192.168.42.1',
-      dns: '192.168.42.1',
       domain: 'tnc.local',
       enabled: true,
     };

@@ -641,6 +641,9 @@
     "chain_pem": "Intermediate chain (PEM)",
     "chain_pem_hint": "Optional. Needed when the issuing CA is not a root your clients trust.",
     "install_button": "Validate and install",
-    "cancel_button": "Cancel"
+    "cancel_button": "Cancel",
+    "download_title": "Download certificate",
+    "download_hint": "Install this certificate on your computer to stop the browser warning. The private key never leaves the appliance.",
+    "download_button": "Download certificate (.pem)"
   }
 }

@@ -152,7 +152,6 @@ export const dhcpConfigSchema = z.object({
   enabled: z.boolean().default(false),
   range: dhcpRangeSchema.default('192.168.42.100-192.168.42.199'),
   leaseTime: dhcpLeaseTimeSchema.default('12h'),
-  dns: ipv4Schema.default('192.168.42.1'),
   gateway: ipv4Schema.optional(),
 });
 

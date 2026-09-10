@@ -1432,17 +1432,6 @@ function DhcpSection(): JSX.Element {
       />
 
       <Input
-        id="dhcpDns"
-        label={t('dns_server')}
-        value={form.dns}
-        onChange={(e) => {
-          setForm({ ...form, dns: e.target.value });
-          setIsDirty(true);
-        }}
-        error={errors.dns}
-      />
-
-      <Input
         id="dhcpGateway"
         label={t('gateway_optional')}
         value={form.gateway ?? ''}

@@ -41,6 +41,44 @@ export function certificateRoutes(ctx: AppContext): Router {
     ok(res, currentCertificate(ctx));
   });
 
+  /**
+   * The public certificate, as a file.
+   *
+   * On an appliance with a self-signed certificate this is the only way out of the
+   * browser warning: the operator downloads the certificate and installs it in their
+   * own trust store. Copying it out of the filesystem means SSH, which is the thing the
+   * web UI exists to avoid.
+   *
+   * The certificate only — never `key.pem`, and never the two together in one bundle.
+   * The private key has no reason to leave the appliance, and an endpoint that can be
+   * asked for it is an endpoint that can be tricked into handing it over.
+   */
+  router.get('/certificates/download', requireSession(ctx), (_req, res) => {
+    let material;
+    try {
+      material = loadCertificateMaterial(ctx.certDir);
+    } catch (error) {
+      throw new HttpError(
+        404,
+        'NOT_FOUND',
+        error instanceof CertificateError
+          ? error.message
+          : `No certificate could be read from ${ctx.certDir}`,
+      );
+    }
+
+    // The chain is appended when there is one: a certificate that validates only with
+    // its intermediates is not much use to whoever is importing it.
+    const body =
+      material.chainPem === undefined
+        ? material.certPem
+        : [material.certPem.trimEnd(), material.chainPem.trimEnd(), ''].join('\n');
+
+    res.setHeader('content-type', 'application/x-pem-file');
+    res.setHeader('content-disposition', 'attachment; filename="tnc-bridge-cert.pem"');
+    res.send(body);
+  });
+
   router.post('/certificates', requireSession(ctx), requireCsrf(ctx), (req, res) => {
     const body = uploadCertificateRequestSchema.parse(req.body);
     const material: CertificateMaterial =
