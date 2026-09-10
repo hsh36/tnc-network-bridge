@@ -1,20 +1,30 @@
 import { Router } from 'express';
 import { type Status } from '../../../shared';
+import { ShareStore } from '../../sync/share-store';
 import { type AppContext } from '../context';
 import { ok, requireSessionOrToken } from '../middleware';
 
 /**
  * `/status` and `/health` (T30).
  *
- * Phase 1's sync engine, SMB bridge and share CRUD are not wired up yet (see
- * `docs/TASKS.md` T15-T26) — so rather than fabricate share and throughput data, this
- * aggregates the state that genuinely exists today: the lock and conflict tables, and
- * whether the process itself is healthy. Every field the schema promises is present;
- * the ones with no real subsystem behind them yet report their honest zero/null value
- * instead of a placeholder.
+ * Aggregates what genuinely exists: the shares and their per-share counts, the lock
+ * and conflict tables, and whether the process itself is healthy. Fields with no
+ * subsystem behind them yet — throughput, the server link probe — report their honest
+ * zero or null rather than a placeholder.
+ *
+ * `shares` used to be a hardcoded empty array left over from before share CRUD existed.
+ * The file browser reads its share picker from here, so the picker was permanently
+ * empty and the page looked broken from the first click.
  */
+/**
+ * An appliance with more shares than this has other problems; the cap is here so a
+ * status poll can never turn into an unbounded query.
+ */
+const SHARE_LIST_CAP = 200;
+
 export function statusRoutes(ctx: AppContext): Router {
   const router = Router();
+  const store = new ShareStore({ db: ctx.db, config: ctx.config });
 
   router.get('/status', requireSessionOrToken(ctx), (_req, res) => {
     const filesIndexed = ctx.db.pluck<number>('SELECT count(*) FROM file_index') ?? 0;
@@ -41,7 +51,7 @@ export function statusRoutes(ctx: AppContext): Router {
         lastProbeAt: null,
         lastError: null,
       },
-      shares: [],
+      shares: store.list(SHARE_LIST_CAP, 0).items,
       totals: {
         sharesEnabled,
         filesIndexed,

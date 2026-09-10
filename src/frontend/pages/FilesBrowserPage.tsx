@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -39,7 +39,8 @@ function formatBytes(bytes: number): string {
 }
 
 interface FilterState {
-  share: number;
+  /** Null until the share list has loaded and one can honestly be chosen. */
+  share: number | null;
   path: string;
   state: string;
   search: string;
@@ -60,8 +61,11 @@ export function FilesBrowserPage(): JSX.Element {
   };
 
   const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
+  // No share selected until the list arrives. It used to default to id 1, which is a
+  // share that need not exist — delete the first one you ever made and the page asks
+  // for files from nothing and shows an empty browser with no way to fix it.
   const [filters, setFilters] = useState<FilterState>({
-    share: 1,
+    share: null,
     path: '',
     state: 'all',
     search: '',
@@ -74,7 +78,9 @@ export function FilesBrowserPage(): JSX.Element {
     'files.list',
     {
       query: {
-        share: filters.share,
+        // `?? 0` only holds for the moment before the share list arrives; `enabled`
+        // keeps the request from being made at all until there is a real share.
+        share: filters.share ?? 0,
         ...(filters.path.length > 0 ? { path: filters.path } : {}),
         ...(filters.state !== 'all'
           ? {
@@ -87,7 +93,10 @@ export function FilesBrowserPage(): JSX.Element {
         offset: 0,
       },
     },
-    { deps: [filters.share, filters.path, filters.state, filters.search] },
+    {
+      deps: [filters.share, filters.path, filters.state, filters.search],
+      enabled: filters.share !== null,
+    },
   );
 
   // Get system status for shares (shares are currently empty in Phase 1, but structure is ready)
@@ -102,11 +111,21 @@ export function FilesBrowserPage(): JSX.Element {
     setPreviewFile(undefined);
   };
 
-  const shareList = useMemo(() => {
-    if (!status.data?.shares) return [];
-    // Status endpoint returns shares array
-    return Array.isArray(status.data.shares) ? status.data.shares : [];
-  }, [status.data?.shares]);
+  const shareList = useMemo(
+    () => (Array.isArray(status.data?.shares) ? status.data.shares : []),
+    [status.data?.shares],
+  );
+
+  // Land on a share as soon as there is one, so the page opens with files rather than
+  // with an empty state the operator has to clear themselves.
+  useEffect(() => {
+    if (filters.share === null && shareList.length > 0) {
+      const first = shareList[0];
+      if (first !== undefined) {
+        setFilters((prev) => ({ ...prev, share: first.id }));
+      }
+    }
+  }, [filters.share, shareList]);
 
   if (files.loading && !files.data) {
     return (

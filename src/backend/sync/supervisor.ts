@@ -10,6 +10,7 @@ import { type VersioningEngine } from '../versioning/versioning-engine';
 import { FilesystemSyncPorts } from './filesystem-ports';
 import { SyncOrchestrator } from './orchestrator';
 import { ShareStore } from './share-store';
+import { SqliteBaseStore } from './sqlite-base-store';
 
 /**
  * Keeps what is running matched to what is configured.
@@ -198,6 +199,12 @@ export class SyncSupervisor {
       mount,
       orchestrator: new SyncOrchestrator({
         shareId,
+        // Without this the orchestrator falls back to its in-memory store, which is
+        // what shipped: sync worked, but `file_index` stayed empty, so every share
+        // read "0 indexed, 0 pending" and the file browser had nothing to list. The
+        // durable `base` also matters on its own — it is what distinguishes a
+        // one-sided change from a conflict, and in memory it was lost on every restart.
+        store: new SqliteBaseStore(this.options.db, shareId),
         ports: new FilesystemSyncPorts({
           shareId,
           cachePath: share.cachePath,

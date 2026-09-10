@@ -329,6 +329,48 @@ describe('a cycle', () => {
     expect(readFileSync(pulled, 'utf8')).toBe('from the server');
     await sync.stop();
   });
+
+  it('records what it synced in file_index, which is what the UI counts', async () => {
+    // The supervisor used to build every orchestrator without a store, so the
+    // in-memory default was used and `file_index` stayed empty however much synced.
+    // Two reported bugs came out of that one omission: shares reading "0 indexed, 0
+    // pending", and a file browser with nothing to browse.
+    const id = createShare('programs');
+    const mountPoint = db.pluck<string>('SELECT mount_point FROM shares WHERE id = @id', { id });
+    writeFileSync(join(mountPoint ?? '', 'part.h'), 'from the server');
+
+    const sync = supervisor();
+    await sync.reconcile();
+
+    await waitFor(
+      () =>
+        (db.pluck<number>('SELECT COUNT(*) FROM file_index WHERE share_id = @id', { id }) ?? 0) > 0,
+    );
+    expect(db.pluck<string>('SELECT rel_path FROM file_index WHERE share_id = @id', { id })).toBe(
+      'part.h',
+    );
+    await sync.stop();
+  });
+
+  it('keeps the index across a restart, so a reboot is not a full resync', async () => {
+    // `base` is what tells a one-sided change apart from a conflict. Held only in
+    // memory it was lost on every restart, and the first scan after a reboot had to
+    // treat every path as ambiguous.
+    const id = createShare('programs');
+    const mountPoint = db.pluck<string>('SELECT mount_point FROM shares WHERE id = @id', { id });
+    writeFileSync(join(mountPoint ?? '', 'part.h'), 'from the server');
+
+    const first = supervisor();
+    await first.reconcile();
+    await waitFor(
+      () =>
+        (db.pluck<number>('SELECT COUNT(*) FROM file_index WHERE share_id = @id', { id }) ?? 0) > 0,
+    );
+    await first.stop();
+
+    const rows = db.pluck<number>('SELECT COUNT(*) FROM file_index WHERE share_id = @id', { id });
+    expect(rows).toBe(1);
+  });
 });
 
 describe('stop', () => {

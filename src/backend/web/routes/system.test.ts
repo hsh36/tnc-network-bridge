@@ -378,3 +378,50 @@ describe('an instance built without an updater', () => {
     expect(applied.body).toMatchObject({ ok: false });
   });
 });
+
+describe('GET /status', () => {
+  it('requires authentication', async () => {
+    expect((await request(app).get('/api/v1/status')).status).toBe(401);
+  });
+
+  it('lists the shares, which is where the file browser gets its picker', async () => {
+    // `shares` was a hardcoded empty array left over from before share CRUD existed,
+    // so the browser's share selector was permanently empty and the page looked broken
+    // from the first click.
+    const { agent, csrf } = await loginAgent();
+    await agent
+      .post('/api/v1/shares')
+      .set('x-csrf-token', csrf)
+      .send({ name: 'werkstatt', serverUnc: '//server/cnc' })
+      .expect(201);
+
+    const res = await agent.get('/api/v1/status').expect(200);
+
+    const shares = (res.body as { data: { shares: { name: string }[] } }).data.shares;
+    expect(shares.map((share) => share.name)).toEqual(['werkstatt']);
+  });
+
+  it('gives each share its own counts rather than a global total', async () => {
+    const { agent, csrf } = await loginAgent();
+    await agent
+      .post('/api/v1/shares')
+      .set('x-csrf-token', csrf)
+      .send({ name: 'werkstatt', serverUnc: '//server/cnc' })
+      .expect(201);
+
+    const res = await agent.get('/api/v1/status').expect(200);
+
+    expect((res.body as { data: { shares: unknown[] } }).data.shares[0]).toMatchObject({
+      filesIndexed: 0,
+      filesPending: 0,
+      activeLocks: 0,
+    });
+  });
+
+  it('is an empty list on an appliance with no shares, not an invented one', async () => {
+    const { agent } = await loginAgent();
+    const res = await agent.get('/api/v1/status').expect(200);
+
+    expect((res.body as { data: { shares: unknown[] } }).data.shares).toEqual([]);
+  });
+});

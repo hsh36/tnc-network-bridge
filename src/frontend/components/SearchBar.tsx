@@ -1,9 +1,12 @@
 import { type FormEvent } from 'react';
-import { Input } from './ui/Input';
+
+import { useTranslation } from '../hooks/useTranslation';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface FilterState {
-  share: number;
+  /** Null until the share list has loaded and one can honestly be chosen. */
+  share: number | null;
   path: string;
   state: string;
   search: string;
@@ -14,6 +17,21 @@ interface Share {
   name: string;
 }
 
+const SELECT_CLASS =
+  'mt-1 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm ' +
+  'text-slate-900 placeholder-slate-400 shadow-sm disabled:opacity-60 ' +
+  'dark:border-border-dark dark:bg-surface-dark-subtle dark:text-slate-100';
+
+const LABEL_CLASS = 'block text-xs font-medium text-slate-700 dark:text-slate-300';
+
+/**
+ * The filter bar above the file browser.
+ *
+ * Every string here was hardcoded English until now, on a page whose operators read
+ * German. The share selector also offered a fabricated "Default Share" with id 1
+ * whenever the list was empty — selecting it asked the API for files from a share that
+ * need not exist, so the browser stayed empty with nothing to explain why.
+ */
 export function SearchBar({
   filters,
   shareList,
@@ -27,6 +45,8 @@ export function SearchBar({
   readonly viewMode: 'tree' | 'list';
   readonly onViewModeChange: (mode: 'tree' | 'list') => void;
 }): JSX.Element {
+  const t = useTranslation('files');
+
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
   };
@@ -34,72 +54,72 @@ export function SearchBar({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        {/* Share selector */}
         <div>
-          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-            Share
+          <label htmlFor="share-filter" className={LABEL_CLASS}>
+            {t('share_label')}
           </label>
           <select
-            value={filters.share}
-            onChange={(e) => onFilterChange({ share: Number(e.target.value) || 1 })}
-            className="mt-1 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm dark:border-border-dark dark:bg-surface-dark-subtle dark:text-slate-100"
+            id="share-filter"
+            value={filters.share ?? ''}
+            disabled={shareList.length === 0}
+            onChange={(e) => onFilterChange({ share: Number(e.target.value) })}
+            className={SELECT_CLASS}
           >
             {shareList.length > 0 ? (
-              shareList.map((share: Share) => (
+              shareList.map((share) => (
                 <option key={share.id} value={share.id}>
                   {share.name}
                 </option>
               ))
             ) : (
-              <option value="1">Default Share</option>
+              // Says what is true rather than naming a share that may not exist.
+              <option value="">{t('no_shares_option')}</option>
             )}
           </select>
         </div>
 
-        {/* State filter */}
         <div>
-          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-            Status
+          <label htmlFor="state-filter" className={LABEL_CLASS}>
+            {t('state_label')}
           </label>
           <select
+            id="state-filter"
             value={filters.state}
             onChange={(e) => onFilterChange({ state: e.target.value })}
-            className="mt-1 block w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm dark:border-border-dark dark:bg-surface-dark-subtle dark:text-slate-100"
+            className={SELECT_CLASS}
           >
-            <option value="all">All</option>
-            <option value="synced">Synced</option>
-            <option value="pending_push">Pending push</option>
-            <option value="pending_pull">Pending pull</option>
-            <option value="conflict">Conflict</option>
-            <option value="error">Error</option>
-            <option value="excluded">Excluded</option>
+            <option value="all">{t('state_all')}</option>
+            <option value="synced">{t('state_synced')}</option>
+            <option value="pending_push">{t('state_pending_push')}</option>
+            <option value="pending_pull">{t('state_pending_pull')}</option>
+            <option value="conflict">{t('state_conflict')}</option>
+            <option value="error">{t('state_error')}</option>
+            <option value="excluded">{t('state_excluded')}</option>
           </select>
         </div>
 
-        {/* Path filter */}
         <div>
-          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-            Path
+          <label htmlFor="path-filter" className={LABEL_CLASS}>
+            {t('path_label')}
           </label>
           <Input
             id="path-filter"
             type="text"
-            placeholder="e.g., /PARTS"
+            placeholder={t('path_placeholder')}
             value={filters.path}
             onChange={(e) => onFilterChange({ path: e.target.value })}
             className="mt-1"
           />
         </div>
 
-        {/* Search */}
         <div>
-          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-            Search
+          <label htmlFor="search-filter" className={LABEL_CLASS}>
+            {t('search_label')}
           </label>
           <Input
             id="search-filter"
             type="text"
-            placeholder="File name..."
+            placeholder={t('search_placeholder')}
             value={filters.search}
             onChange={(e) => onFilterChange({ search: e.target.value })}
             className="mt-1"
@@ -107,16 +127,15 @@ export function SearchBar({
         </div>
       </div>
 
-      {/* View mode toggle */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">View:</span>
+        <span className={LABEL_CLASS}>{t('view_label')}</span>
         <Button
           type="button"
           variant={viewMode === 'tree' ? 'primary' : 'secondary'}
           size="sm"
           onClick={() => onViewModeChange('tree')}
         >
-          Tree
+          {t('view_tree')}
         </Button>
         <Button
           type="button"
@@ -124,7 +143,7 @@ export function SearchBar({
           size="sm"
           onClick={() => onViewModeChange('list')}
         >
-          List
+          {t('view_list')}
         </Button>
       </div>
     </form>
