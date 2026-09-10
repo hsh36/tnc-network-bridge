@@ -277,7 +277,13 @@ create_runtime_dirs() {
       die "Failed to create $dir"
   done
 
-  if [ -f "$SECRET_KEY" ]; then
+  # `sudo test`, not `[ -f ]`. This script runs as the invoking user, and $CONFIG_DIR is
+  # 0750 owned by the service account — so an unprivileged existence check on a file
+  # inside it is false whether or not the file is there. Getting this wrong regenerated
+  # the key on *every* update, and a new key does not fail loudly: it silently turns
+  # every stored credential, including the AD service account and every share password,
+  # into bytes nothing can decrypt.
+  if sudo test -f "$SECRET_KEY"; then
     log_info "Secret key already present; keeping it"
   else
     log_info "Generating secret key..."
