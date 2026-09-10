@@ -16,6 +16,7 @@ const NICS: InterfaceDiscovery[] = [
     speedMbps: 1000,
     driver: 'x',
     hasAddress: true,
+    addresses: [],
   },
   {
     mac: 'aa:bb:cc:dd:ee:01',
@@ -24,6 +25,7 @@ const NICS: InterfaceDiscovery[] = [
     speedMbps: null,
     driver: 'y',
     hasAddress: false,
+    addresses: [],
   },
 ];
 

@@ -456,3 +456,67 @@ describe('without a database', () => {
     expect(updates.getStatus().lastCheckAt).not.toBeNull();
   });
 });
+
+describe('the restart race', () => {
+  it('picks up a status written after startup, which is every real update', () => {
+    // The actual sequence on the appliance, from the journal: the updater restarts the
+    // service during `restarting`, the new process reads the file while starting, and
+    // the updater writes `done` three seconds later — after the only read that would
+    // ever have happened. Reading once at startup froze the UI mid-update on an update
+    // that had succeeded.
+    writeStatus({ phase: 'restarting', progressPct: 80, target: 'v0.2.0', previous: 'abc123' });
+    const updates = manager(respondWith([]), '0.2.0');
+    updates.adoptExternalStatus();
+    expect(updates.getStatus().phase).toBe('restarting');
+
+    // The updater finishes, after this process has already started.
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v0.2.0', previous: 'abc123' });
+
+    expect(updates.getStatus().phase).toBe('done');
+  });
+
+  it('records the history row for an update that finished after the restart', () => {
+    writeStatus({ phase: 'restarting', progressPct: 80, target: 'v0.2.0', previous: 'abc123' });
+    const updates = manager(respondWith([]), '0.2.0');
+    updates.adoptExternalStatus();
+
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v0.2.0', previous: 'abc123' });
+    updates.getStatus();
+
+    expect(updates.getHistory().items[0]).toMatchObject({ result: 'ok', toVersion: '0.2.0' });
+  });
+
+  it('records that row exactly once, however often the UI polls', () => {
+    writeStatus({ phase: 'restarting', progressPct: 80, target: 'v0.2.0', previous: 'abc123' });
+    const updates = manager(respondWith([]), '0.2.0');
+    updates.adoptExternalStatus();
+
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v0.2.0', previous: 'abc123' });
+    updates.getStatus();
+    updates.getStatus();
+    updates.getStatus();
+
+    expect(updates.getHistory().total).toBe(1);
+  });
+
+  it('does not read the file at all once everything is idle', () => {
+    // The UI polls this every two seconds forever; an idle appliance should not be
+    // opening a file for each poll.
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v9.9.9', previous: '' });
+    const updates = manager(respondWith([]), '0.1.0');
+
+    expect(updates.getStatus().phase).toBe('idle');
+  });
+
+  it('does not adopt a stale terminal status left by an earlier update', async () => {
+    // Otherwise the first status read after pressing Install reports the *previous*
+    // update as this one's result, instantly and wrongly.
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v0.1.0', previous: '' });
+    const updates = manager(respondWith([release('v0.2.0')]));
+    await updates.check();
+
+    await updates.apply();
+
+    expect(updates.getStatus().phase).not.toBe('done');
+  });
+});

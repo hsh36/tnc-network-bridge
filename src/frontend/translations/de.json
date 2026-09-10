@@ -209,7 +209,6 @@
     "vlan_hint": "Leer lassen für untagged",
     "link_up": "Verbindung aktiv",
     "link_down": "keine Verbindung",
-    "apply_lan_button": "LAN übernehmen",
     "apply_lan_hint": "Speichern übernimmt die TNC-Seite sofort — dieser Browser hängt nicht daran. Die LAN-Seite wird separat übernommen, mit Rückfall, falls sie Ihre Verbindung kappt.",
     "tnc_applied": "Gespeichert. Die TNC-Seite ist aktiv.",
     "lan_applied": "Die LAN-Einstellungen sind aktiv. Ihre Verbindung war nicht betroffen.",
@@ -227,14 +226,15 @@
     "tnc_hostname_hint": "Der Name, mit dem sich die CNC-Maschinen verbinden. Unabhängig vom Hostnamen oben, weil die Maschinen oft auf einen Namen konfiguriert sind, der sich nicht ändern lässt.",
     "hostname_placeholder": "tnc-bridge",
     "save_and_apply_button": "Speichern und übernehmen",
-    "lan_saved_not_applied": "Gespeichert. Zum Aktivieren auf «Übernehmen» klicken — das kann Ihre Verbindung unterbrechen.",
     "apply_tnc_hint": "Änderungen auf der Maschinenseite werden sofort übernommen. Ihre Verbindung läuft über die LAN-Seite und ist nicht betroffen.",
     "tnc_smb_title": "SMB-Einstellungen für die Maschinenseite",
     "tnc_smb_hint": "Diese gelten für die gesamte Maschinenseite, nicht für eine einzelne Freigabe — Samba liest einen Wert pro Server. Der Zugriff pro Freigabe wird an der Freigabe selbst eingestellt.",
     "workgroup_hint": "Die Arbeitsgruppe, die die Maschinen erwarten. WORKGROUP, sofern Ihre Steuerungen nicht anders konfiguriert sind.",
     "dos_charset_hint": "Zeichensatz für SMB-1-Clients. CP850 für deutsche Umlaute auf HEIDENHAIN-Steuerungen.",
     "load_error": "Einstellungen konnten nicht geladen werden",
-    "loading": "Wird geladen …"
+    "loading": "Wird geladen …",
+    "drift_title": "Gespeichert, aber auf der Schnittstelle nicht aktiv",
+    "drift_body": "Konfiguriert: {configured}. Tatsächlich auf der Schnittstelle: {actual}. Der letzte Übernahmeversuch ist fehlgeschlagen. Mit «Speichern und übernehmen» erneut versuchen."
   },
   "locks": {
     "title": "Dateisperren",

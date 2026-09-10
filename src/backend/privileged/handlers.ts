@@ -505,7 +505,18 @@ function applyNetwork(
   }
 
   // Any timer armed by a previous apply is now moot, whichever way this call goes.
+  //
+  // `stop` alone is not enough, and this is the bug that made the appliance
+  // un-reconfigurable: a revert timer that has fired and exited non-zero leaves the
+  // unit *loaded* in state `failed`, and systemd-run then refuses the name — "Unit
+  // tnc-bridge-netrevert.service was already loaded or has a fragment file". So every
+  // apply that armed a rollback failed from that moment on, permanently, and the only
+  // hint was an error at the very end of an operation that had already changed the
+  // network. `reset-failed` is what actually unloads it.
   log.exec([systemctl, 'stop', `${NET_REVERT_UNIT}.service`], { allowFailure: true });
+  log.exec([systemctl, 'reset-failed', `${NET_REVERT_UNIT}.service`], { allowFailure: true });
+  log.exec([systemctl, 'stop', `${NET_REVERT_UNIT}.timer`], { allowFailure: true });
+  log.exec([systemctl, 'reset-failed', `${NET_REVERT_UNIT}.timer`], { allowFailure: true });
   const backupProfile = `tnc-revert-${request.interface}`;
   log.exec([nmcli, 'con', 'delete', backupProfile], { allowFailure: true });
 

@@ -273,6 +273,37 @@ function NetworkSection(): JSX.Element {
     saved !== undefined &&
     JSON.stringify(form[side]) !== JSON.stringify(saved[side]);
 
+  /**
+   * Is what is stored for this side actually on the interface?
+   *
+   * A save writes the configuration and *then* applies it. When the apply fails — and
+   * it did, on the real appliance, for a whole day — the stored value stays. The form
+   * then shows a static address the interface has never had, and nothing says so: the
+   * page looks like a correctly configured bridge right up until someone checks with
+   * `ip addr`. The comparison is deliberately narrow: only a static address that the
+   * NIC does not carry counts as drift, because DHCP is *supposed* to disagree with a
+   * blank field.
+   */
+  const driftedSide = (side: 'lan' | 'tnc'): boolean => {
+    if (form === undefined || saved === undefined) {
+      return false;
+    }
+    const desired = saved[side];
+    if (desired.method !== 'static' || desired.address === undefined) {
+      return false;
+    }
+    const live = interfaces.find((entry) => entry.name === desired.interface);
+    if (live === undefined || live.addresses.length === 0) {
+      // Nothing to compare against — an interface the host cannot report on is not
+      // evidence of drift, and claiming it would be worse than staying quiet.
+      return false;
+    }
+    return !live.addresses.some((address) => address === desired.address);
+  };
+
+  const driftedLan = driftedSide('lan');
+  const driftedTnc = driftedSide('tnc');
+
   const anyDirty = dirty('lan') || dirty('tnc');
   useEffect(() => {
     window.onbeforeunload = anyDirty ? () => true : null;
@@ -314,18 +345,23 @@ function NetworkSection(): JSX.Element {
             setNotice({ side: 'tnc', text: t('tnc_applied') });
           });
         }
-        setNotice({ side: 'lan', text: t('lan_saved_not_applied') });
-        return undefined;
+        // One button, so saving applies. Splitting them made the operator press two
+        // things to do one thing, and left a saved-but-not-applied state that looks
+        // exactly like a working configuration until someone reboots.
+        //
+        // The safety is not in the second button — it is in the backend, which arms a
+        // rollback whenever the change could cut the connection it arrived over and
+        // reverts unless it is confirmed from the new address.
+        return applyLan();
       })
       .catch(onError)
       .finally(() => setBusy(undefined));
   };
 
   /** Applies the saved LAN configuration, arming the rollback the backend decides on. */
-  const applyLan = (): void => {
-    setNotice(undefined);
+  const applyLan = (): Promise<void> => {
     setApplyingLan(true);
-    api('network.apply', { body: { side: 'lan' } })
+    return api('network.apply', { body: { side: 'lan' } })
       .then((result) => {
         if (result.status === 'pending_confirmation') {
           setNotice({
@@ -350,6 +386,29 @@ function NetworkSection(): JSX.Element {
       setForm({ ...form, [side]: next });
     };
 
+  /** The banner that says the stored configuration is not the one in force. */
+  const driftFor = (side: 'lan' | 'tnc'): JSX.Element | null => {
+    if (!(side === 'lan' ? driftedLan : driftedTnc)) {
+      return null;
+    }
+    const desired = saved?.[side];
+    const live = interfaces.find((entry) => entry.name === desired?.interface);
+    return (
+      <div
+        className="rounded-md border border-status-warn/40 bg-status-warn/5 px-3 py-2"
+        role="alert"
+      >
+        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{t('drift_title')}</p>
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          {t('drift_body', {
+            configured: desired?.address ?? '—',
+            actual: live?.addresses.join(', ') ?? '—',
+          })}
+        </p>
+      </div>
+    );
+  };
+
   const noticeFor = (side: 'lan' | 'tnc'): JSX.Element | null =>
     notice?.side === side ? (
       <p className="text-sm text-status-ok" role="status">
@@ -372,6 +431,7 @@ function NetworkSection(): JSX.Element {
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">{t('lan_side_hint')}</p>
           </header>
+          {driftFor('lan')}
           <NetworkSideFields
             side="lan"
             value={form.lan}
@@ -382,20 +442,11 @@ function NetworkSection(): JSX.Element {
           <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 dark:border-border-dark">
             <Button
               onClick={() => saveSide('lan')}
-              loading={busy === 'lan'}
-              disabled={!dirty('lan') || busy !== undefined}
+              loading={busy === 'lan' || applyingLan}
+              disabled={(!dirty('lan') && !driftedLan) || busy !== undefined || applyingLan}
               className="w-fit"
             >
-              {t('save_button')}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={applyLan}
-              loading={applyingLan}
-              disabled={dirty('lan') || applyingLan || busy !== undefined}
-              className="w-fit"
-            >
-              {t('apply_lan_button')}
+              {t('save_and_apply_button')}
             </Button>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('apply_lan_hint')}</p>
@@ -409,6 +460,7 @@ function NetworkSection(): JSX.Element {
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">{t('tnc_side_hint')}</p>
           </header>
+          {driftFor('tnc')}
           <NetworkSideFields
             side="tnc"
             value={form.tnc}
@@ -420,7 +472,7 @@ function NetworkSection(): JSX.Element {
             <Button
               onClick={() => saveSide('tnc')}
               loading={busy === 'tnc'}
-              disabled={!dirty('tnc') || busy !== undefined}
+              disabled={(!dirty('tnc') && !driftedTnc) || busy !== undefined}
               className="w-fit"
             >
               {t('save_and_apply_button')}

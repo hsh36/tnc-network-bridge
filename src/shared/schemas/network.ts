@@ -40,6 +40,16 @@ export const interfaceDiscoverySchema = z.object({
   driver: z.string().nullable(),
   /** Has an active IP address. */
   hasAddress: z.boolean(),
+  /**
+   * The IPv4 addresses actually on the interface, in CIDR form.
+   *
+   * Reported so the UI can tell a *stored* configuration from the one in force. A save
+   * writes the configuration and then applies it, and when the apply fails the stored
+   * value stays — leaving a page that shows a static address the NIC has never had,
+   * with nothing to say so. `hasAddress` could not answer that; it only said whether
+   * there was one at all.
+   */
+  addresses: z.array(z.string()).default([]),
 });
 
 export type InterfaceDiscovery = z.infer<typeof interfaceDiscoverySchema>;

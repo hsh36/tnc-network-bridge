@@ -209,7 +209,6 @@
     "vlan_hint": "Leave empty for untagged",
     "link_up": "link up",
     "link_down": "link down",
-    "apply_lan_button": "Apply LAN settings",
     "apply_lan_hint": "Saving applies the TNC side immediately — this browser is not on it. The LAN side is applied separately, with a rollback in case it cuts your connection.",
     "tnc_applied": "Saved. The TNC side is now live.",
     "lan_applied": "The LAN settings are live. Your connection was not affected.",
@@ -227,14 +226,15 @@
     "tnc_hostname_hint": "The name the CNC machines connect to. Independent of the hostname above, because the machines are often configured with a name that cannot be changed.",
     "hostname_placeholder": "tnc-bridge",
     "save_and_apply_button": "Save and apply",
-    "lan_saved_not_applied": "Saved. Press \"Apply\" to activate — this can interrupt your connection.",
     "apply_tnc_hint": "Changes to the machine side take effect immediately. Your connection is on the LAN side and is not affected.",
     "tnc_smb_title": "SMB settings for the machine side",
     "tnc_smb_hint": "These apply to the whole machine side, not to a single share — Samba reads one value per server. Per-share access is set on the share itself.",
     "workgroup_hint": "The workgroup the machines expect. WORKGROUP unless your controls were configured otherwise.",
     "dos_charset_hint": "Character set for SMB 1 clients. CP850 for German umlauts on HEIDENHAIN controls.",
     "load_error": "Could not load the settings",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "drift_title": "Saved, but not active on the interface",
+    "drift_body": "Configured: {configured}. Actually on the interface: {actual}. The last attempt to apply this failed. Press \"Save and apply\" to try again."
   },
   "locks": {
     "title": "Locks & Conflicts",

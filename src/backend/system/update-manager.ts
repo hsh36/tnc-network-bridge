@@ -120,7 +120,23 @@ export class UpdateManager {
     this.statusFile = options.statusFile ?? DEFAULT_STATUS_FILE;
   }
 
+  /**
+   * The current state, refreshed from the updater's status file every time.
+   *
+   * Reading only at startup was not enough, and the reason is a three-second race that
+   * happens on every single update: the updater restarts the service at the
+   * `restarting` phase, the new process reads the file during startup, and the updater
+   * writes `done` a moment later — after the only read that would ever happen. The UI
+   * then polled a phase frozen mid-update forever, on an update that had in fact
+   * succeeded.
+   *
+   * Re-reading is cheap: a small file, and only while something is in flight.
+   */
   getStatus(): UpdateStatus {
+    if (this.phase !== 'idle') {
+      this.adoptExternalStatus();
+    }
+
     return {
       currentVersion: this.currentVersion,
       available: this.available,
@@ -196,6 +212,10 @@ export class UpdateManager {
       return Promise.reject(new Error('No update available to apply. Check for updates first.'));
     }
 
+    // Cleared before the updater starts. A leftover terminal status would otherwise be
+    // adopted by the very next status read and report this update as finished before
+    // the script had written its first line.
+    this.clearStatusFile();
     this.phase = 'downloading';
     this.progressPct = 0;
     this.lastError = null;
@@ -265,12 +285,16 @@ export class UpdateManager {
   }
 
   /**
-   * Adopt whatever the updater last wrote, if it concerns an update we do not know about.
+   * Adopt whatever the updater last wrote.
    *
-   * Called once at startup. After a successful update this process *is* the new
-   * release, so a `done` record simply confirms what the version already says; after a
-   * failed one, this is the only place the reason survives — the process that asked for
-   * the update was replaced before it could record anything.
+   * Called at startup and, while an update is in flight, on every status read. After a
+   * successful update this process *is* the new release, so a `done` record confirms
+   * what the version already says; after a failed one, this is the only place the
+   * reason survives — the process that asked for the update was replaced before it
+   * could record anything.
+   *
+   * Idempotent: a terminal status is consumed, so the history row is written once and
+   * later reads find nothing to adopt.
    */
   adoptExternalStatus(): void {
     const external = this.readStatusFile();

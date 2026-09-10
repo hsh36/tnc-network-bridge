@@ -30,8 +30,8 @@ export interface SysfsReader {
   readAttribute(iface: string, attribute: string): string | undefined;
   /** Target of the driver symlink, or `undefined` for virtual interfaces. */
   readDriver(iface: string): string | undefined;
-  /** Interface names that currently hold at least one address. */
-  addressed(): Set<string>;
+  /** IPv4 addresses in CIDR form, by interface name. Absent means none. */
+  addressed(): Map<string, string[]>;
 }
 
 export function sysfsReader(root: string = SYSFS_NET): SysfsReader {
@@ -62,10 +62,15 @@ export function sysfsReader(root: string = SYSFS_NET): SysfsReader {
       }
     },
     addressed: () => {
-      const named = new Set<string>();
+      const named = new Map<string, string[]>();
       for (const [name, addresses] of Object.entries(networkInterfaces())) {
-        if ((addresses ?? []).length > 0) {
-          named.add(name);
+        // IPv4 only, and in the CIDR form the config stores, so the two are directly
+        // comparable without either side having to reformat the other.
+        const v4 = (addresses ?? [])
+          .filter((entry) => entry.family === 'IPv4')
+          .map((entry) => `${entry.address}/${String(maskToPrefix(entry.netmask))}`);
+        if (v4.length > 0) {
+          named.set(name, v4);
         }
       }
       return named;
@@ -85,6 +90,23 @@ export function toSpeed(raw: string | undefined): number | null {
   if (raw === undefined) return null;
   const value = Number(raw);
   return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/**
+ * `255.255.248.0` -> `21`.
+ *
+ * `os.networkInterfaces()` reports a dotted netmask; the configuration stores a prefix
+ * length. Converting here keeps the comparison honest rather than making the UI guess.
+ */
+export function maskToPrefix(netmask: string): number {
+  return netmask
+    .split('.')
+    .map((octet) => Number.parseInt(octet, 10))
+    .reduce(
+      (bits, octet) =>
+        bits + ((Number.isNaN(octet) ? 0 : octet) >>> 0).toString(2).split('1').length - 1,
+      0,
+    );
 }
 
 /**
@@ -113,6 +135,7 @@ export function discoverInterfaces(reader: SysfsReader = sysfsReader()): Interfa
       speedMbps: toSpeed(reader.readAttribute(name, 'speed')),
       driver: reader.readDriver(name) ?? null,
       hasAddress: withAddress.has(name),
+      addresses: withAddress.get(name) ?? [],
     });
   }
 

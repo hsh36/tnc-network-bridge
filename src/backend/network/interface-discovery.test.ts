@@ -1,4 +1,10 @@
-import { type SysfsReader, discoverInterfaces, toSpeed, toState } from './interface-discovery';
+import {
+  type SysfsReader,
+  discoverInterfaces,
+  maskToPrefix,
+  toSpeed,
+  toState,
+} from './interface-discovery';
 
 /**
  * The reason this module exists rather than reusing `os.networkInterfaces()` is that an
@@ -19,10 +25,10 @@ function reader(interfaces: Record<string, FakeInterface>): SysfsReader {
     readAttribute: (iface, attribute) => interfaces[iface]?.attributes[attribute],
     readDriver: (iface) => interfaces[iface]?.driver,
     addressed: () =>
-      new Set(
+      new Map(
         Object.entries(interfaces)
           .filter(([, i]) => i.addressed)
-          .map(([name]) => name),
+          .map(([name]) => [name, ['10.0.0.1/24']]),
       ),
   };
 }
@@ -107,7 +113,7 @@ describe('discoverInterfaces', () => {
       listInterfaces: () => [],
       readAttribute: () => undefined,
       readDriver: () => undefined,
-      addressed: () => new Set(),
+      addressed: () => new Map(),
     };
     expect(discoverInterfaces(empty)).toEqual([]);
   });
@@ -135,5 +141,45 @@ describe('toSpeed', () => {
     // The kernel answers -1 for a link that is down, which is the normal state of the
     // NIC being configured — reporting it as a speed of -1 would be nonsense.
     expect(toSpeed(raw)).toBeNull();
+  });
+});
+
+describe('maskToPrefix', () => {
+  it.each([
+    ['255.255.255.0', 24],
+    // The one the appliance actually runs on.
+    ['255.255.248.0', 21],
+    ['255.255.254.0', 23],
+    ['255.0.0.0', 8],
+    ['255.255.255.255', 32],
+    ['0.0.0.0', 0],
+  ])('converts %s to /%i', (netmask, prefix) => {
+    expect(maskToPrefix(netmask)).toBe(prefix);
+  });
+
+  it('treats a malformed octet as zero rather than throwing', () => {
+    // os.networkInterfaces() should never produce one, but a status read is not the
+    // place to discover that assumption was wrong.
+    expect(maskToPrefix('255.255.x.0')).toBe(16);
+  });
+});
+
+describe('reported addresses', () => {
+  it('carries the live addresses through, so drift can be seen', () => {
+    // `hasAddress` could only say whether there was an address at all. Telling a stored
+    // configuration from the one in force needs to know *which*.
+    const fake = reader({
+      eth0: { attributes: { address: 'aa:bb:cc:dd:ee:00', operstate: 'up' }, addressed: true },
+    });
+
+    expect(discoverInterfaces(fake)[0]?.addresses).toEqual(['10.0.0.1/24']);
+  });
+
+  it('reports an empty list for a NIC with no address', () => {
+    const fake = reader({
+      eth1: { attributes: { address: 'aa:bb:cc:dd:ee:01', operstate: 'down' }, addressed: false },
+    });
+
+    expect(discoverInterfaces(fake)[0]?.addresses).toEqual([]);
   });
 });

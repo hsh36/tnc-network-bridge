@@ -531,9 +531,55 @@ describe('apply-network', () => {
     expect(h.calls.some((argv) => argv[0] === '/usr/bin/systemdRun')).toBe(false);
     expect(h.calls.some((argv) => argv.includes('clone'))).toBe(false);
     // The pending timer and its clone are cleared, which is what "confirm" means here.
-    expect(h.calls[1]).toEqual(['/usr/bin/systemctl', 'stop', `${NET_REVERT_UNIT}.service`]);
-    expect(h.calls[2]).toEqual(['/usr/bin/nmcli', 'con', 'delete', 'tnc-revert-eth0']);
+    // Asserted by content rather than by index: a positional assertion on a command log
+    // breaks whenever a step is inserted, which is noise rather than a signal.
+    expect(h.calls).toContainEqual(['/usr/bin/systemctl', 'stop', `${NET_REVERT_UNIT}.service`]);
+    expect(h.calls).toContainEqual(['/usr/bin/nmcli', 'con', 'delete', 'tnc-revert-eth0']);
     expect(result.detail).toMatchObject({ revertArmed: false });
+  });
+
+  it('unloads a revert unit left in the failed state, not merely stops it', () => {
+    // The bug that made the appliance un-reconfigurable. A revert timer that has fired
+    // and exited non-zero stays *loaded* in state `failed`, and systemd-run then
+    // refuses the name — so every later apply that armed a rollback failed permanently,
+    // reporting an error only after it had already changed the network. `stop` does not
+    // clear a failed unit; `reset-failed` does.
+    const h = harness(() => NMCLI_SHOW);
+
+    execute(build({ ...base, revertAfterSeconds: 300 }), h.deps);
+
+    expect(h.calls).toContainEqual([
+      '/usr/bin/systemctl',
+      'reset-failed',
+      `${NET_REVERT_UNIT}.service`,
+    ]);
+  });
+
+  it('clears the timer unit as well as the service', () => {
+    // systemd-run --on-active creates both; a stuck timer blocks the name just as a
+    // stuck service does.
+    const h = harness(() => NMCLI_SHOW);
+
+    execute(build({ ...base, revertAfterSeconds: 300 }), h.deps);
+
+    expect(h.calls).toContainEqual([
+      '/usr/bin/systemctl',
+      'reset-failed',
+      `${NET_REVERT_UNIT}.timer`,
+    ]);
+  });
+
+  it('clears the old unit before arming the new one', () => {
+    // Order is the whole point: resetting after systemd-run would be resetting the
+    // timer this call just armed.
+    const h = harness(() => NMCLI_SHOW);
+
+    execute(build({ ...base, revertAfterSeconds: 300 }), h.deps);
+
+    const reset = h.calls.findIndex((argv) => argv.includes('reset-failed'));
+    const armed = h.calls.findIndex((argv) => argv[0] === '/usr/bin/systemdRun');
+    expect(reset).toBeGreaterThanOrEqual(0);
+    expect(armed).toBeGreaterThan(reset);
   });
 
   it('brings the connection up after modifying it', () => {
