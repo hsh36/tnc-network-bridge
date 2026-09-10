@@ -1,6 +1,6 @@
 {
   "name": "tnc-network-bridge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "SMB protocol bridge connecting SMB 1.0-only HEIDENHAIN TNC machines to modern SMB 3.1.1+ servers",
   "main": "dist/backend/index.js",
