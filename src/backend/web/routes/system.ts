@@ -112,12 +112,13 @@ export function systemRoutes(ctx: AppContext): Router {
     ok(res, ctx.updates?.getStatus() ?? idleStatus());
   });
 
-  router.post('/update/check', requireSession(ctx), (_req, res, next) => {
-    if (ctx.updates === undefined) {
+  router.post('/update/check', requireSession(ctx), (_req, res) => {
+    const updates = ctx.updates;
+    if (updates === undefined) {
       ok(res, idleStatus());
       return;
     }
-    ctx.updates
+    updates
       .check()
       .then((status) => {
         ok(res, status);
@@ -132,43 +133,45 @@ export function systemRoutes(ctx: AppContext): Router {
           { error: error instanceof Error ? error.message : String(error) },
           'update check failed',
         );
-        if (ctx.updates === undefined) {
-          next(error);
-          return;
-        }
-        ok(res, ctx.updates.getStatus());
+        ok(res, updates.getStatus());
       });
   });
 
   router.post('/update/apply', requireSession(ctx), (req, res, next) => {
-    if (ctx.updates === undefined) {
+    const updates = ctx.updates;
+    if (updates === undefined) {
       next(new Error('Updates are not available on this instance'));
       return;
     }
     const body = applyUpdateRequestSchema.parse(req.body ?? {});
-    // Accepted, not awaited: applying takes minutes and ends in a restart that would
-    // never let the response out. Progress reaches the UI over SSE.
-    void ctx.updates.apply(body.version).catch((error: unknown) => {
-      ctx.logger?.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        'update apply failed',
-      );
-    });
-    ok(res, { accepted: true });
+    // Awaited, and it returns quickly: applying hands the work to a transient systemd
+    // unit and comes back. What it can still report is a refusal — no release found, an
+    // update already running, sudo refusing the helper — and those must reach the
+    // operator as an error, not as a 200 that promises an update nothing started.
+    updates
+      .apply(body.version)
+      .then(() => {
+        ok(res, { accepted: true });
+      })
+      .catch((error: unknown) => {
+        next(error);
+      });
   });
 
   router.post('/update/rollback', requireSession(ctx), (_req, res, next) => {
-    if (ctx.updates === undefined) {
+    const updates = ctx.updates;
+    if (updates === undefined) {
       next(new Error('Updates are not available on this instance'));
       return;
     }
-    void ctx.updates.rollback().catch((error: unknown) => {
-      ctx.logger?.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        'update rollback failed',
-      );
-    });
-    ok(res, { accepted: true });
+    updates
+      .rollback()
+      .then(() => {
+        ok(res, { accepted: true });
+      })
+      .catch((error: unknown) => {
+        next(error);
+      });
   });
 
   router.get('/update/history', requireSessionOrToken(ctx), (req, res) => {

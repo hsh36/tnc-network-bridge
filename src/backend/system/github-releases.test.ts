@@ -156,6 +156,26 @@ describe('fetchLatestRelease', () => {
     ).rejects.toThrow(UpdateCheckError);
   });
 
+  it('gives up rather than hanging when GitHub does not answer', async () => {
+    // A check that never returns leaves the UI spinning forever, and the phase stuck at
+    // `checking` blocks every later check.
+    const never = ((_url: string, init?: { signal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+        });
+      })) as unknown as typeof fetch;
+
+    await expect(
+      fetchLatestRelease({
+        repo: 'hsh36/tnc-network-bridge',
+        channel: 'stable',
+        fetchImpl: never,
+        timeoutMs: 10,
+      }),
+    ).rejects.toThrow(/did not answer in time/);
+  });
+
   it('returns null, not an error, when the repository has no releases yet', async () => {
     const fetchImpl = jest.fn().mockResolvedValue(jsonResponse([]));
     await expect(

@@ -299,6 +299,36 @@ describe('adoptExternalStatus', () => {
     expect(updates.getStatus().phase).toBe('idle');
   });
 
+  it('ignores a status file holding something that is not an object', () => {
+    writeFileSync(statusFile, '"installing"');
+    const updates = manager(respondWith([]));
+
+    updates.adoptExternalStatus();
+
+    expect(updates.getStatus().phase).toBe('idle');
+  });
+
+  it('ignores a status file with no phase in it at all', () => {
+    writeFileSync(statusFile, JSON.stringify({ target: 'v0.2.0' }));
+    const updates = manager(respondWith([]));
+
+    updates.adoptExternalStatus();
+
+    expect(updates.getStatus().phase).toBe('idle');
+  });
+
+  it('tolerates a status file missing the fields the script always writes', () => {
+    // Forward compatibility in the other direction: an older script, or one killed
+    // between opening the file and writing the body.
+    writeFileSync(statusFile, JSON.stringify({ phase: 'done' }));
+    const updates = manager(respondWith([]), '0.2.0');
+
+    updates.adoptExternalStatus();
+
+    expect(updates.getStatus().phase).toBe('done');
+    expect(updates.getStatus().rollbackVersion).toBeNull();
+  });
+
   it('ignores a phase this build does not know', () => {
     writeStatus({ phase: 'teleporting', target: 'v9.9.9' });
     const updates = manager(respondWith([]));
@@ -353,5 +383,76 @@ describe('adoptExternalStatus', () => {
     updates.adoptExternalStatus();
 
     expect(updates.getStatus().rollbackVersion).toBe('0.1.0');
+  });
+});
+
+describe('refusing concurrent work', () => {
+  it('does not start a second check on top of one already running', async () => {
+    // `checking` is a real phase the UI shows. A second check would reset it and the
+    // first would then finish into a state it no longer owns.
+    let release_: (() => void) | undefined;
+    const slow = (() =>
+      new Promise((resolve) => {
+        release_ = () => {
+          resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+        };
+      })) as unknown as typeof fetch;
+    const updates = manager(slow);
+
+    const first = updates.check();
+    await expect(updates.check()).rejects.toThrow(/while checking/);
+
+    release_?.();
+    await first;
+  });
+
+  it('does not start a second update on top of one in flight', async () => {
+    writeStatus({ phase: 'installing', progressPct: 40, target: 'v0.2.0', previous: 'v0.1.0' });
+    const updates = manager(respondWith([]), '0.1.0');
+    updates.adoptExternalStatus();
+
+    await expect(updates.apply('0.3.0')).rejects.toThrow(/while installing/);
+    expect(invoked).toHaveLength(0);
+  });
+
+  it('reports a rollback the helper refused', async () => {
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v0.2.0', previous: 'v0.1.0' });
+    const updates = new UpdateManager({
+      currentVersion: '0.2.0',
+      publishEvent: (event) => events.push(event),
+      config,
+      db,
+      fetchImpl: respondWith([]),
+      statusFile,
+      invoke: () => {
+        throw new Error('helper exited with status 1');
+      },
+    });
+    updates.adoptExternalStatus();
+
+    await expect(updates.rollback()).rejects.toThrow(/helper exited/);
+    expect(updates.getStatus().phase).toBe('failed');
+    expect(updates.getStatus().lastError).toMatch(/helper exited/);
+  });
+});
+
+describe('without a database', () => {
+  it('still reports status, and simply keeps no history', async () => {
+    // A route test builds a context without one. Losing history is acceptable there;
+    // throwing on every status poll is not.
+    const updates = new UpdateManager({
+      currentVersion: '0.1.0',
+      publishEvent: (event) => events.push(event),
+      config,
+      fetchImpl: respondWith([release('v0.2.0')]),
+      statusFile,
+      invoke: (request) => ({ ok: true, verb: request.verb, commands: [], detail: {} }) as never,
+    });
+
+    await updates.check();
+    await updates.apply();
+
+    expect(updates.getHistory()).toEqual({ items: [], total: 0 });
+    expect(updates.getStatus().lastCheckAt).not.toBeNull();
   });
 });
