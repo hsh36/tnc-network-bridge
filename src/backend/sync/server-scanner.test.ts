@@ -637,7 +637,9 @@ describe('worker thread isolation (AC)', () => {
   });
 
   it('leaves the parent event loop free while it walks', async () => {
-    for (let i = 0; i < 400; i += 1) {
+    // Enough files that the walk cannot finish inside a single timer tick, so there is
+    // a window in which the main thread can be observed running.
+    for (let i = 0; i < 2000; i += 1) {
       file(`d${i % 20}/p${i}.h`);
     }
     walker = new WorkerScanWalker();
@@ -645,16 +647,16 @@ describe('worker thread isolation (AC)', () => {
     let ticks = 0;
     const ticker = setInterval(() => {
       ticks += 1;
-    }, 5);
+    }, 1);
 
-    const started = Date.now();
     await walkAll(walker, { root });
-    const elapsed = Date.now() - started;
     clearInterval(ticker);
 
-    // A walk that blocked the main thread would let through no ticks at all. The bound
-    // is deliberately loose — this proves "not blocked", not a scheduling guarantee.
-    expect(elapsed).toBeGreaterThan(5);
+    // A walk that blocked the main thread would let through no ticks at all.
+    //
+    // There used to be an `expect(elapsed).toBeGreaterThan(5)` here, which asserted the
+    // walk was *slow* — the opposite of the property under test, and a failure waiting
+    // for a fast enough machine. What matters is only that the loop kept turning.
     expect(ticks).toBeGreaterThan(0);
   });
 

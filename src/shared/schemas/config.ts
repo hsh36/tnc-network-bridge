@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   cronSchema,
   globPatternSchema,
+  hostnameSchema,
   interfaceNameSchema,
   ipAddressSchema,
   ipv4CidrSchema,
@@ -40,11 +41,33 @@ export const ipv4MethodSchema = z.enum(['dhcp', 'static']);
  */
 export const networkSideSchema = z.object({
   interface: interfaceNameSchema,
+  /**
+   * The name the bridge answers to on this segment.
+   *
+   * Per side because the two are genuinely different things, not one setting shown
+   * twice. On the LAN it is the machine's own hostname — what it sends as its DHCP
+   * client name and what its certificate is issued for. On the TNC side it is the SMB
+   * server name the machines connect to, which Samba announces independently of the
+   * host's name and which often has to keep whatever the machines were configured with
+   * years ago.
+   *
+   * Empty means "leave it alone": neither the system hostname nor the Samba name is
+   * changed, which is the right behaviour on an appliance that was named during
+   * installation.
+   */
+  hostname: hostnameSchema.or(z.literal('')).default(''),
   method: ipv4MethodSchema.default('dhcp'),
   /** Required when `method` is `static`; ignored by DHCP. */
   address: ipv4CidrSchema.optional(),
   gateway: ipv4Schema.optional(),
-  /** Primary and secondary resolver, in that order. */
+  /**
+   * Primary and secondary resolver, in that order.
+   *
+   * Meaningful on the LAN side only. The machine segment is self-contained — a TNC
+   * reaches the bridge by address and has nothing to resolve — so a resolver configured
+   * there would at best be unused and at worst point the appliance's own lookups at a
+   * server that cannot be reached from that leg.
+   */
   dns: z.array(ipAddressSchema).max(2).default([]),
   /** 802.1Q tag, or `null` for untagged. */
   vlan: z.number().int().min(1).max(4094).nullable().default(null),
@@ -107,6 +130,18 @@ export const networkConfigSchema = z
   .superRefine((cfg, ctx) => {
     checkStaticAddressing(cfg.lan, 'lan', ctx);
     checkStaticAddressing(cfg.tnc, 'tnc', ctx);
+
+    // Enforced, not merely hidden in the form. The machine segment has nothing to
+    // resolve, and a resolver stored here would be written into the TNC leg's profile
+    // where it can only mislead — or, worse, become the appliance's own resolver on a
+    // leg that cannot reach it.
+    if (cfg.tnc.dns.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tnc', 'dns'],
+        message: 'The TNC side has nothing to resolve; leave its DNS servers empty.',
+      });
+    }
 
     // Sharing a NIC is only safe when 802.1Q keeps the two segments in separate
     // broadcast domains. Untagged, it would put SMB1 on the corporate LAN — which is

@@ -306,6 +306,13 @@ export interface ApplyNetworkRequest {
   readonly vlan: number | null;
   /** Reverts unless confirmed within this many seconds. 0 disables the timer. */
   readonly revertAfterSeconds: number;
+  /**
+   * The machine's own hostname, or empty to leave it as it is.
+   *
+   * Only the LAN side ever sends this: a host has one name, and the TNC side's name is
+   * an SMB server name that Samba announces, not the system's.
+   */
+  readonly hostname: string;
 }
 
 export interface WriteNftRulesetRequest {
@@ -554,6 +561,10 @@ export function validateRequest(raw: unknown, options: ValidateOptions = {}): Pr
           0,
           3600,
         ),
+        hostname:
+          input.hostname === undefined || input.hostname === ''
+            ? ''
+            : validateHostname(verb, 'hostname', input.hostname),
         ...(input.address === undefined
           ? {}
           : { address: validateCidr(verb, 'address', input.address) }),
@@ -669,6 +680,26 @@ function requireCredentialField(verb: string, field: string, value: unknown): st
  * refspecs like `origin/main:evil`. Restricting to the characters a tag or a commit sha
  * actually uses removes the whole class rather than blocking the examples of it.
  */
+/**
+ * A hostname this helper is willing to set.
+ *
+ * RFC 1123 labels only. `hostnamectl` takes the value as an argv element so there is no
+ * shell to escape, but a name with a slash or a dot-dot in it would still end up in
+ * /etc/hostname and in every certificate issued afterwards.
+ */
+export function validateHostname(verb: string, field: string, value: unknown): string {
+  const name = requireString(verb, field, value, 253);
+  const label = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
+  if (!name.split('.').every((part) => label.test(part))) {
+    throw new PrivilegedValidationError(
+      verb,
+      field,
+      'must be a hostname: letters, digits and dashes, in dot-separated labels',
+    );
+  }
+  return name;
+}
+
 export function validateGitRef(verb: string, field: string, value: unknown): string {
   const ref = requireString(verb, field, value, 200);
   if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(ref) || ref.includes('..')) {

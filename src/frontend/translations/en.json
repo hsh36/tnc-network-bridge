@@ -221,7 +221,15 @@
     "pending_body": "If you do not confirm within {time}, the previous settings are restored automatically. Confirm only once you are sure you can still reach this bridge.",
     "pending_expired": "The window has passed. The previous settings should be back; reload this page on the old address.",
     "confirm_button": "Confirm, keep these settings",
-    "confirm_error": "The change could not be confirmed."
+    "confirm_error": "The change could not be confirmed.",
+    "lan_hostname": "Hostname",
+    "lan_hostname_hint": "The appliance's own name. Sent as its DHCP client name and used in its certificate. Leave empty to keep the current one.",
+    "tnc_hostname": "SMB server name",
+    "tnc_hostname_hint": "The name the CNC machines connect to. Independent of the hostname above, because the machines are often configured with a name that cannot be changed.",
+    "hostname_placeholder": "tnc-bridge",
+    "save_and_apply_button": "Save and apply",
+    "lan_saved_not_applied": "Saved. Press \"Apply\" to activate — this can interrupt your connection.",
+    "apply_tnc_hint": "Changes to the machine side take effect immediately. Your connection is on the LAN side and is not affected."
   },
   "locks": {
     "title": "Locks & Conflicts",

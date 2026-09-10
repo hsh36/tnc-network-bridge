@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { PRODUCT_NAME } from '../../shared';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
+import { NetworkApplyBanner } from './NetworkApplyBanner';
 import { Button } from './ui/Button';
 import { LanguagePickerButtons } from './LanguagePicker';
 import { ThemeToggle } from './ui/ThemeToggle';
@@ -81,7 +82,19 @@ export function Layout({ children }: { readonly children: ReactNode }): JSX.Elem
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+      <main className="min-w-0 flex-1 p-4 md:p-6">
+        {/*
+          Above every page, not only the network form.
+
+          This is the screen an operator reaches after a network change has cut their
+          connection: new address, fresh certificate warning, fresh login. Whatever page
+          that login drops them on, the countdown has to be in front of them — it is the
+          only thing standing between a working configuration and an automatic rollback,
+          and it renders nothing at all when there is no pending change.
+        */}
+        <NetworkApplyBanner />
+        {children}
+      </main>
     </div>
   );
 }

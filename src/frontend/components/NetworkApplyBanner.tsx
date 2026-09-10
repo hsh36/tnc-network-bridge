@@ -49,6 +49,23 @@ export function NetworkApplyBanner({
     void load();
   }, [load]);
 
+  // While there is nothing pending, ask again now and then.
+  //
+  // The banner lives in the layout, so it mounts once per login. That covers the case
+  // it exists for — the operator reconnecting on the new address — but not the one
+  // where they press Apply in this same session and never lose the connection. Ten
+  // seconds is slow enough to be free and fast enough that the countdown appears while
+  // they are still looking at the button they pressed.
+  useEffect(() => {
+    if (remaining !== undefined) {
+      return undefined;
+    }
+    const id = setInterval(() => {
+      void load();
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [load, remaining === undefined]);
+
   useEffect(() => {
     if (remaining === undefined) {
       return;

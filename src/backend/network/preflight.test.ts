@@ -30,6 +30,7 @@ const NICS: InterfaceDiscovery[] = [
 function side(overrides: Partial<NetworkSide> = {}): NetworkSide {
   return {
     interface: 'eth0',
+    hostname: '',
     method: 'static',
     address: '10.0.0.5/24',
     gateway: '10.0.0.1',

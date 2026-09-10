@@ -221,7 +221,15 @@
     "pending_body": "Bestätigen Sie nicht innerhalb von {time}, werden die vorherigen Einstellungen automatisch wiederhergestellt. Bestätigen Sie erst, wenn Sie sicher sind, diese Bridge weiterhin zu erreichen.",
     "pending_expired": "Das Zeitfenster ist abgelaufen. Die vorherigen Einstellungen sollten zurück sein; laden Sie diese Seite auf der alten Adresse neu.",
     "confirm_button": "Bestätigen, Einstellungen behalten",
-    "confirm_error": "Die Änderung konnte nicht bestätigt werden."
+    "confirm_error": "Die Änderung konnte nicht bestätigt werden.",
+    "lan_hostname": "Hostname",
+    "lan_hostname_hint": "Der eigene Name des Geräts. Wird als DHCP-Clientname gesendet und im Zertifikat verwendet. Leer lassen, um den aktuellen zu behalten.",
+    "tnc_hostname": "SMB-Servername",
+    "tnc_hostname_hint": "Der Name, mit dem sich die CNC-Maschinen verbinden. Unabhängig vom Hostnamen oben, weil die Maschinen oft auf einen Namen konfiguriert sind, der sich nicht ändern lässt.",
+    "hostname_placeholder": "tnc-bridge",
+    "save_and_apply_button": "Speichern und übernehmen",
+    "lan_saved_not_applied": "Gespeichert. Zum Aktivieren auf «Übernehmen» klicken — das kann Ihre Verbindung unterbrechen.",
+    "apply_tnc_hint": "Änderungen auf der Maschinenseite werden sofort übernommen. Ihre Verbindung läuft über die LAN-Seite und ist nicht betroffen."
   },
   "locks": {
     "title": "Dateisperren",

@@ -105,7 +105,7 @@ export class NetworkApplyService {
     const selfAffecting = this.wouldCutCaller(desired.interface, localAddress, interfaces);
     const revertAfterSeconds = selfAffecting ? network.applyRevertSeconds : 0;
 
-    this.callHelper(desired, revertAfterSeconds);
+    this.callHelper(desired, revertAfterSeconds, side);
 
     const expiresAt = revertAfterSeconds > 0 ? this.now() + revertAfterSeconds : null;
     if (expiresAt === null) {
@@ -139,7 +139,7 @@ export class NetworkApplyService {
       throw new NetworkApplyError(`No interface called "${desired.interface}"`);
     }
 
-    this.callHelper(desired, 0);
+    this.callHelper(desired, 0, side);
 
     this.clearPending(nic.mac);
     this.logger?.info({ side, interface: desired.interface }, 'network change confirmed');
@@ -205,7 +205,11 @@ export class NetworkApplyService {
    * call sites used to do — is dead code, and the real error escaped the route as an
    * unhandled 500 carrying nothing the operator could act on.
    */
-  private callHelper(desired: NetworkSide, revertAfterSeconds: number): void {
+  private callHelper(
+    desired: NetworkSide,
+    revertAfterSeconds: number,
+    side: NetworkSideName,
+  ): void {
     try {
       this.invoke({
         verb: 'apply-network',
@@ -218,6 +222,10 @@ export class NetworkApplyService {
         ipv6Enabled: desired.ipv6,
         vlan: desired.vlan,
         revertAfterSeconds,
+        // Only the LAN side names the machine. A host has one hostname; what the TNC
+        // side calls `hostname` is the SMB server name Samba announces, which is set
+        // in smb.conf and never with `hostnamectl`.
+        hostname: side === 'lan' ? desired.hostname : '',
       });
     } catch (error) {
       if (error instanceof PrivilegedCallError) {

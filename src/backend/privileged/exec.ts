@@ -60,6 +60,7 @@ export const BINARIES = {
   sysctl: ['/usr/sbin/sysctl', '/sbin/sysctl'],
   ln: ['/usr/bin/ln', '/bin/ln'],
   systemdRun: ['/usr/bin/systemd-run', '/bin/systemd-run'],
+  hostnamectl: ['/usr/bin/hostnamectl', '/bin/hostnamectl'],
 } as const;
 
 export type BinaryName = keyof typeof BINARIES;

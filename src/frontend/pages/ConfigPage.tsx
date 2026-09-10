@@ -21,7 +21,6 @@ import { Checkbox, Input, Select } from '../components/ui/Input';
 import { Tabs } from '../components/ui/Tabs';
 import { FullPageSpinner } from '../components/ui/Spinner';
 import { CertificateManager } from '../components/CertificateManager';
-import { NetworkApplyBanner } from '../components/NetworkApplyBanner';
 import { SharesSection } from '../components/SharesSection';
 import { useTranslation } from '../hooks/useTranslation';
 import { api, ApiError } from '../lib/api-client';
@@ -135,6 +134,19 @@ function NetworkSideFields({
         ))}
       </Select>
 
+      {/* Per side because these are two different names, not one setting shown twice:
+          on the LAN it is the machine's own hostname, on the TNC side it is the SMB
+          server name the machines dial. */}
+      <Input
+        id={`${side}Hostname`}
+        label={side === 'lan' ? t('lan_hostname') : t('tnc_hostname')}
+        hint={side === 'lan' ? t('lan_hostname_hint') : t('tnc_hostname_hint')}
+        placeholder={t('hostname_placeholder')}
+        value={value.hostname}
+        onChange={(e) => set({ hostname: e.target.value })}
+        error={err('hostname')}
+      />
+
       <Select
         id={`${side}Method`}
         label={t('addressing')}
@@ -166,19 +178,26 @@ function NetworkSideFields({
               error={err('gateway')}
             />
           )}
-          <Input
-            id={`${side}Dns1`}
-            label={t('dns_primary')}
-            value={value.dns[0] ?? ''}
-            onChange={(e) => set({ dns: joinDns(e.target.value, value.dns[1]) })}
-            error={err('dns')}
-          />
-          <Input
-            id={`${side}Dns2`}
-            label={t('dns_secondary')}
-            value={value.dns[1] ?? ''}
-            onChange={(e) => set({ dns: joinDns(value.dns[0], e.target.value) })}
-          />
+          {/* LAN only. The machine segment is self-contained — a TNC reaches the
+              bridge by address and has nothing to resolve — so a resolver here could
+              only mislead. The schema refuses one too, rather than trusting the form. */}
+          {side === 'lan' && (
+            <>
+              <Input
+                id={`${side}Dns1`}
+                label={t('dns_primary')}
+                value={value.dns[0] ?? ''}
+                onChange={(e) => set({ dns: joinDns(e.target.value, value.dns[1]) })}
+                error={err('dns')}
+              />
+              <Input
+                id={`${side}Dns2`}
+                label={t('dns_secondary')}
+                value={value.dns[1] ?? ''}
+                onChange={(e) => set({ dns: joinDns(value.dns[0], e.target.value) })}
+              />
+            </>
+          )}
         </>
       )}
 
@@ -227,19 +246,19 @@ function joinDns(primary: string | undefined, secondary: string | undefined): st
 function NetworkSection(): JSX.Element {
   const t = useTranslation('config');
   const [form, setForm] = useState<NetworkConfig>();
+  const [saved, setSaved] = useState<NetworkConfig>();
   const [interfaces, setInterfaces] = useState<InterfaceDiscovery[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [applying, setApplying] = useState(false);
-  const [applyNotice, setApplyNotice] = useState<string>();
-  const [isDirty, setIsDirty] = useState(false);
-  const [pendingKey, setPendingKey] = useState(0);
+  const [busy, setBusy] = useState<'lan' | 'tnc'>();
+  const [applyingLan, setApplyingLan] = useState(false);
+  const [notice, setNotice] = useState<{ side: 'lan' | 'tnc'; text: string }>();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { banner, onSaved, onError } = useSaveBanner(t);
 
   useEffect(() => {
-    void api('config.get', { params: { section: 'network' } }).then((data) =>
-      setForm(data as NetworkConfig),
-    );
+    void api('config.get', { params: { section: 'network' } }).then((data) => {
+      setForm(data as NetworkConfig);
+      setSaved(data as NetworkConfig);
+    });
     // A failure here is not fatal: the picker falls back to showing the stored name, so
     // the section still works on a host whose sysfs cannot be read.
     void api('network.interfaces')
@@ -247,17 +266,31 @@ function NetworkSection(): JSX.Element {
       .catch(() => setInterfaces([]));
   }, []);
 
+  // Dirtiness is per side now, because the buttons are: one zone must not be greyed out
+  // because the other has unsaved edits.
+  const dirty = (side: 'lan' | 'tnc'): boolean =>
+    form !== undefined &&
+    saved !== undefined &&
+    JSON.stringify(form[side]) !== JSON.stringify(saved[side]);
+
+  const anyDirty = dirty('lan') || dirty('tnc');
   useEffect(() => {
-    const unsaved = isDirty;
-    window.onbeforeunload = unsaved ? () => true : null;
+    window.onbeforeunload = anyDirty ? () => true : null;
     return () => {
       window.onbeforeunload = null;
     };
-  }, [isDirty]);
+  }, [anyDirty]);
 
-  if (form === undefined) return <FullPageSpinner />;
+  if (form === undefined || saved === undefined) return <FullPageSpinner />;
 
-  const save = (): void => {
+  /**
+   * Saves the whole section, because `/config/:section` is a full replace.
+   *
+   * `side` decides what happens *after* the save, not what gets written: saving one
+   * zone necessarily carries the other zone's current form values with it, so both are
+   * validated either way.
+   */
+  const saveSide = (side: 'lan' | 'tnc'): void => {
     const validationErrors = validateConfigSection('network', form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -265,59 +298,72 @@ function NetworkSection(): JSX.Element {
       return;
     }
     setErrors({});
-    setSaving(true);
+    setBusy(side);
+    setNotice(undefined);
     api('config.update', { params: { section: 'network' }, body: form })
       .then((data) => {
         setForm(data as NetworkConfig);
-        setIsDirty(false);
+        setSaved(data as NetworkConfig);
         onSaved();
         // The machine segment is applied straight away: this browser is not on it, so
-        // there is nothing to lose by acting, and nothing for the operator to confirm.
-        // The LAN side is the one that can cut this connection, and waits for its own
-        // button — a half-typed DNS entry must not be able to take the bridge away.
-        return api('network.apply', { body: { side: 'tnc' } });
+        // there is nothing to lose by acting and nothing for the operator to confirm.
+        // The LAN side is the one that can cut this connection and waits for its own
+        // button, so a half-typed address cannot take the bridge away.
+        if (side === 'tnc') {
+          return api('network.apply', { body: { side: 'tnc' } }).then(() => {
+            setNotice({ side: 'tnc', text: t('tnc_applied') });
+          });
+        }
+        setNotice({ side: 'lan', text: t('lan_saved_not_applied') });
+        return undefined;
       })
-      .then(() => setApplyNotice(t('tnc_applied')))
       .catch(onError)
-      .finally(() => setSaving(false));
+      .finally(() => setBusy(undefined));
   };
 
   /** Applies the saved LAN configuration, arming the rollback the backend decides on. */
   const applyLan = (): void => {
-    setApplyNotice(undefined);
-    setApplying(true);
+    setNotice(undefined);
+    setApplyingLan(true);
     api('network.apply', { body: { side: 'lan' } })
       .then((result) => {
         if (result.status === 'pending_confirmation') {
-          setApplyNotice(
-            result.expectedUrl === null
-              ? t('lan_pending_dhcp')
-              : t('lan_pending', { url: result.expectedUrl }),
-          );
-          // Makes the countdown banner re-read the pending change immediately rather
-          // than on the next page load.
-          setPendingKey((key) => key + 1);
+          setNotice({
+            side: 'lan',
+            text:
+              result.expectedUrl === null
+                ? t('lan_pending_dhcp')
+                : t('lan_pending', { url: result.expectedUrl }),
+          });
+          // The banner in the layout picks the pending change up on its own poll.
           return;
         }
-        setApplyNotice(t('lan_applied'));
+        setNotice({ side: 'lan', text: t('lan_applied') });
       })
       .catch(onError)
-      .finally(() => setApplying(false));
+      .finally(() => setApplyingLan(false));
   };
 
   const update =
     (side: 'lan' | 'tnc') =>
     (next: NetworkSide): void => {
       setForm({ ...form, [side]: next });
-      setIsDirty(true);
     };
+
+  const noticeFor = (side: 'lan' | 'tnc'): JSX.Element | null =>
+    notice?.side === side ? (
+      <p className="text-sm text-status-ok" role="status">
+        {notice.text}
+      </p>
+    ) : null;
 
   return (
     <div className="flex flex-col gap-4">
-      <NetworkApplyBanner key={pendingKey} onConfirmed={() => setApplyNotice(t('lan_confirmed'))} />
-
       {/* Side by side, LAN left and TNC right, so the asymmetry between the two legs of
-          the bridge is visible at a glance rather than inferred from field order. */}
+          the bridge is visible at a glance rather than inferred from field order.
+          Each zone carries its own buttons: the two sides genuinely behave differently
+          on save — one applies at once, the other cannot without risking the connection
+          — and a single shared button at the bottom made that difference invisible. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="flex flex-col gap-4 rounded-lg border border-border p-4 dark:border-border-dark">
           <header>
@@ -333,6 +379,27 @@ function NetworkSection(): JSX.Element {
             errors={errors}
             onChange={update('lan')}
           />
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 dark:border-border-dark">
+            <Button
+              onClick={() => saveSide('lan')}
+              loading={busy === 'lan'}
+              disabled={!dirty('lan') || busy !== undefined}
+              className="w-fit"
+            >
+              {t('save_button')}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={applyLan}
+              loading={applyingLan}
+              disabled={dirty('lan') || applyingLan || busy !== undefined}
+              className="w-fit"
+            >
+              {t('apply_lan_button')}
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t('apply_lan_hint')}</p>
+          {noticeFor('lan')}
         </section>
 
         <section className="flex flex-col gap-4 rounded-lg border border-border p-4 dark:border-border-dark">
@@ -349,30 +416,22 @@ function NetworkSection(): JSX.Element {
             errors={errors}
             onChange={update('tnc')}
           />
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 dark:border-border-dark">
+            <Button
+              onClick={() => saveSide('tnc')}
+              loading={busy === 'tnc'}
+              disabled={!dirty('tnc') || busy !== undefined}
+              className="w-fit"
+            >
+              {t('save_and_apply_button')}
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t('apply_tnc_hint')}</p>
+          {noticeFor('tnc')}
         </section>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          {t('save_button')}
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={applyLan}
-          loading={applying}
-          disabled={isDirty || applying}
-          className="w-fit"
-        >
-          {t('apply_lan_button')}
-        </Button>
-        {banner}
-      </div>
-      <p className="text-xs text-slate-500 dark:text-slate-400">{t('apply_lan_hint')}</p>
-      {applyNotice !== undefined && (
-        <p className="text-sm text-status-ok" role="status">
-          {applyNotice}
-        </p>
-      )}
+      {banner}
     </div>
   );
 }

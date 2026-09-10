@@ -539,6 +539,14 @@ function applyNetwork(
   log.exec([nmcli, 'con', 'mod', connection, ...settings]);
   log.exec([nmcli, 'con', 'up', connection]);
 
+  // Before the revert timer is armed, so a hostname change is covered by the same
+  // rollback as the addressing it came with. `hostnamectl` also updates the transient
+  // and pretty names, which is what makes the new name visible to mDNS and to the DHCP
+  // client without a reboot.
+  if (request.hostname !== '') {
+    log.exec([deps.resolve('hostnamectl'), 'set-hostname', request.hostname]);
+  }
+
   if (request.revertAfterSeconds > 0) {
     log.exec([
       deps.resolve('systemdRun'),
@@ -561,6 +569,7 @@ function applyNetwork(
       method: request.method,
       revertArmed: request.revertAfterSeconds > 0,
       revertAfterSeconds: request.revertAfterSeconds,
+      hostname: request.hostname,
     },
   };
 }
