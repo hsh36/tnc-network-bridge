@@ -80,7 +80,16 @@ export const OS_UPDATE_SCRIPT = `${INSTALL_DIR}/scripts/os-update.sh`;
 /** Fixed for the same reason as {@link SELF_UPDATE_UNIT}: it is the interlock. */
 export const OS_UPDATE_UNIT = 'tnc-bridge-os-update';
 
-/** The group that owns the TLS private key. The service reads it; nobody else can. */
+/**
+ * The service group.
+ *
+ * It owns the TLS private key — the service reads it, nobody else can — and it owns the
+ * cache a share exports. Every Samba account this helper creates is put in it, because
+ * otherwise the account cannot read the very files the share exists for: `/srv/tnc` is
+ * 0750 and the cached files are 0660, both owned by the service account. Membership
+ * also settles the other direction: a file a machine writes lands in this group, so the
+ * sync engine can push it back to the server.
+ */
 export const SERVICE_GROUP = 'tncbridge';
 
 export class PrivilegedExecutionError extends Error {
@@ -908,6 +917,12 @@ function ensureUnixAccount(username: string, deps: HandlerDeps, log: CommandLog)
       '--no-create-home',
       '--shell',
       '/usr/sbin/nologin',
+      // The service group as the *primary* one, which is what makes the share usable at
+      // all. Without it the account authenticates and then cannot traverse /srv/tnc,
+      // so a machine gets a share it may open and cannot read — an outcome that looks
+      // like a broken bridge rather than a permissions mistake.
+      '--gid',
+      SERVICE_GROUP,
       username,
     ],
     { allowFailure: true },
@@ -921,6 +936,10 @@ function ensureUnixAccount(username: string, deps: HandlerDeps, log: CommandLog)
       `could not create the account ${username}: ${result.stderr.trim() || result.stdout.trim()}`,
     );
   }
+
+  // Repairs an account created before the group was set, and is a no-op otherwise.
+  // Cheaper than asking, and the answer would have to be parsed out of `id`.
+  log.exec([deps.resolve('usermod'), '--gid', SERVICE_GROUP, username], { allowFailure: true });
 }
 
 function setSambaUser(

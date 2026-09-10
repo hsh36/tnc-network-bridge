@@ -57,6 +57,7 @@ export const BINARIES = {
   smbpasswd: ['/usr/bin/smbpasswd'],
   useradd: ['/usr/sbin/useradd', '/sbin/useradd'],
   userdel: ['/usr/sbin/userdel', '/sbin/userdel'],
+  usermod: ['/usr/sbin/usermod', '/sbin/usermod'],
   nft: ['/usr/sbin/nft', '/sbin/nft'],
   nmcli: ['/usr/bin/nmcli'],
   fail2banClient: ['/usr/bin/fail2ban-client'],

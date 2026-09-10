@@ -21,6 +21,7 @@ import {
   renderCredentialsFile,
   SAMBA_BACKUP_PATH,
   SAMBA_CONFIG_PATH,
+  SERVICE_GROUP,
   SELF_UPDATE_SCRIPT,
   SELF_UPDATE_UNIT,
   OS_UPDATE_SCRIPT,
@@ -1021,6 +1022,31 @@ describe('set-samba-user', () => {
     password: 'geheim',
     remove: false,
   };
+
+  it('puts the account in the service group, or the share is unreadable', () => {
+    // Found on the appliance: the account authenticated and then could not traverse
+    // /srv/tnc, which is 0750 and owned by the service account. A machine would get a
+    // share it may open and cannot read — which looks like a broken bridge rather than
+    // a permissions mistake. The group also settles the other direction: a file the
+    // machine writes lands in it, so the sync engine can push it back.
+    const h = harness();
+
+    execute(build(REQUEST), h.deps);
+
+    const useradd = h.calls.find((argv) => argv[0]?.includes('useradd'));
+    expect(useradd).toContain('--gid');
+    expect(useradd?.[(useradd.indexOf('--gid') ?? 0) + 1]).toBe(SERVICE_GROUP);
+  });
+
+  it('repairs an account created before the group was set', () => {
+    // Idempotent, and cheaper than asking: the answer would have to be parsed out of
+    // `id`, and getting it wrong silently is how the original bug survived.
+    const h = harness();
+
+    execute(build(REQUEST), h.deps);
+
+    expect(h.calls).toContainEqual(['/usr/bin/usermod', '--gid', SERVICE_GROUP, 'tnc-werkstatt']);
+  });
 
   it('creates a locked system account to back the Samba one', () => {
     // Samba refuses an entry for a user getpwnam cannot resolve, so the Unix account
