@@ -6,6 +6,7 @@ import { ConfigManager } from '../config/config-manager';
 import { type Db } from '../config/db';
 import { runMigrations } from '../config/migrations/runner';
 import { generateSecretKey } from '../config/secrets';
+import { PrivilegedCallError } from '../privileged/client';
 import { type HelperResponse } from '../privileged/main';
 import { type PrivilegedRequest } from '../privileged/verbs';
 
@@ -70,9 +71,13 @@ function service(options: { fail?: string } = {}): NetworkApplyService {
     now: () => 1_700_000_000,
     invoke: (request): HelperResponse => {
       calls.push(request);
-      return options.fail === undefined
-        ? { ok: true, verb: request.verb }
-        : { ok: false, verb: request.verb, error: options.fail, code: 'failed' };
+      if (options.fail !== undefined) {
+        // How the real client signals a refusal. It never returns `ok: false` — a stub
+        // that did let a wrong assumption pass the suite and reach the appliance, where
+        // a failed apply surfaced as a 500 with no message.
+        throw new PrivilegedCallError(options.fail, 'failed', 3);
+      }
+      return { ok: true, verb: request.verb };
     },
   });
 }

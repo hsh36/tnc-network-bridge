@@ -3,7 +3,7 @@ import { networkInterfaces } from 'node:os';
 import { type NetworkSide, type PendingChange } from '../../shared';
 import { type ConfigManager } from '../config/config-manager';
 import { type Db, type DbLogger } from '../config/db';
-import { type HelperInvoker, invokePrivileged } from '../privileged/client';
+import { PrivilegedCallError, type HelperInvoker, invokePrivileged } from '../privileged/client';
 
 import { discoverInterfaces } from './interface-discovery';
 import { type PreflightIssue, preflight } from './preflight';
@@ -105,22 +105,7 @@ export class NetworkApplyService {
     const selfAffecting = this.wouldCutCaller(desired.interface, localAddress, interfaces);
     const revertAfterSeconds = selfAffecting ? network.applyRevertSeconds : 0;
 
-    const response = this.invoke({
-      verb: 'apply-network',
-      interface: desired.interface,
-      method: desired.method,
-      ...(desired.address === undefined ? {} : { address: desired.address }),
-      ...(desired.gateway === undefined ? {} : { gateway: desired.gateway }),
-      dns: [...desired.dns],
-      mtu: desired.mtu,
-      ipv6Enabled: desired.ipv6,
-      vlan: desired.vlan,
-      revertAfterSeconds,
-    });
-
-    if (!response.ok) {
-      throw new NetworkApplyError(response.error ?? 'The privileged helper refused the change');
-    }
+    this.callHelper(desired, revertAfterSeconds);
 
     const expiresAt = revertAfterSeconds > 0 ? this.now() + revertAfterSeconds : null;
     if (expiresAt === null) {
@@ -154,21 +139,7 @@ export class NetworkApplyService {
       throw new NetworkApplyError(`No interface called "${desired.interface}"`);
     }
 
-    const response = this.invoke({
-      verb: 'apply-network',
-      interface: desired.interface,
-      method: desired.method,
-      ...(desired.address === undefined ? {} : { address: desired.address }),
-      ...(desired.gateway === undefined ? {} : { gateway: desired.gateway }),
-      dns: [...desired.dns],
-      mtu: desired.mtu,
-      ipv6Enabled: desired.ipv6,
-      vlan: desired.vlan,
-      revertAfterSeconds: 0,
-    });
-    if (!response.ok) {
-      throw new NetworkApplyError(response.error ?? 'The privileged helper refused the change');
-    }
+    this.callHelper(desired, 0);
 
     this.clearPending(nic.mac);
     this.logger?.info({ side, interface: desired.interface }, 'network change confirmed');
@@ -224,6 +195,36 @@ export class NetworkApplyService {
     }
     const owner = ownerOf(normalised, this.read);
     return owner === undefined || owner === iface || !interfaces.some((i) => i.name === owner);
+  }
+
+  /**
+   * One call, one place to translate its failure.
+   *
+   * `invokePrivileged` signals a refusal by throwing `PrivilegedCallError`; it never
+   * returns a response with `ok: false`. Checking the returned flag — which is what both
+   * call sites used to do — is dead code, and the real error escaped the route as an
+   * unhandled 500 carrying nothing the operator could act on.
+   */
+  private callHelper(desired: NetworkSide, revertAfterSeconds: number): void {
+    try {
+      this.invoke({
+        verb: 'apply-network',
+        interface: desired.interface,
+        method: desired.method,
+        ...(desired.address === undefined ? {} : { address: desired.address }),
+        ...(desired.gateway === undefined ? {} : { gateway: desired.gateway }),
+        dns: [...desired.dns],
+        mtu: desired.mtu,
+        ipv6Enabled: desired.ipv6,
+        vlan: desired.vlan,
+        revertAfterSeconds,
+      });
+    } catch (error) {
+      if (error instanceof PrivilegedCallError) {
+        throw new NetworkApplyError(error.message);
+      }
+      throw error;
+    }
   }
 
   private recordPending(mac: string, applied: NetworkSide, expiresAt: number): void {

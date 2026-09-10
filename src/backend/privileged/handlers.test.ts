@@ -398,9 +398,32 @@ describe('apply-network', () => {
     expect(parseConnectionName('no colon here\n')).toBeUndefined();
   });
 
-  it('fails clearly when the interface has no NetworkManager connection', () => {
+  it('creates a profile when the interface has none, instead of refusing', () => {
+    // A NIC that has never been configured has no profile to modify, which is the state
+    // every appliance's second interface ships in. Refusing made the TNC side impossible
+    // to configure at all — the operator saw a 500 and the segment stayed dark.
     const h = harness(() => 'GENERAL.CONNECTION:--\n');
-    expect(() => execute(build(base), h.deps)).toThrow(/no active NetworkManager connection/);
+
+    const result = execute(build(base), h.deps);
+
+    const added = result.commands.find((cmd) => cmd.includes('add'));
+    expect(added).toBeDefined();
+    expect(added).toEqual(
+      expect.arrayContaining(['con', 'add', 'type', 'ethernet', 'ifname', 'eth0']),
+    );
+    // Named after the interface so a second run finds it rather than stacking another.
+    expect(added).toEqual(expect.arrayContaining(['con-name', 'tnc-eth0']));
+    // And it must come back on its own after a reboot.
+    expect(added).toEqual(expect.arrayContaining(['autoconnect', 'yes']));
+  });
+
+  it('modifies the profile it just created, not some other one', () => {
+    const h = harness(() => 'GENERAL.CONNECTION:--\n');
+
+    const result = execute(build(base), h.deps);
+
+    const modified = result.commands.find((cmd) => cmd.includes('mod'));
+    expect(modified).toEqual(expect.arrayContaining(['con', 'mod', 'tnc-eth0']));
   });
 
   it('applies a static address, gateway and DNS', () => {

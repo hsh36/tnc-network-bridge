@@ -448,12 +448,29 @@ function applyNetwork(
     'show',
     request.interface,
   ]);
-  const connection = parseConnectionName(shown.stdout);
+  // A NIC that has never been configured has no profile to modify — which is the state
+  // every appliance's second interface ships in, and the one an operator is most likely
+  // to be configuring. Refusing here made the TNC side impossible to set up at all, so
+  // the profile is created instead. `con add` names it after the interface so a second
+  // run finds it rather than stacking another one.
+  let connection = parseConnectionName(shown.stdout);
   if (connection === undefined) {
-    throw new PrivilegedExecutionError(
-      'apply-network',
-      `interface ${request.interface} has no active NetworkManager connection`,
-    );
+    connection = `tnc-${request.interface}`;
+    log.exec([
+      nmcli,
+      'con',
+      'add',
+      'type',
+      'ethernet',
+      'ifname',
+      request.interface,
+      'con-name',
+      connection,
+      // Not autoconnect-priority or anything clever: the profile has to come up on its
+      // own after a reboot, or the machine segment is dark until someone logs in.
+      'autoconnect',
+      'yes',
+    ]);
   }
 
   // Any timer armed by a previous apply is now moot, whichever way this call goes.
