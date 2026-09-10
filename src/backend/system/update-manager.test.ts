@@ -547,3 +547,64 @@ describe('displayVersion', () => {
     expect(updates.getHistory().items[0]?.fromVersion).toBe('68597a7');
   });
 });
+
+describe('announcing an update that finished after the restart', () => {
+  it('publishes when the updater reports done', () => {
+    // Without this a UI holding the stream open learns nothing until its next poll,
+    // and — before the client stopped preferring the stream over the poll — learned
+    // nothing at all, because the last event it ever received was `downloading`.
+    writeStatus({ phase: 'restarting', progressPct: 80, target: 'v0.3.0', previous: 'abc123' });
+    const updates = manager(respondWith([]), '0.3.0');
+    updates.adoptExternalStatus();
+    events = [];
+
+    writeStatus({ phase: 'done', progressPct: 100, target: 'v0.3.0', previous: 'abc123' });
+    updates.getStatus();
+
+    const published = events.filter((event) => event.type === 'update');
+    expect(published).toHaveLength(1);
+    expect(published[0]?.type === 'update' ? published[0].status.phase : undefined).toBe('done');
+  });
+
+  it('publishes each time the phase moves on', () => {
+    writeStatus({ phase: 'downloading', progressPct: 0, target: 'v0.3.0', previous: 'abc' });
+    const updates = manager(respondWith([]), '0.2.0');
+    updates.adoptExternalStatus();
+    events = [];
+
+    writeStatus({ phase: 'installing', progressPct: 40, target: 'v0.3.0', previous: 'abc' });
+    updates.getStatus();
+    writeStatus({ phase: 'restarting', progressPct: 80, target: 'v0.3.0', previous: 'abc' });
+    updates.getStatus();
+
+    expect(events.filter((event) => event.type === 'update')).toHaveLength(2);
+  });
+
+  it('does not publish when nothing has moved', () => {
+    // The UI polls every two seconds; an unchanged phase must not become a stream of
+    // identical events.
+    writeStatus({ phase: 'installing', progressPct: 40, target: 'v0.3.0', previous: 'abc' });
+    const updates = manager(respondWith([]), '0.2.0');
+    updates.adoptExternalStatus();
+    events = [];
+
+    updates.getStatus();
+    updates.getStatus();
+    updates.getStatus();
+
+    expect(events.filter((event) => event.type === 'update')).toHaveLength(0);
+  });
+
+  it('terminates: publishing does not re-enter the refresh that triggered it', () => {
+    // getStatus adopts, adopting publishes, and publishing used to call getStatus.
+    // A thousand polls here would blow the stack if that cycle came back.
+    writeStatus({ phase: 'installing', progressPct: 40, target: 'v0.3.0', previous: 'abc' });
+    const updates = manager(respondWith([]), '0.2.0');
+
+    expect(() => {
+      for (let i = 0; i < 1000; i += 1) {
+        updates.getStatus();
+      }
+    }).not.toThrow();
+  });
+});

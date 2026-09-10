@@ -148,7 +148,20 @@ export class UpdateManager {
     if (this.phase !== 'idle') {
       this.adoptExternalStatus();
     }
+    return this.snapshot();
+  }
 
+  /**
+   * The in-memory state, without touching the status file.
+   *
+   * Separate from {@link getStatus} because {@link publishStatus} must not refresh:
+   * `getStatus` adopts, adopting publishes, and publishing would call `getStatus`
+   * again. It terminates today only because a consumed file makes the second adopt a
+   * no-op — which is a subtle ordering argument to have to make every time someone
+   * touches this. Reading the fields directly removes the cycle instead of relying on
+   * it being shallow.
+   */
+  private snapshot(): UpdateStatus {
     return {
       currentVersion: this.currentVersion,
       available: this.available,
@@ -333,13 +346,20 @@ export class UpdateManager {
       });
       // Consumed: leaving it would re-record the same attempt on every restart.
       this.clearStatusFile();
+      // Announced, not merely stored. A UI holding the stream open should learn that
+      // the update finished when it finishes, rather than on its next poll.
+      this.publishStatus();
       return;
     }
 
     // Still running — the service was restarted by the updater and the updater is now
     // waiting on the health gate that this very startup is about to satisfy.
+    const changed = this.phase !== external.phase || this.progressPct !== external.progressPct;
     this.phase = external.phase;
     this.progressPct = external.progressPct;
+    if (changed) {
+      this.publishStatus();
+    }
   }
 
   /** Newest first, so page one is the attempt the operator just made. */
@@ -452,7 +472,7 @@ export class UpdateManager {
     this.publishEvent({
       ts: Date.now(),
       type: 'update',
-      status: this.getStatus(),
+      status: this.snapshot(),
     });
   }
 }

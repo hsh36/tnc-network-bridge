@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { type UpdateStatus, type UpdateHistoryEntry } from '../../shared';
 import { useApiQuery } from './useApi';
 import { useSSE } from './useSSE';
@@ -33,10 +33,30 @@ export function useUpdateStatus(): UseUpdateStatusResult {
   const [rolling, setRolling] = useState(false);
   const [rollbackError, setRollbackError] = useState<string>();
 
-  // Extract the latest update status from SSE if available
+  /*
+   * The poll is the source of truth; SSE only says "ask again now".
+   *
+   * This used to be `sseStatus ?? status.data`, which assumes the stream is at least as
+   * fresh as the poll. During an update that is exactly false: applying restarts the
+   * service, so the connection drops — and the last event the browser received before
+   * it dropped was the `downloading` one that `apply()` published. Nothing republished
+   * afterwards, so that event sat in `sse.latest` forever and shadowed a polled status
+   * that had long since said `done`. The screen showed "downloading" and a progress bar
+   * stuck at zero, on an update that had finished minutes earlier.
+   *
+   * Making the poll authoritative removes the whole class: there is one answer, and a
+   * dropped stream can no longer contradict it. Liveness is kept by refreshing on each
+   * event instead of rendering it.
+   */
   const latestSSEEvent = sse.latest;
-  const sseStatus = latestSSEEvent?.type === 'update' ? latestSSEEvent.status : undefined;
-  const mergedStatus = sseStatus ?? status.data;
+  const refresh = status.refresh;
+  useEffect(() => {
+    if (latestSSEEvent?.type === 'update') {
+      refresh();
+    }
+  }, [latestSSEEvent, refresh]);
+
+  const mergedStatus = status.data;
 
   const check = useCallback(async () => {
     setChecking(true);
