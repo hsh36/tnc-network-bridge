@@ -10,7 +10,7 @@ import { runMigrations } from '../config/migrations/runner';
 import { generateSecretKey } from '../config/secrets';
 import { type PrivilegedRequest } from '../privileged/verbs';
 
-import { UpdateManager } from './update-manager';
+import { displayVersion, UpdateManager } from './update-manager';
 
 /**
  * The defect these are written against: `/update/status` answered from a literal, so a
@@ -518,5 +518,32 @@ describe('the restart race', () => {
     await updates.apply();
 
     expect(updates.getStatus().phase).not.toBe('done');
+  });
+});
+
+describe('displayVersion', () => {
+  it('shortens a commit sha to the form every git UI uses', () => {
+    // The updater records the commit it would roll back to, which is the only correct
+    // target — but forty characters in a history column reads as a bug.
+    expect(displayVersion('68597a78f34ffadf9ca066fccca5c004238f40bd')).toBe('68597a7');
+  });
+
+  it('leaves a version string alone', () => {
+    expect(displayVersion('0.2.0')).toBe('0.2.0');
+    expect(displayVersion('v0.2.0')).toBe('v0.2.0');
+  });
+
+  it('records the short form in the history', () => {
+    writeStatus({
+      phase: 'done',
+      progressPct: 100,
+      target: 'v0.2.0',
+      previous: '68597a78f34ffadf9ca066fccca5c004238f40bd',
+    });
+    const updates = manager(respondWith([]), '0.2.0');
+
+    updates.adoptExternalStatus();
+
+    expect(updates.getHistory().items[0]?.fromVersion).toBe('68597a7');
   });
 });

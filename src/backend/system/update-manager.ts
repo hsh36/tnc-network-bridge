@@ -46,6 +46,18 @@ export interface UpdateManagerOptions {
   readonly statusFile?: string;
 }
 
+/**
+ * A version string a person can read.
+ *
+ * The updater records what it rolled back *from* as the commit that was checked out,
+ * which is the only correct rollback target — but a 40-character sha in the update
+ * history column reads as a bug rather than as information. Shortened to the form every
+ * git UI uses; anything that already looks like a version is left alone.
+ */
+export function displayVersion(value: string): string {
+  return /^[0-9a-f]{40}$/i.test(value) ? value.slice(0, 7) : value;
+}
+
 /** Where `scripts/self-update.sh` writes its progress. Must match the script. */
 export const DEFAULT_STATUS_FILE = '/var/lib/tnc-bridge/update-status.json';
 
@@ -313,7 +325,8 @@ export class UpdateManager {
         this.rollbackVersion = normaliseVersion(external.previous);
       }
       this.record({
-        fromVersion: external.previous === '' ? null : normaliseVersion(external.previous),
+        fromVersion:
+          external.previous === '' ? null : displayVersion(normaliseVersion(external.previous)),
         toVersion: normaliseVersion(external.target),
         result: external.phase === 'done' ? 'ok' : 'failed',
         log: external.error ?? null,
