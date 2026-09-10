@@ -183,7 +183,7 @@ export function toMountError(error: unknown, operation: string): MountError {
 // Timeout wrapper
 // ---------------------------------------------------------------------------
 
-/** Default deadline for a single server-side call. Comfortably above the mount's `timeo=50` (5 s). */
+/** Default deadline for a single server-side call. Comfortably above the mount's `echo_interval`. */
 export const DEFAULT_FS_TIMEOUT_MS = 15_000;
 
 /**

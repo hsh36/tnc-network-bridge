@@ -198,8 +198,15 @@ export function buildMountOptions(request: MountShareRequest, credentialsPath: s
     'dir_mode=0770',
     'iocharset=utf8',
     'actimeo=1',
+    // `echo_interval` is how long a quiet connection waits before the client pings, and
+    // with `soft` above it is what bounds how long a call against a vanished server
+    // hangs. `timeo` used to sit here too and is not a parameter the modern cifs module
+    // accepts at all — the whole mount is refused with a bare
+    //
+    //   mount error(22): Invalid argument
+    //
+    // and the reason appears only in dmesg, as "cifs: Unknown parameter 'timeo'".
     'echo_interval=10',
-    'timeo=50',
   ];
   if (request.seal) {
     options.push('seal');

@@ -257,6 +257,32 @@ describe('mount-share', () => {
       'credentials=/run/tnc-bridge/creds-x',
     );
   });
+
+  /**
+   * Options the cifs module does not know are not ignored — the whole mount is refused
+   * with a bare `mount error(22): Invalid argument`, and the actual reason appears only
+   * in dmesg. `timeo` was in this list and is not a parameter modern cifs accepts, so
+   * every share failed to mount with an error that named nothing.
+   *
+   * The list is deliberately of options *removed for cause*, not an allowlist: a new
+   * option should not need this test edited, but a rediscovered bad one should fail.
+   */
+  it.each(['timeo'])('does not pass %p, which modern cifs rejects outright', (option) => {
+    const request = build(MOUNT_REQUEST) as Extract<PrivilegedRequest, { verb: 'mount-share' }>;
+    const rendered = buildMountOptions(request, '/run/tnc-bridge/creds');
+
+    expect(rendered.split(',').map((entry) => entry.split('=')[0])).not.toContain(option);
+  });
+
+  it('keeps the options that bound how long a call against a dead server hangs', () => {
+    const request = build(MOUNT_REQUEST) as Extract<PrivilegedRequest, { verb: 'mount-share' }>;
+    const rendered = buildMountOptions(request, '/run/tnc-bridge/creds');
+
+    // Without `soft` a CIFS call against a vanished server blocks for ever, and the
+    // process holding it cannot be killed.
+    expect(rendered.split(',')).toContain('soft');
+    expect(rendered).toContain('echo_interval=');
+  });
 });
 
 describe('unmount-share', () => {
