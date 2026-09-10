@@ -25,8 +25,6 @@ import { type AuthFailureReason, AuthLogWriter } from '../logging/auth-log';
  * exactly the reasons its frozen failregex expects.
  */
 
-
-
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const SESSION_COOKIE_BYTES = 32;
 const CSRF_TOKEN_BYTES = 32;

@@ -1,5 +1,9 @@
 import { type BridgeEvent } from '../../shared';
-import { type UpdateHistoryEntry, type UpdateStatus, type UpdatePhase } from '../../shared/schemas/operations';
+import {
+  type UpdateHistoryEntry,
+  type UpdateStatus,
+  type UpdatePhase,
+} from '../../shared/schemas/operations';
 import { type Db } from '../config/db';
 import { type ConfigManager } from '../config/config-manager';
 import { fetchLatestRelease, isNewer, type ReleaseInfo } from './github-releases';

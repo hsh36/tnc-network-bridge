@@ -36,8 +36,10 @@ const respondWith = (body: unknown, status = 200): typeof fetch =>
       json: () => Promise.resolve(body),
     })) as unknown as typeof fetch;
 
-const failWith = (error: Error): typeof fetch =>
-  () => Promise.reject(error);
+const failWith =
+  (error: Error): typeof fetch =>
+  () =>
+    Promise.reject(error);
 
 function manager(fetchImpl: typeof fetch, currentVersion = '0.1.0'): UpdateManager {
   return new UpdateManager({

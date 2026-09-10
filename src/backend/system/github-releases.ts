@@ -144,13 +144,16 @@ export async function fetchLatestRelease(
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);
 
   try {
-    const response = await call(`https://api.github.com/repos/${options.repo}/releases?per_page=30`, {
-      headers: {
-        accept: 'application/vnd.github+json',
-        'user-agent': 'tnc-network-bridge',
+    const response = await call(
+      `https://api.github.com/repos/${options.repo}/releases?per_page=30`,
+      {
+        headers: {
+          accept: 'application/vnd.github+json',
+          'user-agent': 'tnc-network-bridge',
+        },
+        signal: controller.signal,
       },
-      signal: controller.signal,
-    });
+    );
 
     if (!response.ok) {
       throw new UpdateCheckError(
