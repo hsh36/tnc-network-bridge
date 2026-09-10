@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { cleanupTmpDbs, tmpDb, tmpDir } from '../../../tests/support/tmp-db';
@@ -388,5 +388,40 @@ describe('stop', () => {
 
     await sync.reconcile();
     expect(sync.activeShareIds()).toEqual([]);
+  });
+});
+
+describe('the exported cache directory', () => {
+  // POSIX modes only mean anything on POSIX; on Windows the bits are not stored.
+  const onPosix = process.platform === 'win32' ? it.skip : it;
+
+  onPosix('is group-writable, or a machine can open a program and not save it', async () => {
+    // Found on the appliance: the account a machine authenticates as is in the service
+    // group, but `mkdir` takes the umask, so the directory came out 0755 and the group
+    // had no write bit. Reading worked; saving did not.
+    const id = createShare('programs');
+    const sync = supervisor();
+    await sync.reconcile();
+
+    const cachePath = db.pluck<string>('SELECT cache_path FROM shares WHERE id = @id', { id });
+    await waitFor(() => existsSync(cachePath ?? ''));
+    const mode = statSync(cachePath ?? '').mode & 0o777;
+
+    expect(mode & 0o070).toBe(0o070);
+    await sync.stop();
+  });
+
+  onPosix('is setgid, so what the machine writes stays readable by the sync engine', async () => {
+    // The failure in the other direction, and the one that would only show up when
+    // somebody edits a program at the control.
+    const id = createShare('programs');
+    const sync = supervisor();
+    await sync.reconcile();
+
+    const cachePath = db.pluck<string>('SELECT cache_path FROM shares WHERE id = @id', { id });
+    await waitFor(() => existsSync(cachePath ?? ''));
+
+    expect(statSync(cachePath ?? '').mode & 0o2000).toBe(0o2000);
+    await sync.stop();
   });
 });

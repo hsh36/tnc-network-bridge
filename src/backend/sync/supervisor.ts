@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { chmod, mkdir } from 'node:fs/promises';
 
 import { type ShareStatus } from '../../shared';
 import { type ConfigManager } from '../config/config-manager';
@@ -168,6 +168,16 @@ export class SyncSupervisor {
     // everything" on the very first cycle.
     await mkdir(share.mountPoint, { recursive: true });
     await mkdir(share.cachePath, { recursive: true });
+    // The cache is what Samba exports, so the service group must be able to write it:
+    // the account a machine authenticates as is in that group, and without group write
+    // a control can open a program and not save it. `mkdir`'s mode argument is masked
+    // by the umask, which is why this is a separate chmod rather than a mode option.
+    //
+    // Setgid, so anything created inside inherits the group. A file written by the
+    // machine then stays readable by the sync engine that has to push it back — the
+    // failure in the other direction, and the one that would only show up when somebody
+    // edits a program at the control.
+    await chmod(share.cachePath, 0o2770);
 
     const smb = this.options.config.get('smb');
     const password =
