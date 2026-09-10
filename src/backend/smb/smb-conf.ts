@@ -173,7 +173,11 @@ const TEMPLATE_SOURCE = `#
   # the option is deprecated: writing it out produced that warning on every
   # smbclient and testparm call, which is a line an operator reads and worries about.
   # Not saying it gets the same result quietly.
-  raw NTLMv2 auth = {{#if ntlmAuth}}yes{{else}}no{{/if}}
+  # "raw NTLMv2 auth" is not set either, for the same reason as lanman above: Samba
+  # deprecated it and later removed it, so it warned on every call and changed nothing.
+  # It governed NTLMv2 inside raw NTLMSSP, which modern Samba always permits — and it
+  # is not what an iTNC 530 needs anyway. That control speaks NTLM, which is "ntlm auth"
+  # directly above, and no version of it ever spoke NTLMv2.
   server signing = disabled
   server smb encrypt = off
 

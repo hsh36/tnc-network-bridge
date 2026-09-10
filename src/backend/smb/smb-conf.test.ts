@@ -49,6 +49,31 @@ describe('renderSmbConf', () => {
     expect(content).toContain('server signing = disabled');
   });
 
+  /**
+   * Options modern Samba warns about, and what to write instead.
+   *
+   * Every one of these printed a WARNING on each smbclient and testparm call on the
+   * real appliance — a line an operator reads and worries about, in exchange for
+   * behaviour that was already the default. They are pinned here because the cost of
+   * one creeping back in is not a broken bridge but a permanently noisy one, which is
+   * the kind of thing nobody gets around to chasing.
+   */
+  const DEPRECATED_PARAMETERS = [
+    'lanman auth',
+    'client lanman auth',
+    // Governed NTLMv2 inside raw NTLMSSP, which Samba now always permits. Not what an
+    // iTNC 530 needs either: that control speaks NTLM, which is `ntlm auth`.
+    'raw NTLMv2 auth',
+  ];
+
+  it.each(DEPRECATED_PARAMETERS)('never writes the deprecated %s', (parameter) => {
+    // Matches an assignment, not a mention: the template explains in a comment why each
+    // of these is absent, and that prose must not fail its own guard.
+    const directive = new RegExp(`^\\s*${parameter}\\s*=`, 'im');
+    expect(build({ ntlmAuth: true })).not.toMatch(directive);
+    expect(build({ ntlmAuth: false })).not.toMatch(directive);
+  });
+
   it('never enables lanman auth, whatever is asked of it', () => {
     // R2: some very old controls need it. It is off by default and opt-in only.
     // Not written at all. Samba has defaulted it off since 4.0 and now warns that the
