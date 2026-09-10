@@ -967,3 +967,94 @@ describe('os-update', () => {
     expect(() => build({ ...REQUEST, reboot: 'yes; rm -rf /' })).toThrow();
   });
 });
+
+describe('set-samba-user', () => {
+  const REQUEST = {
+    verb: 'set-samba-user',
+    username: 'tnc-werkstatt',
+    password: 'geheim',
+    remove: false,
+  };
+
+  it('creates a locked system account to back the Samba one', () => {
+    // Samba refuses an entry for a user getpwnam cannot resolve, so the Unix account
+    // has to exist — but it exists only to be a name Samba can hang a password on.
+    const h = harness();
+
+    execute(build(REQUEST), h.deps);
+
+    const useradd = h.calls.find((argv) => argv[0]?.includes('useradd'));
+    expect(useradd).toContain('--system');
+    expect(useradd).toContain('--no-create-home');
+    expect(useradd).toContain('/usr/sbin/nologin');
+  });
+
+  it('never puts the password in argv', () => {
+    // argv is visible in the process table and in this helper's own audit line.
+    const h = harness();
+
+    execute(build(REQUEST), h.deps);
+
+    for (const argv of h.calls) {
+      expect(argv).not.toContain('geheim');
+    }
+  });
+
+  it('treats an existing account as success, because a password change is normal', () => {
+    // useradd exits 9 for "user already exists", which is the ordinary case here.
+    const h = harness();
+    h.failWhen((argv) => argv[0]?.includes('useradd') === true, { status: 9 });
+
+    expect(() => execute(build(REQUEST), h.deps)).not.toThrow();
+  });
+
+  it('fails loudly when the account cannot be created for another reason', () => {
+    const h = harness();
+    h.failWhen((argv) => argv[0]?.includes('useradd') === true, {
+      status: 1,
+      stderr: 'no space left on device',
+    });
+
+    expect(() => execute(build(REQUEST), h.deps)).toThrow(/no space left/);
+  });
+
+  it('fails when smbpasswd refuses the account', () => {
+    const h = harness();
+    h.failWhen((argv) => argv.includes('-a'), { status: 1, stderr: 'password too short' });
+
+    expect(() => execute(build(REQUEST), h.deps)).toThrow(/password too short/);
+  });
+
+  it('removes the Samba entry before the Unix account', () => {
+    // The other order leaves an smbpasswd entry pointing at a uid that no longer
+    // resolves, which makes every later call on that name fail.
+    const h = harness();
+
+    execute(build({ ...REQUEST, remove: true }), h.deps);
+
+    const smbIndex = h.calls.findIndex((argv) => argv.includes('-x'));
+    const userdelIndex = h.calls.findIndex((argv) => argv[0]?.includes('userdel'));
+    expect(smbIndex).toBeGreaterThanOrEqual(0);
+    expect(userdelIndex).toBeGreaterThan(smbIndex);
+  });
+
+  it('does not fail when removing an account that was never created', () => {
+    const h = harness();
+    h.failWhen(() => true, { status: 1 });
+
+    expect(() => execute(build({ ...REQUEST, remove: true }), h.deps)).not.toThrow();
+  });
+
+  it('refuses an empty password, because an account with none is not one', () => {
+    expect(() => build({ ...REQUEST, password: '' })).toThrow();
+  });
+
+  it.each([
+    ['a name outside the namespace', 'root'],
+    ['a leading dash', '-rf'],
+    ['an uppercase name', 'TNC-Werkstatt'],
+    ['a path', 'tnc-../../etc/passwd'],
+  ])('rejects %s', (_label, username) => {
+    expect(() => build({ ...REQUEST, username })).toThrow();
+  });
+});

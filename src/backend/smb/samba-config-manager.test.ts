@@ -279,6 +279,103 @@ describe('render', () => {
   });
 });
 
+describe('TNC-side accounts', () => {
+  /** The set-samba-user calls made, in order. */
+  const accountCalls = (): { username: string; remove: boolean }[] =>
+    invoked
+      .filter((r) => r.verb === 'set-samba-user')
+      .map((r) => r as { username: string; remove: boolean });
+
+  it('creates the account a share authenticates against', () => {
+    addShare('werkstatt', { tncGuestOk: false, tncUser: 'cnc', tncPassword: 'geheim' });
+
+    manager().reconcile();
+
+    expect(accountCalls()).toContainEqual(
+      expect.objectContaining({ username: 'tnc-werkstatt', remove: false }),
+    );
+  });
+
+  it('names the account in valid users, so the share actually requires it', () => {
+    addShare('werkstatt', { tncGuestOk: false, tncUser: 'cnc', tncPassword: 'geheim' });
+
+    manager().reconcile();
+
+    expect(written()).toMatch(/\[werkstatt][\s\S]*?valid users\s*=\s*tnc-werkstatt/);
+  });
+
+  it('does not name an account on a guest share', () => {
+    // `valid users` alongside `guest ok = yes` is a contradiction Samba resolves in
+    // favour of the guest, which would make the account silently decorative.
+    addShare('werkstatt', { tncGuestOk: true, tncUser: 'cnc', tncPassword: 'geheim' });
+
+    manager().reconcile();
+
+    expect(written()).not.toMatch(/valid users/);
+  });
+
+  it('removes the account when a share switches to guest access', () => {
+    addShare('werkstatt', { tncGuestOk: true });
+
+    manager().reconcile();
+
+    expect(accountCalls()).toContainEqual(
+      expect.objectContaining({ username: 'tnc-werkstatt', remove: true }),
+    );
+  });
+
+  it('removes the account of a disabled share', () => {
+    // The share is not exported, so an account that can still authenticate against the
+    // appliance is a credential with nothing behind it.
+    addShare('werkstatt', { enabled: false, tncGuestOk: false, tncUser: 'cnc' });
+
+    manager().reconcile();
+
+    expect(accountCalls()).toContainEqual(
+      expect.objectContaining({ username: 'tnc-werkstatt', remove: true }),
+    );
+  });
+
+  it('creates no account for a share that names a user but stored no password', () => {
+    // An account nobody can log into is less use than a logged warning.
+    addShare('werkstatt', { tncGuestOk: false, tncUser: 'cnc' });
+
+    manager().reconcile();
+
+    expect(accountCalls().filter((c) => !c.remove)).toEqual([]);
+  });
+
+  it("writes the config even when one share's account could not be set", () => {
+    // A partial bridge is worth more than none, and the failure is on the record.
+    addShare('werkstatt', { tncGuestOk: false, tncUser: 'cnc', tncPassword: 'geheim' });
+    const samba = new SambaConfigManager({
+      db,
+      config,
+      invoke: (request: { verb: string }) => {
+        if (request.verb === 'set-samba-user') {
+          throw new Error('useradd is missing');
+        }
+        invoked.push(request as never);
+        return { ok: true, verb: request.verb, commands: [], detail: {} };
+      },
+    });
+
+    expect(samba.reconcile()).toBe(true);
+    expect(written()).toContain('[werkstatt]');
+  });
+
+  it('keeps the two passwords apart, since they point in opposite directions', () => {
+    // One reaches the corporate server, one lets a shop-floor control in. Storing them
+    // under the same label would let an envelope be moved between the columns.
+    const store = new ShareStore({ db, config });
+    addShare('werkstatt', { tncGuestOk: false, tncUser: 'cnc', tncPassword: 'tnc-secret' });
+    const id = store.list(10, 0).items[0]!.id;
+
+    expect(store.tncPassword(id)).toBe('tnc-secret');
+    expect(store.password(id)).toBeUndefined();
+  });
+});
+
 describe('restart', () => {
   it('restarts rather than reloads, because smbd reads interfaces only at startup', () => {
     manager().restart();

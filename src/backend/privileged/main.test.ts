@@ -171,10 +171,10 @@ describe('argument handling', () => {
     expect(s.stdout.join('')).toMatch(/reads one JSON request on stdin/i);
   });
 
-  it('lists the thirteen verbs for --list-verbs', () => {
+  it('lists the fourteen verbs for --list-verbs', () => {
     const s = setup({ argv: ['--list-verbs'] });
     expect(runHelper(s.io, s.deps, s.sink)).toBe(EXIT_OK);
-    expect(s.stdout.join('').trim().split('\n')).toHaveLength(13);
+    expect(s.stdout.join('').trim().split('\n')).toHaveLength(14);
   });
 
   it('answers --help even when invoked unprivileged, so operators can read it', () => {

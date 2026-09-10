@@ -108,6 +108,12 @@ const VALID_REQUESTS = {
     healthTimeoutSeconds: 120,
   },
   'os-update': { verb: 'os-update', reboot: false },
+  'set-samba-user': {
+    verb: 'set-samba-user',
+    username: 'tnc-werkstatt',
+    password: 'a-password',
+    remove: false,
+  },
 } as const;
 
 /** Fields a caller controls that must never accept a hostile value. */
@@ -126,11 +132,14 @@ const INJECTABLE_FIELDS: Record<string, readonly string[]> = {
   'self-update': ['targetRef', 'previousRef'],
   // `reboot` is a boolean; there is no string for a payload to hide in.
   'os-update': [],
+  // The password is not listed: it reaches smbpasswd on stdin and is never an argv
+  // element, so a metacharacter in it has nothing to escape into.
+  'set-samba-user': ['username'],
 };
 
 describe('the verb allowlist', () => {
-  it('contains exactly the thirteen verbs of ARCHITECTURE §5.4', () => {
-    expect(PRIVILEGED_VERBS).toHaveLength(13);
+  it('contains exactly the fourteen verbs of ARCHITECTURE §5.4', () => {
+    expect(PRIVILEGED_VERBS).toHaveLength(14);
     expect([...PRIVILEGED_VERBS]).toEqual([
       'mount-share',
       'unmount-share',
@@ -145,6 +154,7 @@ describe('the verb allowlist', () => {
       'apply-update',
       'self-update',
       'os-update',
+      'set-samba-user',
     ]);
   });
 
@@ -191,7 +201,7 @@ describe('every verb accepts its known-good request', () => {
 });
 
 /**
- * The core matrix: 13 verbs × their controllable fields × 13 payloads.
+ * The core matrix: 14 verbs × their controllable fields × 13 payloads.
  *
  * Every combination must throw. A single silent acceptance here is a root compromise,
  * which is why this is exhaustive rather than representative.

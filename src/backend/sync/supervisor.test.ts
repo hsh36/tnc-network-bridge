@@ -78,6 +78,8 @@ function createShare(name: string, overrides: Record<string, unknown> = {}): num
     bandwidthLimitKbps: null,
     maxFileSizeMb: 512,
     tncGuestOk: true,
+    tncUser: null,
+    tncPassword: '',
     ...overrides,
   });
   // The real paths are /mnt and /srv, which a test cannot create. Point them at a temp

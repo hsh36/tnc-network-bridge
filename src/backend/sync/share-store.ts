@@ -53,6 +53,8 @@ interface ShareRow {
   read_only: number;
   failover_read_only: number;
   tnc_guest_ok: number;
+  tnc_user: string | null;
+  tnc_password: string | null;
   status: string;
   last_scan_at: number | null;
   last_error: string | null;
@@ -63,6 +65,30 @@ interface ShareRow {
 /** Binds a password envelope to the row it belongs to; see `ConfigManager.encryptFor`. */
 function passwordAad(shareId: number): string {
   return `shares.${String(shareId)}.smbPassword`;
+}
+
+/**
+ * The TNC-side password's own label.
+ *
+ * Deliberately different from {@link passwordAad}. The two credentials point in
+ * opposite directions — one reaches the corporate server, one lets a shop-floor control
+ * in — and a distinct AAD means an envelope lifted from one column cannot be pasted
+ * into the other even with database access.
+ */
+function tncPasswordAad(shareId: number): string {
+  return `shares.${String(shareId)}.tncPassword`;
+}
+
+/**
+ * The Unix and Samba account name for a share.
+ *
+ * Derived rather than stored: it is a function of the share name, so it cannot drift
+ * out of step with it, and the `tnc-` prefix keeps every account this creates in a
+ * namespace that cannot collide with a real operator login. The helper validates the
+ * same shape independently.
+ */
+export function sambaAccountFor(shareName: string): string {
+  return `tnc-${shareName.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`;
 }
 
 function toShare(row: ShareRow): Share {
@@ -85,6 +111,7 @@ function toShare(row: ShareRow): Share {
     readOnly: row.read_only === 1,
     failoverReadOnly: row.failover_read_only === 1,
     tncGuestOk: row.tnc_guest_ok === 1,
+    tncUser: row.tnc_user,
     status: row.status as Share['status'],
     lastScanAt: row.last_scan_at,
     lastError: row.last_error,
@@ -144,12 +171,12 @@ export class ShareStore {
          name, enabled, server_unc, mount_point, cache_path,
          smb_domain, smb_user, smb_version, smb_seal, conflict_mode,
          exclude_patterns, scan_interval_ms, bandwidth_limit_kbps, max_file_size_mb,
-         tnc_guest_ok, created_at, updated_at
+         tnc_guest_ok, tnc_user, created_at, updated_at
        ) VALUES (
          @name, @enabled, @serverUnc, @mountPoint, @cachePath,
          @smbDomain, @smbUser, @smbVersion, @smbSeal, @conflictMode,
          @excludePatterns, @scanIntervalMs, @bandwidthLimitKbps, @maxFileSizeMb,
-         @tncGuestOk, @now, @now
+         @tncGuestOk, @tncUser, @now, @now
        )`,
       {
         name: input.name,
@@ -167,6 +194,7 @@ export class ShareStore {
         bandwidthLimitKbps: input.bandwidthLimitKbps,
         maxFileSizeMb: input.maxFileSizeMb,
         tncGuestOk: input.tncGuestOk ? 1 : 0,
+        tncUser: input.tncUser,
         now,
       },
     );
@@ -175,6 +203,7 @@ export class ShareStore {
     // Written after the insert because the envelope is bound to the row id, which only
     // exists once the row does.
     this.writePassword(id, input.smbPassword);
+    this.writeTncPassword(id, input.tncPassword);
     return toShare(this.requireRow(id));
   }
 
@@ -218,6 +247,7 @@ export class ShareStore {
     }
 
     this.writePassword(existing.id, patch.smbPassword);
+    this.writeTncPassword(existing.id, patch.tncPassword);
     return toShare(this.requireRow(id));
   }
 
@@ -249,6 +279,26 @@ export class ShareStore {
     this.db.run('UPDATE shares SET smb_password = @password WHERE id = @id', {
       id,
       password: value === '' ? null : this.config.encryptFor(passwordAad(id), value),
+    });
+  }
+
+  /** The password a machine authenticates with, or `undefined` when none is set. */
+  tncPassword(id: number): string | undefined {
+    const row = this.requireRow(id);
+    if (row.tnc_password === null || row.tnc_password === '') {
+      return undefined;
+    }
+    return this.config.decryptFor(tncPasswordAad(id), row.tnc_password);
+  }
+
+  /** Same three-way rule as {@link writePassword}: undefined and the sentinel leave it. */
+  private writeTncPassword(id: number, value: string | undefined): void {
+    if (value === undefined || value === SECRET_SENTINEL) {
+      return;
+    }
+    this.db.run('UPDATE shares SET tnc_password = @password WHERE id = @id', {
+      id,
+      password: value === '' ? null : this.config.encryptFor(tncPasswordAad(id), value),
     });
   }
 

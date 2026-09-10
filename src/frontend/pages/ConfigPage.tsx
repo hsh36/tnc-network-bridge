@@ -9,7 +9,6 @@ import {
   type NetworkConfig,
   type NetworkSide,
   type SecurityConfig,
-  type SmbConfig,
   type SyncConfig,
   type UpdatesConfig,
   type VersioningConfig,
@@ -18,6 +17,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Checkbox, Input, Select } from '../components/ui/Input';
+import { TncSmbGlobals } from '../components/TncSmbGlobals';
 import { Tabs } from '../components/ui/Tabs';
 import { FullPageSpinner } from '../components/ui/Spinner';
 import { CertificateManager } from '../components/CertificateManager';
@@ -428,268 +428,14 @@ function NetworkSection(): JSX.Element {
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('apply_tnc_hint')}</p>
           {noticeFor('tnc')}
+
+          {/* The Samba globals live here rather than in the share dialog, because Samba
+              reads one value per server and not one per stanza. See TncSmbGlobals. */}
+          <TncSmbGlobals />
         </section>
       </div>
 
       {banner}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SMB Settings
-// ---------------------------------------------------------------------------
-
-function SmbSection(): JSX.Element {
-  const t = useTranslation('config');
-  const [form, setForm] = useState<SmbConfig>();
-  const [saving, setSaving] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [testing, setTesting] = useState(false);
-  const { banner, onSaved, onError } = useSaveBanner(t);
-
-  useEffect(() => {
-    void api('config.get', { params: { section: 'smb' } }).then((data) =>
-      setForm(data as SmbConfig),
-    );
-  }, []);
-
-  useEffect(() => {
-    const unsaved = isDirty;
-    window.onbeforeunload = unsaved ? () => true : null;
-    return () => {
-      window.onbeforeunload = null;
-    };
-  }, [isDirty]);
-
-  if (form === undefined) return <FullPageSpinner />;
-
-  const save = (): void => {
-    const validationErrors = validateConfigSection('smb', form);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      onError(new Error(t('validation_failed')));
-      return;
-    }
-    setErrors({});
-    setSaving(true);
-    api('config.update', { params: { section: 'smb' }, body: form })
-      .then((data) => {
-        setForm(data as SmbConfig);
-        setIsDirty(false);
-        onSaved();
-      })
-      .catch(onError)
-      .finally(() => setSaving(false));
-  };
-
-  const testConnection = (): void => {
-    setTesting(true);
-    // TODO: Implement test connection when API route is available
-    setTimeout(() => setTesting(false), 2000);
-  };
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="border-b border-border pb-4 dark:border-border-dark">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-          {t('server_side')}
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select
-            id="serverMinProtocol"
-            label={t('minimum_protocol')}
-            value={form.server.minProtocol}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                server: {
-                  ...form.server,
-                  minProtocol: e.target.value as
-                    'SMB2' | 'SMB3' | 'SMB3_00' | 'SMB3_02' | 'SMB3_11',
-                },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['server.minProtocol']}
-          >
-            <option value="SMB2">SMB 2</option>
-            <option value="SMB3">SMB 3</option>
-            <option value="SMB3_00">SMB 3.0.0</option>
-            <option value="SMB3_02">SMB 3.0.2</option>
-            <option value="SMB3_11">SMB 3.1.1</option>
-          </Select>
-          <Checkbox
-            id="serverSeal"
-            label={t('enable_sealing')}
-            checked={form.server.seal}
-            onChange={(e) => {
-              setForm({ ...form, server: { ...form.server, seal: e.target.checked } });
-              setIsDirty(true);
-            }}
-          />
-        </div>
-        {/*
-          These credentials are the fallback, not the only place an account can be set:
-          `createShareRequestSchema` carries smbDomain/smbUser/smbPassword per share and
-          falls back here when they are omitted. Without this note the section reads as
-          though one account is imposed on every share.
-        */}
-        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          {t('smb_credentials_note')}
-        </p>
-        <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            id="serverDomain"
-            label={t('domain')}
-            value={form.server.credentials.domain}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                server: {
-                  ...form.server,
-                  credentials: { ...form.server.credentials, domain: e.target.value },
-                },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['server.credentials.domain']}
-          />
-          <Input
-            id="serverUsername"
-            label={t('username')}
-            value={form.server.credentials.username}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                server: {
-                  ...form.server,
-                  credentials: { ...form.server.credentials, username: e.target.value },
-                },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['server.credentials.username']}
-          />
-          <Input
-            id="serverPassword"
-            label={t('password')}
-            type="password"
-            value={
-              form.server.credentials.password === '********'
-                ? ''
-                : form.server.credentials.password
-            }
-            placeholder={form.server.credentials.password === '********' ? 'Unchanged' : undefined}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                server: {
-                  ...form.server,
-                  credentials: { ...form.server.credentials, password: e.target.value },
-                },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['server.credentials.password']}
-          />
-        </div>
-      </div>
-
-      <div className="border-b border-border pb-4 dark:border-border-dark">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-          {t('tnc_side')}
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Select
-            id="tncMinProtocol"
-            label={t('minimum_protocol')}
-            value={form.tnc.minProtocol}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                tnc: { ...form.tnc, minProtocol: e.target.value as 'NT1' | 'SMB2' | 'SMB3' },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['tnc.minProtocol']}
-          >
-            <option value="NT1">NT1</option>
-            <option value="SMB2">SMB 2</option>
-            <option value="SMB3">SMB 3</option>
-          </Select>
-          <Select
-            id="tncMaxProtocol"
-            label={t('maximum_protocol')}
-            value={form.tnc.maxProtocol}
-            onChange={(e) => {
-              setForm({
-                ...form,
-                tnc: { ...form.tnc, maxProtocol: e.target.value as 'NT1' | 'SMB2' | 'SMB3' },
-              });
-              setIsDirty(true);
-            }}
-            error={errors['tnc.maxProtocol']}
-          >
-            <option value="NT1">NT1</option>
-            <option value="SMB2">SMB 2</option>
-            <option value="SMB3">SMB 3</option>
-          </Select>
-        </div>
-        <div className="mt-4 flex flex-col gap-2">
-          <Checkbox
-            id="tncNtlmAuth"
-            label={t('enable_ntlm')}
-            checked={form.tnc.ntlmAuth}
-            onChange={(e) => {
-              setForm({ ...form, tnc: { ...form.tnc, ntlmAuth: e.target.checked } });
-              setIsDirty(true);
-            }}
-          />
-          <Checkbox
-            id="tncLanmanAuth"
-            label={t('enable_lanman')}
-            checked={form.tnc.lanmanAuth}
-            onChange={(e) => {
-              setForm({ ...form, tnc: { ...form.tnc, lanmanAuth: e.target.checked } });
-              setIsDirty(true);
-            }}
-          />
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            id="tncDosCharset"
-            label={t('dos_charset')}
-            value={form.tnc.dosCharset}
-            onChange={(e) => {
-              setForm({ ...form, tnc: { ...form.tnc, dosCharset: e.target.value } });
-              setIsDirty(true);
-            }}
-            error={errors['tnc.dosCharset']}
-          />
-          <Input
-            id="tncWorkgroup"
-            label={t('workgroup')}
-            value={form.tnc.workgroup}
-            onChange={(e) => {
-              setForm({ ...form, tnc: { ...form.tnc, workgroup: e.target.value } });
-              setIsDirty(true);
-            }}
-            error={errors['tnc.workgroup']}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={save} loading={saving} disabled={!isDirty} className="w-fit">
-          {t('save_button')}
-        </Button>
-        <Button onClick={testConnection} variant="secondary" loading={testing} className="w-fit">
-          {t('test_connection_button')}
-        </Button>
-        {banner}
-      </div>
     </div>
   );
 }
@@ -1709,7 +1455,6 @@ export function ConfigPage(): JSX.Element {
           <Tabs
             items={[
               { id: 'network', label: t('network'), content: <NetworkSection /> },
-              { id: 'smb', label: 'SMB', content: <SmbSection /> },
               { id: 'dhcp', label: t('dhcp'), content: <DhcpSection /> },
               { id: 'shares', label: t('tab_shares'), content: <SharesSection /> },
               { id: 'sync', label: t('tab_sync'), content: <SyncSection /> },

@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { configSectionNameSchema } from '../../../shared';
+import { configSectionNameSchema, SECRET_SENTINEL, testSmbRequestSchema } from '../../../shared';
 import { rateLimit } from '../../security/rate-limit';
+import { testSmbConnection } from '../../smb/tester';
 import { type AppContext } from '../context';
-import { ok, requireCsrf, requireSession } from '../middleware';
+import { asyncHandler, ok, requireCsrf, requireSession } from '../middleware';
 
 /**
  * `/config/:section` (T30), over T5's {@link AppContext.config}, hardened per T43.
@@ -35,6 +36,59 @@ export function configRoutes(ctx: AppContext): Router {
       });
     },
   });
+
+  /**
+   * Probe a server share before committing to it.
+   *
+   * The contract has declared this since the API was written and no route stood behind
+   * it, so the "Test" button had nothing to call. `tester.ts` — which classifies the
+   * failure into something an operator can act on, rather than passing through
+   * smbclient's output — was likewise complete and unreachable.
+   *
+   * `probeWrite` is off. This runs against a live production share on somebody's file
+   * server, from a form the operator may still be typing into; listing and connecting
+   * prove reachability and credentials without creating a file on it.
+   */
+  router.post(
+    '/config/test/smb',
+    requireSession(ctx),
+    requireCsrf(ctx),
+    limitWrites,
+    asyncHandler(async (req, res) => {
+      const body = testSmbRequestSchema.parse(req.body);
+      const credentials = ctx.config.get('smb').server.credentials;
+
+      const result = await testSmbConnection({
+        unc: body.unc,
+        // Falls back to the configured service account, which is what makes the button
+        // useful on a share whose own credentials have not been filled in yet.
+        domain: body.domain ?? credentials.domain,
+        username: body.username ?? credentials.username,
+        // The sentinel means "the stored one": a client testing a share it fetched has
+        // never held the plaintext and cannot send it.
+        password:
+          body.password === undefined || body.password === SECRET_SENTINEL
+            ? ctx.config.getSecret('smb.server.credentials.password')
+            : body.password,
+        ...(body.smbVersion === undefined ? {} : { smbVersion: body.smbVersion }),
+        ...(body.seal === undefined ? {} : { seal: body.seal }),
+        probeWrite: false,
+      });
+
+      ctx.audit?.record({
+        actor: 'admin',
+        action: 'config.testSmb',
+        target: body.unc,
+        detail: result.success ? 'ok' : `failed: ${result.failure}`,
+        ...(req.ip === undefined ? {} : { ip: req.ip }),
+      });
+
+      // 200 even for a refused connection: the probe ran and reached a verdict, which
+      // is a result. A 5xx would say the appliance failed, and send the operator
+      // looking in the wrong place.
+      ok(res, result);
+    }),
+  );
 
   router.get('/config/:section', requireSession(ctx), (req, res) => {
     const section = configSectionNameSchema.parse(req.params.section);

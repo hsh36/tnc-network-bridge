@@ -23,7 +23,11 @@ const EMPTY: ShareSidesValue = {
   smbPassword: '',
   smbVersion: '3.1.1',
   smbSeal: true,
-  tncGuestOk: true,
+  // Off, matching the schema default. Guest access on a machine segment is defensible
+  // and often what a shop wants, but a default that has to be undone is not a default.
+  tncGuestOk: false,
+  tncUser: '',
+  tncPassword: '',
 };
 
 export function ShareCreate({
@@ -56,6 +60,10 @@ export function ShareCreate({
         smbVersion: value.smbVersion,
         smbSeal: value.smbSeal,
         tncGuestOk: value.tncGuestOk,
+        // Same three-way rule as the server-side credential: null means "no account",
+        // which is what a guest share has.
+        tncUser: value.tncUser.trim() === '' ? null : value.tncUser.trim(),
+        ...(value.tncPassword === '' ? {} : { tncPassword: value.tncPassword }),
       },
     })
       .then(() => {
@@ -68,7 +76,10 @@ export function ShareCreate({
       .finally(() => setSaving(false));
   };
 
-  const incomplete = value.name.trim() === '' || value.serverUnc.trim() === '';
+  // A share that refuses guests and names nobody can be reached by no machine at all,
+  // which is a share that does not work rather than one that is merely strict.
+  const needsAccount = !value.tncGuestOk && value.tncUser.trim() === '';
+  const incomplete = value.name.trim() === '' || value.serverUnc.trim() === '' || needsAccount;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

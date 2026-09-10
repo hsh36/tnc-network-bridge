@@ -41,6 +41,14 @@ export const shareSchema = z.object({
   /** Set by the failover controller when the server is unreachable (T23). Not operator-editable. */
   failoverReadOnly: z.boolean(),
   tncGuestOk: z.boolean(),
+  /**
+   * The account a machine authenticates as, or null for none.
+   *
+   * Separate from `smbUser`, which is how the *bridge* reaches the server. These are
+   * two different directions and two different credentials, and conflating them is how
+   * a service account's password ends up on a shop-floor control.
+   */
+  tncUser: z.string().nullable(),
   status: shareStatusSchema,
   lastScanAt: unixSecondsSchema.nullable(),
   lastError: z.string().nullable(),
@@ -91,7 +99,13 @@ export const createShareRequestSchema = z
     scanIntervalMs: z.number().int().min(1000).max(600_000).default(15_000),
     bandwidthLimitKbps: z.number().int().positive().nullable().default(null),
     maxFileSizeMb: z.number().int().min(1).max(102_400).default(512),
-    tncGuestOk: z.boolean().default(true),
+    // Off by default. Guest access on a machine segment is defensible and often what a
+    // shop wants, but defaulting to it means every share ever created is open until
+    // somebody notices — a default that has to be undone is not a default.
+    tncGuestOk: z.boolean().default(false),
+    tncUser: z.string().max(32).nullable().default(null),
+    /** AES-256-GCM at rest; never returned in plaintext by the API. */
+    tncPassword: secretWriteSchema.default(''),
   })
   .strict();
 

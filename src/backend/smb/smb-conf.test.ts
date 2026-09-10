@@ -50,9 +50,12 @@ describe('renderSmbConf', () => {
     expect(content).toContain('server signing = disabled');
   });
 
-  it('exposes lanman auth for the controls that still demand it', () => {
+  it('never enables lanman auth, whatever is asked of it', () => {
     // R2: some very old controls need it. It is off by default and opt-in only.
-    expect(build({ lanmanAuth: true })).toContain('lanman auth = yes');
+    // Not a setting any more. LANMAN is a lookup table rather than encryption, and
+    // every SMB1 control this bridge exists for speaks NTLM.
+    expect(build({})).toContain('lanman auth = no');
+    expect(build({})).not.toContain('lanman auth = yes');
   });
 
   it('uses CP850 for the DOS charset', () => {

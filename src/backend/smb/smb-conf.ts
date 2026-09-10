@@ -64,7 +64,6 @@ export interface SmbConfInput {
   readonly serverString?: string;
   readonly maxProtocol?: 'NT1' | 'SMB2' | 'SMB3';
   readonly ntlmAuth?: boolean;
-  readonly lanmanAuth?: boolean;
   readonly dosCharset?: string;
   readonly unixCharset?: string;
   readonly logLevel?: number;
@@ -167,7 +166,14 @@ const TEMPLATE_SOURCE = `#
   # are unacceptable on a corporate LAN, which is exactly why this listener is
   # confined to the TNC interface below.
   ntlm auth = {{#if ntlmAuth}}yes{{else}}no{{/if}}
-  lanman auth = {{#if lanmanAuth}}yes{{else}}no{{/if}}
+  # Never yes, and no longer a setting.
+  #
+  # LANMAN hashes the password twice with DES over a 7-character half, uppercased. It is
+  # not weak encryption, it is a lookup table — and every SMB1 control this bridge exists
+  # for speaks NTLM, which is the option above. Making it configurable meant offering an
+  # operator a switch whose only effect is to publish their password.
+  lanman auth = no
+  client lanman auth = no
   raw NTLMv2 auth = {{#if ntlmAuth}}yes{{else}}no{{/if}}
   server signing = disabled
   server smb encrypt = off
@@ -279,7 +285,6 @@ export function renderSmbConf(input: SmbConfInput): string {
     serverString: sanitiseValue(input.serverString ?? 'TNC Network Bridge', 'serverString'),
     maxProtocol: input.maxProtocol ?? 'SMB3',
     ntlmAuth: input.ntlmAuth ?? true,
-    lanmanAuth: input.lanmanAuth ?? false,
     tncInterface: sanitiseValue(input.tncInterface, 'tncInterface'),
     unixCharset: sanitiseValue(input.unixCharset ?? 'UTF-8', 'unixCharset'),
     dosCharset: sanitiseValue(input.dosCharset ?? 'CP850', 'dosCharset'),

@@ -76,7 +76,9 @@ describe('configuration defaults', () => {
     const smb = smbConfigSchema.parse({});
     expect(smb.tnc.minProtocol).toBe('NT1');
     expect(smb.tnc.dosCharset).toBe('CP850');
-    expect(smb.tnc.lanmanAuth).toBe(false);
+    // LANMAN is not a setting any more: it is a lookup table rather than encryption,
+    // and every SMB1 control this bridge exists for speaks NTLM.
+    expect('lanmanAuth' in smb.tnc).toBe(false);
     expect(smb.server.minProtocol).toBe('SMB3_11');
     expect(smb.server.seal).toBe(true);
   });

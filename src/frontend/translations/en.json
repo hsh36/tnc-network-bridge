@@ -121,7 +121,6 @@
     "tnc_side": "TNC (Machine side)",
     "maximum_protocol": "Maximum protocol",
     "enable_ntlm": "Enable NTLM authentication",
-    "enable_lanman": "Enable LANMAN authentication (legacy)",
     "dos_charset": "DOS character set",
     "workgroup": "Workgroup",
     "test_connection_button": "Test Connection",
@@ -229,7 +228,13 @@
     "hostname_placeholder": "tnc-bridge",
     "save_and_apply_button": "Save and apply",
     "lan_saved_not_applied": "Saved. Press \"Apply\" to activate — this can interrupt your connection.",
-    "apply_tnc_hint": "Changes to the machine side take effect immediately. Your connection is on the LAN side and is not affected."
+    "apply_tnc_hint": "Changes to the machine side take effect immediately. Your connection is on the LAN side and is not affected.",
+    "tnc_smb_title": "SMB settings for the machine side",
+    "tnc_smb_hint": "These apply to the whole machine side, not to a single share — Samba reads one value per server. Per-share access is set on the share itself.",
+    "workgroup_hint": "The workgroup the machines expect. WORKGROUP unless your controls were configured otherwise.",
+    "dos_charset_hint": "Character set for SMB 1 clients. CP850 for German umlauts on HEIDENHAIN controls.",
+    "load_error": "Could not load the settings",
+    "loading": "Loading…"
   },
   "locks": {
     "title": "Locks & Conflicts",
@@ -657,7 +662,19 @@
     "create_button": "Create share",
     "create_error": "The share could not be created.",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "advanced": "Advanced",
+    "test_button": "Test connection",
+    "test_hint": "Lists the share and connects to it. Nothing is written to the server.",
+    "test_reachable": "Reachable",
+    "test_failed": "Failed",
+    "test_ok": "Connected. Dialect: {dialect}.",
+    "test_error": "The test could not be run",
+    "tnc_user": "User",
+    "tnc_user_hint": "The account the machines log in with. Only used when guest access is off.",
+    "tnc_password": "Password",
+    "tnc_password_hint": "The password the machines log in with.",
+    "tnc_password_stored": "A password is stored. Leave empty to keep it."
   },
   "security": {
     "certificate_title": "Web interface certificate",

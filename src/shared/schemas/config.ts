@@ -222,8 +222,6 @@ export const smbConfigSchema = z
         minProtocol: tncProtocolSchema.default('NT1'),
         maxProtocol: tncProtocolSchema.default('SMB3'),
         ntlmAuth: z.boolean().default(true),
-        /** LANMAN is broken beyond repair; off unless a machine truly cannot do anything else. */
-        lanmanAuth: z.boolean().default(false),
         dosCharset: z.string().max(32).default('CP850'),
         workgroup: z
           .string()

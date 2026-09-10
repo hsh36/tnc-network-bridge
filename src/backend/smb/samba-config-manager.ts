@@ -1,7 +1,7 @@
 import { type ConfigManager } from '../config/config-manager';
 import { type Db, type DbLogger } from '../config/db';
 import { invokePrivileged, type HelperInvoker } from '../privileged/client';
-import { ShareStore } from '../sync/share-store';
+import { sambaAccountFor, ShareStore } from '../sync/share-store';
 
 import { buildSmbConf, type SmbShareConfig } from './smb-conf';
 
@@ -72,6 +72,12 @@ export class SambaConfigManager {
         path: share.cachePath,
         readOnly: share.readOnly || share.failoverReadOnly,
         guestOk: share.tncGuestOk,
+        // Named only when the share actually authenticates. `valid users` alongside
+        // `guest ok = yes` is a contradiction Samba resolves in favour of the guest,
+        // which would silently make the account decorative.
+        ...(share.tncGuestOk || share.tncUser === null
+          ? {}
+          : { validUsers: [sambaAccountFor(share.name)] }),
         ...(share.excludePatterns.length > 0 ? { extraVetoFiles: share.excludePatterns } : {}),
       }));
 
@@ -85,10 +91,52 @@ export class SambaConfigManager {
       ...(network.tnc.hostname === '' ? {} : { netbiosName: network.tnc.hostname }),
       maxProtocol: smb.tnc.maxProtocol,
       ntlmAuth: smb.tnc.ntlmAuth,
-      lanmanAuth: smb.tnc.lanmanAuth,
       dosCharset: smb.tnc.dosCharset,
       shares,
     });
+  }
+
+  /**
+   * Create or drop the Samba accounts the shares call for.
+   *
+   * Before the file is written, so a `valid users` line never names an account that
+   * does not exist yet — smbd would accept the stanza and refuse every login against
+   * it, which looks to an operator exactly like a wrong password.
+   *
+   * Each share is handled in its own try/catch. One share with an unwritable account
+   * must not stop the others from being exported: a partial bridge is worth more than
+   * none, and the failure is on the record either way.
+   */
+  private reconcileAccounts(): void {
+    for (const share of this.shares.list(500, 0).items) {
+      const account = sambaAccountFor(share.name);
+      try {
+        if (!share.enabled || share.tncGuestOk || share.tncUser === null) {
+          // Removing is idempotent and safe for an account that was never created; the
+          // helper allows both of its commands to fail.
+          this.invoke({ verb: 'set-samba-user', username: account, password: '', remove: true });
+          continue;
+        }
+
+        const password = this.shares.tncPassword(share.id);
+        if (password === undefined) {
+          // A share that names a user but has no password stored cannot authenticate
+          // anyone. Saying so is more use than an account nobody can log into.
+          this.logger?.warn(
+            { share: share.name },
+            'share has a TNC user but no password; no account was created',
+          );
+          continue;
+        }
+
+        this.invoke({ verb: 'set-samba-user', username: account, password, remove: false });
+      } catch (error) {
+        this.logger?.error(
+          { share: share.name, error: error instanceof Error ? error.message : String(error) },
+          'could not reconcile the Samba account for a share',
+        );
+      }
+    }
   }
 
   /**
@@ -100,6 +148,8 @@ export class SambaConfigManager {
    * failure is logged, and the next reconcile tries again.
    */
   reconcile(): boolean {
+    this.reconcileAccounts();
+
     let content: string;
     try {
       content = this.render();

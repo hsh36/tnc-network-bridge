@@ -22,6 +22,7 @@ import {
   type Fail2banUnbanRequest,
   type SelfUpdateRequest,
   type OsUpdateRequest,
+  type SetSambaUserRequest,
   type InstallCertRequest,
   type MountShareRequest,
   type PrivilegedRequest,
@@ -877,6 +878,87 @@ function osUpdate(request: OsUpdateRequest, deps: HandlerDeps, log: CommandLog):
 }
 
 // ---------------------------------------------------------------------------
+// 14 · set-samba-user
+// ---------------------------------------------------------------------------
+
+/**
+ * The Unix account behind a Samba one.
+ *
+ * `--system` with no home, no shell and a locked password. Samba refuses an entry for a
+ * user `getpwnam` cannot resolve, so the account has to exist — but it exists only to be
+ * a name Samba can hang a password on. Nothing should be able to log in as it, over SSH
+ * or anywhere else, which is what `/usr/sbin/nologin` and `!` in the shadow field buy.
+ */
+function ensureUnixAccount(username: string, deps: HandlerDeps, log: CommandLog): void {
+  const result = log.exec(
+    [
+      deps.resolve('useradd'),
+      '--system',
+      '--no-create-home',
+      '--shell',
+      '/usr/sbin/nologin',
+      username,
+    ],
+    { allowFailure: true },
+  );
+
+  // Exit 9 is "user already exists", which is the normal case on a password change and
+  // not a failure. Anything else is.
+  if (result.status !== 0 && result.status !== 9) {
+    throw new PrivilegedExecutionError(
+      'set-samba-user',
+      `could not create the account ${username}: ${result.stderr.trim() || result.stdout.trim()}`,
+    );
+  }
+}
+
+function setSambaUser(
+  request: SetSambaUserRequest,
+  deps: HandlerDeps,
+  log: CommandLog,
+): HandlerResult {
+  const smbpasswd = deps.resolve('smbpasswd');
+
+  if (request.remove) {
+    // Samba first, then Unix: the reverse order leaves an smbpasswd entry pointing at a
+    // uid that no longer resolves, which makes every later smbpasswd call on that name
+    // fail. Both are allowed to fail — removing a share whose account was never created
+    // must not error.
+    log.exec([smbpasswd, '-x', request.username], { allowFailure: true });
+    log.exec([deps.resolve('userdel'), request.username], { allowFailure: true });
+    return {
+      verb: 'set-samba-user',
+      commands: log.entries,
+      detail: { username: request.username, removed: true },
+    };
+  }
+
+  ensureUnixAccount(request.username, deps, log);
+
+  // `-s` reads the password from stdin, twice, and `-a` adds or updates. Passing it in
+  // argv would put it in the process table and in this helper's own audit line.
+  const set = log.exec([smbpasswd, '-s', '-a', request.username], {
+    input: `${request.password}\n${request.password}\n`,
+    allowFailure: true,
+  });
+  if (set.status !== 0) {
+    throw new PrivilegedExecutionError(
+      'set-samba-user',
+      `smbpasswd rejected the account ${request.username}: ${set.stderr.trim() || set.stdout.trim()}`,
+    );
+  }
+
+  // Added accounts start disabled on some builds; enabling is idempotent.
+  log.exec([smbpasswd, '-e', request.username], { allowFailure: true });
+
+  return {
+    verb: 'set-samba-user',
+    commands: log.entries,
+    detail: { username: request.username, removed: false },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
 
@@ -912,6 +994,8 @@ export function execute(
       return selfUpdate(request, deps, log);
     case 'os-update':
       return osUpdate(request, deps, log);
+    case 'set-samba-user':
+      return setSambaUser(request, deps, log);
     case 'fail2ban-unban':
       return fail2banUnban(request, deps, log);
     case 'install-cert':

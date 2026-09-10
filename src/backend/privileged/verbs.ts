@@ -36,6 +36,7 @@ export const PRIVILEGED_VERBS = [
   'apply-update',
   'self-update',
   'os-update',
+  'set-samba-user',
 ] as const;
 
 export type PrivilegedVerb = (typeof PRIVILEGED_VERBS)[number];
@@ -393,6 +394,28 @@ export interface OsUpdateRequest {
   readonly reboot: boolean;
 }
 
+/**
+ * Create, update or remove the Samba account a share authenticates a machine against.
+ *
+ * Samba keeps its own password database, but every entry in it must correspond to a
+ * real Unix account — smbpasswd refuses a user `getpwnam` cannot resolve. So this
+ * creates a locked system account with no shell and no home to back the Samba one:
+ * something a TNC can authenticate as over SMB and nobody can log in as over anything
+ * else.
+ *
+ * The account name is derived from the share by the caller and constrained here. The
+ * password reaches smbpasswd on stdin, never in argv, so it cannot appear in the
+ * process table or in an audit line.
+ */
+export interface SetSambaUserRequest {
+  readonly verb: 'set-samba-user';
+  readonly username: string;
+  /** Empty with `remove: false` is refused: an account with no password is not one. */
+  readonly password: string;
+  /** Removes the account instead of creating it. `password` is ignored. */
+  readonly remove: boolean;
+}
+
 export type PrivilegedRequest =
   | MountShareRequest
   | UnmountShareRequest
@@ -406,7 +429,8 @@ export type PrivilegedRequest =
   | ServiceRestartRequest
   | ApplyUpdateRequest
   | SelfUpdateRequest
-  | OsUpdateRequest;
+  | OsUpdateRequest
+  | SetSambaUserRequest;
 
 export interface ValidateOptions {
   /** Injected so tests need not depend on the host's real interfaces. */
@@ -644,6 +668,20 @@ export function validateRequest(raw: unknown, options: ValidateOptions = {}): Pr
     case 'os-update':
       return { verb, reboot: requireBoolean(verb, 'reboot', input.reboot ?? false) };
 
+    case 'set-samba-user': {
+      const remove = requireBoolean(verb, 'remove', input.remove ?? false);
+      const password = remove ? '' : requireString(verb, 'password', input.password, 256);
+      if (!remove && password === '') {
+        throw new PrivilegedValidationError(verb, 'password', 'must not be empty');
+      }
+      return {
+        verb,
+        username: validateSambaUsername(verb, input.username),
+        password,
+        remove,
+      };
+    }
+
     case 'apply-update': {
       const version = validateVersion(verb, input.version);
       return {
@@ -695,6 +733,26 @@ export function validateHostname(verb: string, field: string, value: unknown): s
       verb,
       field,
       'must be a hostname: letters, digits and dashes, in dot-separated labels',
+    );
+  }
+  return name;
+}
+
+/**
+ * A Unix account name this helper is willing to create.
+ *
+ * Narrower than what `useradd` accepts, and deliberately so: the prefix confines every
+ * account this ever makes to a namespace that cannot collide with a real operator's
+ * login, and the character set rules out the leading dash that `useradd` would read as
+ * an option.
+ */
+export function validateSambaUsername(verb: string, value: unknown): string {
+  const name = requireString(verb, 'username', value, 32);
+  if (!/^tnc-[a-z0-9][a-z0-9_-]{0,26}$/.test(name)) {
+    throw new PrivilegedValidationError(
+      verb,
+      'username',
+      'must start with "tnc-" and contain only lowercase letters, digits, dash and underscore',
     );
   }
   return name;
