@@ -5,6 +5,7 @@ import { type LockManager } from '../locking/lock-manager';
 import { type BridgeMetrics } from '../monitoring/registry';
 import { type Scheduler } from '../scheduling/scheduler';
 import { type AuditLog } from '../security/audit-log';
+import { type SyncSupervisor } from '../sync/supervisor';
 import { type VersionStore } from '../versioning/version-store';
 import { type AuthManager } from './auth';
 import { type EventBus } from './event-bus';
@@ -51,6 +52,12 @@ export interface AppContext {
   readonly certDir: string;
   /** Present once the HTTPS server has started; lets certificate changes hot-reload. */
   httpsManager?: HttpsServerManager;
+  /**
+   * Present in the running service; absent in tests that only exercise routes. A route
+   * asks it to reconcile after changing a share — never to "start" one, because what
+   * starts a share is the share being enabled.
+   */
+  readonly sync?: SyncSupervisor;
   readonly version: string;
   readonly startedAt: number;
   readonly now: () => number;

@@ -12,14 +12,26 @@ import { HttpError } from '../envelope';
 import { ok, requireCsrf, requireSession, requireSessionOrToken } from '../middleware';
 
 /**
+ * Bring the running syncs in line with what was just written.
+ *
+ * Fire-and-forget on purpose: the caller asked to save a share, and a mount that takes
+ * twenty seconds to time out must not hold their save open. Whether a share syncs is
+ * decided by its `enabled` column, which is now stored — reconciliation is how that
+ * becomes true, not a second thing the operator has to ask for.
+ */
+function reconcile(ctx: AppContext): void {
+  void ctx.sync?.reconcile();
+}
+
+/**
  * `/shares` — the bridge's central object: one server export, mirrored into a local
  * cache, re-served to the machines.
  *
- * CRUD is real; actions are not. The sync orchestrator is not yet part of the running
- * service, so `scan`, `resync`, `mount` and the rest answer 503 rather than the
- * contract's `{accepted: true, operationId}` — that shape promises queued work the
- * caller can follow on the event stream, and answering it while doing nothing would
- * leave the UI waiting forever for a scan that never starts.
+ * Actions act on the running supervisor. `scan` and `resync` bring the next cycle
+ * forward; `pause` and `resume` suspend transfers without unmounting or losing the
+ * index. `mount`/`unmount` are reconciliation in disguise — what decides whether a
+ * share is mounted is whether it is enabled — so they are answered by asking the
+ * supervisor to converge rather than by poking the mount directly.
  */
 
 function idParam(value: unknown): number {
@@ -28,6 +40,30 @@ function idParam(value: unknown): number {
     throw new HttpError(400, 'VALIDATION_FAILED', 'Expected a positive integer id');
   }
   return n;
+}
+
+/** Maps a share action onto the supervisor. Returns false when the share is not running. */
+function runAction(ctx: AppContext, shareId: number, action: string): boolean {
+  const sync = ctx.sync;
+  if (sync === undefined) {
+    return false;
+  }
+  switch (action) {
+    case 'pause':
+      return sync.setPaused(shareId, true);
+    case 'resume':
+      return sync.setPaused(shareId, false);
+    case 'mount':
+    case 'unmount':
+      // Both are "make the running state match the configuration", which is exactly
+      // what reconcile does — and unlike poking the mount, it cannot leave the two
+      // disagreeing.
+      void sync.reconcile();
+      return true;
+    default:
+      // scan and resync: bring the next cycle forward.
+      return sync.runNow(shareId);
+  }
 }
 
 function toHttp(error: unknown): unknown {
@@ -60,6 +96,7 @@ export function sharesRoutes(ctx: AppContext): Router {
         detail: `serverUnc=${share.serverUnc}`,
         ...(req.ip === undefined ? {} : { ip: req.ip }),
       });
+      reconcile(ctx);
       ok(res, share, 201);
     } catch (error) {
       throw toHttp(error);
@@ -86,6 +123,7 @@ export function sharesRoutes(ctx: AppContext): Router {
         detail: Object.keys(body).join(', '),
         ...(req.ip === undefined ? {} : { ip: req.ip }),
       });
+      reconcile(ctx);
       ok(res, share);
     } catch (error) {
       throw toHttp(error);
@@ -103,13 +141,14 @@ export function sharesRoutes(ctx: AppContext): Router {
         target: share.name,
         ...(req.ip === undefined ? {} : { ip: req.ip }),
       });
+      reconcile(ctx);
       ok(res, { acknowledged: true as const });
     } catch (error) {
       throw toHttp(error);
     }
   });
 
-  router.post('/shares/:id/:action', requireSession(ctx), requireCsrf(ctx), (req) => {
+  router.post('/shares/:id/:action', requireSession(ctx), requireCsrf(ctx), (req, res) => {
     const id = idParam(req.params.id);
     const action = shareActionSchema.parse(req.params.action);
     try {
@@ -120,19 +159,28 @@ export function sharesRoutes(ctx: AppContext): Router {
         actor: 'admin',
         action: `shares.${action}`,
         target: share.name,
-        result: 'denied',
-        detail: 'the sync orchestrator is not running in this build',
         ...(req.ip === undefined ? {} : { ip: req.ip }),
       });
-      // The contract's success shape is `{accepted: true, operationId}` — a promise
-      // that work was queued and can be followed on the event stream. Nothing was
-      // queued, so answering 200 with that shape would leave the UI waiting for a scan
-      // that is never going to start. 503 says what is actually true.
-      throw new HttpError(
-        503,
-        'SERVICE_UNAVAILABLE',
-        `Share actions need the sync engine, which is not running in this build (requested: ${action})`,
-      );
+      if (ctx.sync === undefined) {
+        // No supervisor means this process is not the one that syncs — a test, or the
+        // dev server. Claiming the work was queued would leave the caller waiting on an
+        // event stream that will never carry a result.
+        throw new HttpError(
+          503,
+          'SERVICE_UNAVAILABLE',
+          `Share actions need the sync engine, which is not running in this process (requested: ${action})`,
+        );
+      }
+
+      const accepted = runAction(ctx, id, action);
+      if (!accepted) {
+        throw new HttpError(
+          409,
+          'CONFLICT',
+          `"${share.name}" is not syncing. Enable the share first.`,
+        );
+      }
+      ok(res, { accepted: true as const, operationId: `${action}-${String(id)}-${String(Date.now())}` });
     } catch (error) {
       throw toHttp(error);
     }

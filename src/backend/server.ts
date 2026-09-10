@@ -13,6 +13,7 @@ import { createBridgeMetrics } from './monitoring/registry';
 import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
+import { SyncSupervisor } from './sync/supervisor';
 import { FirewallService } from './security/firewall-service';
 import { BlobStore } from './versioning/blob-store';
 import { VersionCleanup } from './versioning/cleanup';
@@ -218,7 +219,10 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   });
 
   // Constructed for its side effects; nothing else holds a reference to it.
-  void new VersioningEngine({ store: versions, blobRoot: paths.blobRoot, logger });
+  // Named now rather than discarded: the sync supervisor hands it every file it is
+  // about to overwrite or delete, which is what makes the version history real instead
+  // of a table nothing ever writes to.
+  const versioning = new VersioningEngine({ store: versions, blobRoot: paths.blobRoot, logger });
 
   const cleanup = new VersionCleanup({
     versions,
@@ -234,6 +238,17 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   const schedules = new Scheduler({ db: service.db, jobs, logger, audit });
 
   new ScheduleLockWindowManager({ db: service.db, locks, scheduler: schedules, logger });
+
+  // What actually syncs. `enabled` on a share is the instruction; the supervisor makes
+  // the running state match it, so a reboot resumes on its own and saving a share is
+  // just another reconcile rather than a special "start" path.
+  const sync = new SyncSupervisor({
+    db: service.db,
+    config: service.config,
+    locks,
+    versioning,
+    logger,
+  });
 
   const metrics = createBridgeMetrics();
   const collector = new MetricsCollector({
@@ -290,6 +305,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
       metrics,
       audit,
       shareCacheRoot: createShareCacheRootResolver(service.db),
+      sync,
       logger,
       certDir: paths.certDir,
       version: readPackageVersion(),
@@ -315,7 +331,11 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
     heartbeat.unref();
     started.push(() => clearInterval(heartbeat));
 
+    // After the listener, not before: a first scan of a large share must not delay the
+    // point at which an operator can reach the interface to stop it.
     await https.listen(port, options.host);
+    void sync.reconcile();
+    started.push(() => void sync.stop());
 
     let stopped = false;
     return {
