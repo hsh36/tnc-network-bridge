@@ -75,6 +75,36 @@ export const applyUpdateRequestSchema = z
   })
   .strict();
 
+/** Raspberry Pi OS package updates. */
+export const osUpdatePhaseSchema = z.enum([
+  'idle',
+  'refreshing',
+  'upgrading',
+  'cleaning',
+  'rebooting',
+  'done',
+  'failed',
+]);
+
+export const osUpdateStatusSchema = z.object({
+  phase: osUpdatePhaseSchema,
+  progressPct: z.number().min(0).max(100).nullable(),
+  lastRunAt: unixSecondsSchema.nullable(),
+  lastResult: z.enum(['ok', 'failed']).nullable(),
+  /** Free text from the updater: which step failed, or that a reboot is still pending. */
+  detail: z.string().nullable(),
+  rebootPending: z.boolean(),
+});
+
+export type OsUpdateStatus = z.infer<typeof osUpdateStatusSchema>;
+
+export const runOsUpdateRequestSchema = z
+  .object({
+    /** Overrides the configured `autoReboot` for this run only. */
+    reboot: z.boolean().optional(),
+  })
+  .strict();
+
 export const updateHistoryEntrySchema = z.object({
   id: entityIdSchema,
   ts: unixSecondsSchema,

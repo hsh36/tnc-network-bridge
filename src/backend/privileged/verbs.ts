@@ -35,6 +35,7 @@ export const PRIVILEGED_VERBS = [
   'service-restart',
   'apply-update',
   'self-update',
+  'os-update',
 ] as const;
 
 export type PrivilegedVerb = (typeof PRIVILEGED_VERBS)[number];
@@ -368,6 +369,23 @@ export interface SelfUpdateRequest {
   readonly healthTimeoutSeconds: number;
 }
 
+/**
+ * Run the operating system's package updates.
+ *
+ * Separate from {@link SelfUpdateRequest} because the two fail in unrelated ways and an
+ * operator needs to know which one broke: a bridge that will not start after its own
+ * update is a different problem from a Pi that will not boot after a kernel upgrade.
+ */
+export interface OsUpdateRequest {
+  readonly verb: 'os-update';
+  /**
+   * Reboot afterwards — but only if an upgraded package actually asked for one. The
+   * script checks `/var/run/reboot-required`; nothing else should cost the machine its
+   * uptime.
+   */
+  readonly reboot: boolean;
+}
+
 export type PrivilegedRequest =
   | MountShareRequest
   | UnmountShareRequest
@@ -380,7 +398,8 @@ export type PrivilegedRequest =
   | InstallCertRequest
   | ServiceRestartRequest
   | ApplyUpdateRequest
-  | SelfUpdateRequest;
+  | SelfUpdateRequest
+  | OsUpdateRequest;
 
 export interface ValidateOptions {
   /** Injected so tests need not depend on the host's real interfaces. */
@@ -610,6 +629,9 @@ export function validateRequest(raw: unknown, options: ValidateOptions = {}): Pr
           900,
         ),
       };
+
+    case 'os-update':
+      return { verb, reboot: requireBoolean(verb, 'reboot', input.reboot ?? false) };
 
     case 'apply-update': {
       const version = validateVersion(verb, input.version);

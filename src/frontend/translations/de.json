@@ -392,7 +392,9 @@
     "next_run_now": "fällig jetzt",
     "next_run_min": "in {count} Min",
     "next_run_hour": "in {count} Std",
-    "next_run_day": "in {count} T"
+    "next_run_day": "in {count} T",
+    "os_updates": "Systemupdates (Raspberry Pi OS)",
+    "os_update_help": "Installiert Paketupdates von Raspberry Pi OS. Wird unter Einstellungen > Updates konfiguriert."
   },
   "versions": {
     "title": "Versionen",
@@ -484,7 +486,31 @@
     "update_history": "Update-Verlauf",
     "up_to_date_title": "Aktuell",
     "up_to_date_body": "Version {version} ist die neueste Ausgabe. Geprüft am {date}.",
-    "check_failed_title": "Update-Suche fehlgeschlagen"
+    "check_failed_title": "Update-Suche fehlgeschlagen",
+    "load_failed": "Update-Einstellungen konnten nicht geladen werden",
+    "save_failed": "Update-Einstellungen konnten nicht gespeichert werden",
+    "saved": "Gespeichert",
+    "auto_update_enabled": "Bridge-Updates automatisch installieren",
+    "schedule_cron": "Zeitplan (Cron)",
+    "schedule_cron_hint": "Fünf Felder: Minute Stunde Tag Monat Wochentag. \"0 3 * * 0\" ist Sonntag um 03:00.",
+    "github_repo": "GitHub-Repository",
+    "os_updates_title": "Systemupdates (Raspberry Pi OS)",
+    "os_updates_body": "Installiert Paketupdates von Raspberry Pi OS mit apt. Pakete werden nie automatisch entfernt.",
+    "os_auto_enabled": "Systemupdates automatisch installieren",
+    "os_auto_reboot": "Neu starten, wenn ein Update es erfordert",
+    "os_auto_reboot_hint": "Startet nur neu, wenn ein aktualisiertes Paket es tatsächlich verlangt. Die Bridge ist dabei rund zwei Minuten nicht erreichbar.",
+    "os_run_now": "Systemupdates jetzt installieren",
+    "os_run_failed": "Systemupdate konnte nicht gestartet werden",
+    "os_last_run": "Letzter Lauf: {date}",
+    "reboot_pending": "Neustart erforderlich",
+    "os_phase_idle": "Es läuft kein Systemupdate",
+    "os_phase_refreshing": "Paketliste wird aktualisiert",
+    "os_phase_upgrading": "Paketupdates werden installiert",
+    "os_phase_cleaning": "Nicht mehr benötigte Pakete werden entfernt",
+    "os_phase_rebooting": "Neustart läuft",
+    "os_phase_done": "Systemupdates abgeschlossen",
+    "os_phase_failed": "Systemupdate fehlgeschlagen",
+    "save_button": "Speichern"
   },
   "files": {
     "title": "Datei-Browser",

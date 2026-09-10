@@ -1,4 +1,4 @@
-import { SECRET_SENTINEL, type SmbConfig } from '../../shared';
+import { CONFIG_SECTION_NAMES, SECRET_SENTINEL, type SmbConfig } from '../../shared';
 import { cleanupTmpDbs, tmpDb } from '../../../tests/support/tmp-db';
 import {
   ConfigError,
@@ -52,7 +52,10 @@ describe('defaults', () => {
   });
 
   it('exposes every section through getAll', () => {
-    expect(Object.keys(config.getAll())).toHaveLength(10);
+    // Counted against the list rather than a literal: a section added to
+    // CONFIG_SECTION_NAMES with no storage behind it is exactly the failure this
+    // catches, and a hardcoded number turns that into a chore instead of a signal.
+    expect(Object.keys(config.getAll()).sort()).toEqual([...CONFIG_SECTION_NAMES].sort());
   });
 });
 

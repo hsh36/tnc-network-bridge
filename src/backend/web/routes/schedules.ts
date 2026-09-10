@@ -5,6 +5,7 @@ import {
   updateScheduleRequestSchema,
 } from '../../../shared';
 import { InvalidCronError, ScheduleNotFoundError, previewRuns } from '../../scheduling/scheduler';
+import { isManagedSchedule } from '../../system/managed-schedules';
 import { type AppContext } from '../context';
 import { HttpError } from '../envelope';
 import {
@@ -96,6 +97,7 @@ export function schedulesRoutes(ctx: AppContext): Router {
     const id = idParam(req.params.id);
     const body = updateScheduleRequestSchema.parse(req.body);
     try {
+      refuseIfManaged(ctx.schedules.require(id).name);
       ok(res, ctx.schedules.update(id, body));
     } catch (err) {
       throw toHttp(err);
@@ -105,6 +107,7 @@ export function schedulesRoutes(ctx: AppContext): Router {
   router.delete('/schedules/:id', requireSession(ctx), requireCsrf(ctx), (req, res) => {
     const id = idParam(req.params.id);
     try {
+      refuseIfManaged(ctx.schedules.require(id).name);
       ctx.schedules.delete(id);
       ok(res, { acknowledged: true as const });
     } catch (err) {
@@ -112,7 +115,13 @@ export function schedulesRoutes(ctx: AppContext): Router {
     }
   });
 
-  /** Runs a schedule immediately. Used by the UI's "test this now" button. */
+  /**
+   * Runs a schedule immediately. Used by the UI's "test this now" button.
+   *
+   * Deliberately *not* guarded against managed schedules: running one by hand is
+   * exactly what an operator should be able to do from here. What they cannot do is
+   * change when it runs, because that value lives elsewhere.
+   */
   router.post(
     '/schedules/:id/run',
     requireSession(ctx),
@@ -130,4 +139,22 @@ export function schedulesRoutes(ctx: AppContext): Router {
   );
 
   return router;
+}
+
+/**
+ * Managed schedules are projections of the update config, and reconciled from it.
+ *
+ * Editing one here would change a value the next reconcile overwrites — silently, and
+ * probably minutes later. Refusing and naming the real setting is the honest answer;
+ * accepting the edit and quietly reverting it is how an operator concludes the
+ * schedule page does not work.
+ */
+function refuseIfManaged(name: string): void {
+  if (isManagedSchedule(name)) {
+    throw new HttpError(
+      409,
+      'CONFLICT',
+      `"${name}" is configured under Settings > Updates and cannot be edited here`,
+    );
+  }
 }

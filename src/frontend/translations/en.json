@@ -392,7 +392,9 @@
     "next_run_now": "due now",
     "next_run_min": "in {count} min",
     "next_run_hour": "in {count} h",
-    "next_run_day": "in {count} d"
+    "next_run_day": "in {count} d",
+    "os_updates": "System updates (Raspberry Pi OS)",
+    "os_update_help": "Installs Raspberry Pi OS package updates. Configured under Settings > Updates."
   },
   "versions": {
     "title": "Versions",
@@ -484,7 +486,31 @@
     "update_history": "Update History",
     "up_to_date_title": "Up to date",
     "up_to_date_body": "Version {version} is the newest release. Checked {date}.",
-    "check_failed_title": "Update check failed"
+    "check_failed_title": "Update check failed",
+    "load_failed": "Could not load the update settings",
+    "save_failed": "Could not save the update settings",
+    "saved": "Saved",
+    "auto_update_enabled": "Install bridge updates automatically",
+    "schedule_cron": "Schedule (cron)",
+    "schedule_cron_hint": "Five fields: minute hour day month weekday. \"0 3 * * 0\" is Sunday at 03:00.",
+    "github_repo": "GitHub repository",
+    "os_updates_title": "System updates (Raspberry Pi OS)",
+    "os_updates_body": "Installs Raspberry Pi OS package updates with apt. Package removals are never performed automatically.",
+    "os_auto_enabled": "Install system updates automatically",
+    "os_auto_reboot": "Reboot when an update requires it",
+    "os_auto_reboot_hint": "Only reboots when an upgraded package actually asks for one. The bridge is unavailable for about two minutes.",
+    "os_run_now": "Install system updates now",
+    "os_run_failed": "Could not start the system update",
+    "os_last_run": "Last run: {date}",
+    "reboot_pending": "Reboot required",
+    "os_phase_idle": "No system update is running",
+    "os_phase_refreshing": "Refreshing the package list",
+    "os_phase_upgrading": "Installing package updates",
+    "os_phase_cleaning": "Removing packages that are no longer needed",
+    "os_phase_rebooting": "Rebooting",
+    "os_phase_done": "System updates finished",
+    "os_phase_failed": "System update failed",
+    "save_button": "Save"
   },
   "files": {
     "title": "File Browser",

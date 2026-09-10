@@ -6,6 +6,7 @@ import { type BridgeMetrics } from '../monitoring/registry';
 import { type Scheduler } from '../scheduling/scheduler';
 import { type AuditLog } from '../security/audit-log';
 import { type SyncSupervisor } from '../sync/supervisor';
+import { type OsUpdateManager } from '../system/os-update-manager';
 import { type UpdateManager } from '../system/update-manager';
 import { type VersionStore } from '../versioning/version-store';
 import { type AuthManager } from './auth';
@@ -67,6 +68,8 @@ export interface AppContext {
    * process that has no updater rather than a fiction about one that does.
    */
   readonly updates?: UpdateManager;
+  /** Raspberry Pi OS package updates, on their own schedule (T43). */
+  readonly osUpdates?: OsUpdateManager;
   readonly version: string;
   readonly startedAt: number;
   readonly now: () => number;

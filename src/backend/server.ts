@@ -14,6 +14,8 @@ import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
 import { SyncSupervisor } from './sync/supervisor';
+import { ManagedSchedules } from './system/managed-schedules';
+import { OsUpdateManager } from './system/os-update-manager';
 import { UpdateManager } from './system/update-manager';
 import { FirewallService } from './security/firewall-service';
 import { BlobStore } from './versioning/blob-store';
@@ -267,6 +269,43 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   // after an update reports an idle system that just replaced itself.
   updates.adoptExternalStatus();
 
+  const osUpdates = new OsUpdateManager({ config: service.config });
+
+  // The two update schedules are projections of the config sections, not rows an
+  // operator maintains by hand. See managed-schedules.ts for why one owner and not two.
+  const managedSchedules = new ManagedSchedules({
+    config: service.config,
+    scheduler: schedules,
+    logger,
+  });
+  managedSchedules.reconcile();
+
+  /*
+   * `update` and `os-update` had no handlers, so the scheduler recorded every firing as
+   * `skipped` and an operator watching the schedule history saw a job that never ran.
+   */
+  jobs.register('update', async () => {
+    const status = await updates.check();
+    if (status.available === null) {
+      return { skipped: true, detail: `no update available for ${status.currentVersion}` };
+    }
+    if (!service.config.get('updates').enabled) {
+      return {
+        detail: `found ${status.available.version}, not installing (automatic updates off)`,
+      };
+    }
+    await updates.apply(status.available.version);
+    return { detail: `installing ${status.available.version}` };
+  });
+
+  jobs.register('os-update', () => {
+    if (osUpdates.isRunning()) {
+      return { skipped: true, detail: 'a system update is already running' };
+    }
+    osUpdates.run();
+    return { detail: 'system update started' };
+  });
+
   const metrics = createBridgeMetrics();
   const collector = new MetricsCollector({
     db: service.db,
@@ -327,6 +366,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
       shareCacheRoot: createShareCacheRootResolver(service.db),
       sync,
       updates,
+      osUpdates,
       logger,
       certDir: paths.certDir,
       version: readPackageVersion(),

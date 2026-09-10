@@ -23,6 +23,8 @@ import {
   SAMBA_CONFIG_PATH,
   SELF_UPDATE_SCRIPT,
   SELF_UPDATE_UNIT,
+  OS_UPDATE_SCRIPT,
+  OS_UPDATE_UNIT,
 } from './handlers';
 import { type PrivilegedRequest, validateRequest, type ValidateOptions } from './verbs';
 
@@ -916,5 +918,52 @@ describe('self-update', () => {
     ['a command substitution', '$(id)'],
   ])('rejects a target ref that is %s', (_label, ref) => {
     expect(() => build({ ...REQUEST, targetRef: ref })).toThrow();
+  });
+});
+
+describe('os-update', () => {
+  const REQUEST = { verb: 'os-update', reboot: false };
+
+  it('runs the OS updater in its own transient unit', () => {
+    // apt takes minutes on a Pi and may end in a reboot. Neither belongs on the
+    // lifetime of an HTTP request, or inside the service's cgroup.
+    const h = harness();
+    h.fs.files.set(OS_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+
+    const result = execute(build(REQUEST), h.deps);
+
+    const argv = h.calls[0] ?? [];
+    expect(argv[0]).toBe('/usr/bin/systemdRun');
+    expect(argv).toContain(`--unit=${OS_UPDATE_UNIT}`);
+    expect(argv).toContain(OS_UPDATE_SCRIPT);
+    expect(result.verb).toBe('os-update');
+  });
+
+  it('passes --reboot only when one was asked for', () => {
+    const h = harness();
+    h.fs.files.set(OS_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+
+    execute(build(REQUEST), h.deps);
+    expect(h.calls[0]).not.toContain('--reboot');
+
+    const rebooting = harness();
+    rebooting.fs.files.set(OS_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+    execute(build({ ...REQUEST, reboot: true }), rebooting.deps);
+    expect(rebooting.calls[0]).toContain('--reboot');
+  });
+
+  it('uses a unit name distinct from the self-updater, so the two never collide', () => {
+    expect(OS_UPDATE_UNIT).not.toBe(SELF_UPDATE_UNIT);
+  });
+
+  it('refuses when the updater script is not installed', () => {
+    const h = harness();
+
+    expect(() => execute(build(REQUEST), h.deps)).toThrow(/not found/);
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it('rejects a reboot flag that is not a boolean', () => {
+    expect(() => build({ ...REQUEST, reboot: 'yes; rm -rf /' })).toThrow();
   });
 });

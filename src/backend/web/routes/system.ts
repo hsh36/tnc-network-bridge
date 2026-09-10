@@ -3,13 +3,15 @@ import { freemem, hostname, loadavg, networkInterfaces, release, totalmem, uptim
 import { Router } from 'express';
 import {
   applyUpdateRequestSchema,
+  runOsUpdateRequestSchema,
+  type OsUpdateStatus,
   type NetworkInterface,
   type SystemInfo,
   type UpdateStatus,
   updateHistoryQuerySchema,
 } from '../../../shared';
 import { type AppContext } from '../context';
-import { ok, requireSessionOrToken, requireSession } from '../middleware';
+import { ok, requireCsrf, requireSessionOrToken, requireSession } from '../middleware';
 
 function readDisk(mountPoint: string): SystemInfo['disks'][number] | undefined {
   try {
@@ -172,6 +174,42 @@ export function systemRoutes(ctx: AppContext): Router {
       .catch((error: unknown) => {
         next(error);
       });
+  });
+
+  /*
+   * `/os-update/*` — Raspberry Pi OS packages, separate from the bridge's own updates.
+   *
+   * Separate endpoints rather than a flag on `/update/*` because an operator reading a
+   * failure needs to know which of the two broke: a bridge that will not start after
+   * its own update is a different problem from a Pi that will not boot after a kernel
+   * upgrade.
+   */
+  const idleOsStatus = (): OsUpdateStatus => ({
+    phase: 'idle',
+    progressPct: null,
+    lastRunAt: null,
+    lastResult: null,
+    detail: null,
+    rebootPending: false,
+  });
+
+  router.get('/os-update/status', requireSessionOrToken(ctx), (_req, res) => {
+    ok(res, ctx.osUpdates?.getStatus() ?? idleOsStatus());
+  });
+
+  router.post('/os-update/run', requireSession(ctx), requireCsrf(ctx), (req, res, next) => {
+    const osUpdates = ctx.osUpdates;
+    if (osUpdates === undefined) {
+      next(new Error('System updates are not available on this instance'));
+      return;
+    }
+    const body = runOsUpdateRequestSchema.parse(req.body ?? {});
+    try {
+      osUpdates.run(body.reboot === undefined ? {} : { reboot: body.reboot });
+      ok(res, { accepted: true });
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.get('/update/history', requireSessionOrToken(ctx), (req, res) => {

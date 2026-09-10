@@ -12,6 +12,7 @@ export const SCHEDULE_KINDS = [
   'lock',
   'unlock',
   'update',
+  'os-update',
   'restart',
   'prune',
   'scan',

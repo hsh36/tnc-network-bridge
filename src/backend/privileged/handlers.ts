@@ -21,6 +21,7 @@ import {
   type ApplyUpdateRequest,
   type Fail2banUnbanRequest,
   type SelfUpdateRequest,
+  type OsUpdateRequest,
   type InstallCertRequest,
   type MountShareRequest,
   type PrivilegedRequest,
@@ -71,6 +72,12 @@ export const SELF_UPDATE_SCRIPT = `${INSTALL_DIR}/scripts/self-update.sh`;
  * launched on top of one already running.
  */
 export const SELF_UPDATE_UNIT = 'tnc-bridge-self-update';
+
+/** The OS updater, shipped alongside the self-updater. */
+export const OS_UPDATE_SCRIPT = `${INSTALL_DIR}/scripts/os-update.sh`;
+
+/** Fixed for the same reason as {@link SELF_UPDATE_UNIT}: it is the interlock. */
+export const OS_UPDATE_UNIT = 'tnc-bridge-os-update';
 
 /** The group that owns the TLS private key. The service reads it; nobody else can. */
 export const SERVICE_GROUP = 'tncbridge';
@@ -823,6 +830,44 @@ function selfUpdate(request: SelfUpdateRequest, deps: HandlerDeps, log: CommandL
 }
 
 // ---------------------------------------------------------------------------
+// 13 · os-update
+// ---------------------------------------------------------------------------
+
+/**
+ * Same shape as {@link selfUpdate}, and for one of the same two reasons.
+ *
+ * This one does not restart the bridge, so the cgroup argument does not apply — but an
+ * apt run on a Pi takes minutes, and it may end in a reboot. Neither belongs on the
+ * lifetime of an HTTP request.
+ */
+function osUpdate(request: OsUpdateRequest, deps: HandlerDeps, log: CommandLog): HandlerResult {
+  if (!deps.fs.exists(OS_UPDATE_SCRIPT)) {
+    throw new PrivilegedExecutionError(
+      'os-update',
+      `updater script ${OS_UPDATE_SCRIPT} not found — reinstall to get it`,
+    );
+  }
+
+  const argv = [
+    deps.resolve('systemdRun'),
+    `--unit=${OS_UPDATE_UNIT}`,
+    '--collect',
+    '--description=TNC Bridge OS update',
+    OS_UPDATE_SCRIPT,
+  ];
+  if (request.reboot) {
+    argv.push('--reboot');
+  }
+  log.exec(argv);
+
+  return {
+    verb: 'os-update',
+    commands: log.entries,
+    detail: { reboot: request.reboot, unit: OS_UPDATE_UNIT },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
 
@@ -856,6 +901,8 @@ export function execute(
       return writeNftRuleset(request, deps, log);
     case 'self-update':
       return selfUpdate(request, deps, log);
+    case 'os-update':
+      return osUpdate(request, deps, log);
     case 'fail2ban-unban':
       return fail2banUnban(request, deps, log);
     case 'install-cert':

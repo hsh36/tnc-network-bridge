@@ -398,6 +398,34 @@ export const updatesConfigSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// osUpdates
+// ---------------------------------------------------------------------------
+
+/**
+ * Raspberry Pi OS package updates, on their own schedule.
+ *
+ * Deliberately not folded into `updates`. The two fail in unrelated ways and an
+ * operator needs to know which one broke — a bridge that will not start after its own
+ * update is a different problem from a Pi that will not boot after a kernel upgrade —
+ * and they want different cadences: the appliance can update in the evening, the OS
+ * should wait for a weekend when a reboot costs nothing.
+ */
+export const osUpdatesConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  /** Sunday 04:00, an hour after the appliance's own default, so they never overlap. */
+  scheduleCron: cronSchema.default('0 4 * * 0'),
+  /**
+   * Reboot when an upgraded package asks for one.
+   *
+   * Off by default: a machining shop decides for itself when the bridge to its CNC
+   * machines may disappear for two minutes. When on, the reboot still only happens if
+   * `/var/run/reboot-required` exists — an upgrade that does not need one does not get
+   * one.
+   */
+  autoReboot: z.boolean().default(false),
+});
+
+// ---------------------------------------------------------------------------
 // logging
 // ---------------------------------------------------------------------------
 
@@ -438,6 +466,7 @@ export const CONFIG_SECTION_NAMES = [
   'versioning',
   'security',
   'updates',
+  'osUpdates',
   'logging',
   'monitoring',
 ] as const;
@@ -454,6 +483,7 @@ export const configSectionSchemas = {
   versioning: versioningConfigSchema,
   security: securityConfigSchema,
   updates: updatesConfigSchema,
+  osUpdates: osUpdatesConfigSchema,
   logging: loggingConfigSchema,
   monitoring: monitoringConfigSchema,
 } as const satisfies Record<ConfigSectionName, z.ZodTypeAny>;
@@ -472,6 +502,7 @@ export type LockingConfig = ConfigSection<'locking'>;
 export type VersioningConfig = ConfigSection<'versioning'>;
 export type SecurityConfig = ConfigSection<'security'>;
 export type UpdatesConfig = ConfigSection<'updates'>;
+export type OsUpdatesConfig = ConfigSection<'osUpdates'>;
 export type LoggingConfig = ConfigSection<'logging'>;
 export type MonitoringConfig = ConfigSection<'monitoring'>;
 

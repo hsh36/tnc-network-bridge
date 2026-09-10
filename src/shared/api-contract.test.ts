@@ -67,11 +67,20 @@ const SPEC_ENDPOINTS = [
   'POST /update/apply',
   'POST /update/rollback',
   'GET /update/history',
+  // Raspberry Pi OS packages, on their own schedule. Separate endpoints rather than a
+  // flag on /update/*: an operator reading a failure needs to know which of the two
+  // broke, because a bridge that will not start is a different problem from a Pi that
+  // will not boot.
+  'GET /os-update/status',
+  'POST /os-update/run',
   'GET /network/interfaces',
   'POST /network/apply',
   'POST /network/confirm',
   'GET /network/pending',
   'GET /certificates',
+  // The public certificate as a file. On a self-signed appliance this is the only way
+  // out of the browser warning that does not involve SSH-ing in to copy it.
+  'GET /certificates/download',
   'POST /certificates',
   'POST /certificates/regenerate',
   'GET /firewall',
@@ -205,6 +214,7 @@ describe('API contract', () => {
           'metrics.prometheus',
           'metrics.prtg',
           'versions.download',
+          'certificates.download',
         ].sort(),
       );
     });

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -6,7 +5,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Spinner } from '../components/ui/Spinner';
 import { UpdateProgress } from '../components/UpdateProgress';
 import { UpdateHistory } from '../components/UpdateHistory';
-import { ScheduleEditor } from '../components/ScheduleEditor';
+import { AutomaticUpdates } from '../components/AutomaticUpdates';
 import { useUpdateStatus } from '../hooks/useUpdateStatus';
 
 /**
@@ -32,8 +31,6 @@ export function SystemUpdates(): JSX.Element {
     rollbackError,
     rolling,
   } = useUpdateStatus();
-
-  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
 
   const isUpdating =
     status?.phase !== 'idle' && status?.phase !== 'done' && status?.phase !== 'failed'
@@ -218,32 +215,7 @@ export function SystemUpdates(): JSX.Element {
         </Card>
       )}
 
-      {/* Update schedule */}
-      <Card>
-        <CardHeader title={t('automatic_updates')} />
-        <CardBody>
-          <div className="flex flex-col gap-4">
-            {!showScheduleEditor ? (
-              <Button size="sm" variant="secondary" onClick={() => setShowScheduleEditor(true)}>
-                {t('configure_schedule')}
-              </Button>
-            ) : (
-              <>
-                <ScheduleEditor
-                  onSave={(_cron) => {
-                    // TODO: Save schedule via API
-                    setShowScheduleEditor(false);
-                  }}
-                />
-                <Button size="sm" variant="ghost" onClick={() => setShowScheduleEditor(false)}>
-                  {t('cancel_button')}
-                </Button>
-              </>
-            )}
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('schedule_note')}</p>
-          </div>
-        </CardBody>
-      </Card>
+      <AutomaticUpdates />
 
       {/* Update history */}
       <Card>

@@ -107,6 +107,7 @@ const VALID_REQUESTS = {
     previousRef: 'v0.1.0',
     healthTimeoutSeconds: 120,
   },
+  'os-update': { verb: 'os-update', reboot: false },
 } as const;
 
 /** Fields a caller controls that must never accept a hostile value. */
@@ -123,11 +124,13 @@ const INJECTABLE_FIELDS: Record<string, readonly string[]> = {
   'service-restart': ['service', 'action'],
   'apply-update': ['version'],
   'self-update': ['targetRef', 'previousRef'],
+  // `reboot` is a boolean; there is no string for a payload to hide in.
+  'os-update': [],
 };
 
 describe('the verb allowlist', () => {
-  it('contains exactly the twelve verbs of ARCHITECTURE §5.4', () => {
-    expect(PRIVILEGED_VERBS).toHaveLength(12);
+  it('contains exactly the thirteen verbs of ARCHITECTURE §5.4', () => {
+    expect(PRIVILEGED_VERBS).toHaveLength(13);
     expect([...PRIVILEGED_VERBS]).toEqual([
       'mount-share',
       'unmount-share',
@@ -141,6 +144,7 @@ describe('the verb allowlist', () => {
       'service-restart',
       'apply-update',
       'self-update',
+      'os-update',
     ]);
   });
 
@@ -187,7 +191,7 @@ describe('every verb accepts its known-good request', () => {
 });
 
 /**
- * The core matrix: 12 verbs × their controllable fields × 13 payloads.
+ * The core matrix: 13 verbs × their controllable fields × 13 payloads.
  *
  * Every combination must throw. A single silent acceptance here is a root compromise,
  * which is why this is exhaustive rather than representative.
