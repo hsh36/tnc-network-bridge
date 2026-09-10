@@ -297,9 +297,14 @@ export function findMountEntry(entries: readonly MountEntry[], mountPoint: strin
  * being absent. `hard` is the kernel's default, so an options list containing neither is
  * a hard mount — exactly the case a "reject if it says hard" test would wave through.
  *
- * `noserverino` is required too, though for a duller reason: without it, inode numbers
- * come from the server and change across a reconnect, which makes the index's identity
- * checks disagree with themselves after every outage.
+ * `noserverino` is *not* asserted, although it is always passed at mount time. The
+ * kernel's `cifs_show_options` does not report it in either direction — a mount made
+ * with it and one made without it are indistinguishable in `/proc/mounts` — so a check
+ * for it fails on a mount that is perfectly correct. It cost a working share being
+ * reported offline while it happily synced, which is the worst kind of false alarm:
+ * the one that makes the next real one easy to dismiss.
+ *
+ * `soft` *is* reported, which is why the check that actually matters still holds.
  */
 export function assertSoftMount(entry: MountEntry): void {
   const options = new Set(entry.options);
@@ -315,17 +320,9 @@ export function assertSoftMount(entry: MountEntry): void {
   if (!options.has('soft')) {
     throw new MountError(
       `${entry.mountPoint} does not carry the 'soft' option (the kernel default is 'hard'). ` +
-        `Refusing to use this mount.`,
+        `Refusing to use this mount. Options reported by the kernel: ${entry.options.join(',')}`,
       'unknown',
       `assert soft ${entry.mountPoint}`,
-    );
-  }
-  if (!options.has('noserverino')) {
-    throw new MountError(
-      `${entry.mountPoint} is missing 'noserverino'; server-assigned inode numbers churn ` +
-        `across reconnects and confuse the file index.`,
-      'unknown',
-      `assert noserverino ${entry.mountPoint}`,
     );
   }
 }

@@ -337,8 +337,23 @@ describe('assertSoftMount', () => {
     expect(() => assertSoftMount(entry('rw,noserverino'))).toThrow(/does not carry the 'soft'/);
   });
 
-  it('rejects a soft mount missing noserverino', () => {
-    expect(() => assertSoftMount(entry('rw,soft'))).toThrow(/noserverino/);
+  it('accepts a mount the kernel reports without noserverino', () => {
+    // It is passed at mount time and the kernel reports it in neither direction, so a
+    // check for it fails on a mount that is entirely correct. This is the exact option
+    // list a working share produced on the appliance while being reported offline.
+    expect(() =>
+      assertSoftMount(
+        entry('rw,relatime,vers=3.1.1,seal,soft,nounix,mapposix,nobrl,echo_interval=10,actimeo=1'),
+      ),
+    ).not.toThrow();
+  });
+
+  it('names the options it saw when it refuses, so the cause is in the message', () => {
+    // "missing X" without saying what was there is what turns a one-line kernel
+    // message into an afternoon of guessing.
+    expect(() => assertSoftMount(entry('rw,relatime,vers=3.1.1'))).toThrow(
+      /Options reported by the kernel: .*vers=3\.1\.1/,
+    );
   });
 });
 
