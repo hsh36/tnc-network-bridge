@@ -46,16 +46,16 @@ describe('renderSmbConf', () => {
   it('enables NTLM and disables signing, which NT1 clients cannot do', () => {
     const content = build();
     expect(content).toContain('ntlm auth = yes');
-    expect(content).toContain('lanman auth = no');
     expect(content).toContain('server signing = disabled');
   });
 
   it('never enables lanman auth, whatever is asked of it', () => {
     // R2: some very old controls need it. It is off by default and opt-in only.
-    // Not a setting any more. LANMAN is a lookup table rather than encryption, and
-    // every SMB1 control this bridge exists for speaks NTLM.
-    expect(build({})).toContain('lanman auth = no');
-    expect(build({})).not.toContain('lanman auth = yes');
+    // Not written at all. Samba has defaulted it off since 4.0 and now warns that the
+    // option is deprecated, so naming it produced a warning on every smbclient and
+    // testparm call for a value that was already the default.
+    expect(build({})).not.toMatch(/^\s*lanman auth/m);
+    expect(build({})).not.toMatch(/^\s*client lanman auth/m);
   });
 
   it('uses CP850 for the DOS charset', () => {

@@ -166,14 +166,13 @@ const TEMPLATE_SOURCE = `#
   # are unacceptable on a corporate LAN, which is exactly why this listener is
   # confined to the TNC interface below.
   ntlm auth = {{#if ntlmAuth}}yes{{else}}no{{/if}}
-  # Never yes, and no longer a setting.
+  # LANMAN is not mentioned at all, on purpose.
   #
-  # LANMAN hashes the password twice with DES over a 7-character half, uppercased. It is
-  # not weak encryption, it is a lookup table — and every SMB1 control this bridge exists
-  # for speaks NTLM, which is the option above. Making it configurable meant offering an
-  # operator a switch whose only effect is to publish their password.
-  lanman auth = no
-  client lanman auth = no
+  # It hashes the password twice with DES over an uppercased 7-character half: not weak
+  # encryption, a lookup table. Samba has defaulted it off since 4.0 and now warns that
+  # the option is deprecated: writing it out produced that warning on every
+  # smbclient and testparm call, which is a line an operator reads and worries about.
+  # Not saying it gets the same result quietly.
   raw NTLMv2 auth = {{#if ntlmAuth}}yes{{else}}no{{/if}}
   server signing = disabled
   server smb encrypt = off

@@ -46,7 +46,11 @@ function addShare(name: string, overrides: Record<string, unknown> = {}): void {
     scanIntervalMs: 5000,
     bandwidthLimitKbps: null,
     maxFileSizeMb: 100,
-    tncGuestOk: false,
+    // Reachable by default, so a test that does not care about access control still
+    // gets an exported share. The ones that do care override it.
+    tncGuestOk: true,
+    tncUser: null,
+    tncPassword: '',
     ...overrides,
   } as never);
 }
@@ -311,7 +315,29 @@ describe('TNC-side accounts', () => {
 
     manager().reconcile();
 
+    expect(written()).toMatch(/\[werkstatt]/);
     expect(written()).not.toMatch(/valid users/);
+  });
+
+  it('does not export a share no machine could connect to', () => {
+    // Guest off and no account. Exporting it means the control gets ACCESS_DENIED,
+    // which reads as a password problem and sends the operator looking for credentials
+    // that do not exist. Found on real hardware, where exactly this share existed.
+    addShare('werkstatt', { tncGuestOk: false, tncUser: null });
+
+    manager().reconcile();
+
+    expect(written()).not.toContain('[werkstatt]');
+  });
+
+  it('exports the other shares even when one is unreachable', () => {
+    addShare('kaputt', { tncGuestOk: false, tncUser: null });
+    addShare('werkstatt', { tncGuestOk: true });
+
+    manager().reconcile();
+
+    expect(written()).not.toContain('[kaputt]');
+    expect(written()).toContain('[werkstatt]');
   });
 
   it('removes the account when a share switches to guest access', () => {

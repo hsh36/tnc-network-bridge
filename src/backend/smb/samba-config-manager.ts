@@ -63,6 +63,20 @@ export class SambaConfigManager {
     const shares: SmbShareConfig[] = this.shares
       .list(500, 0)
       .items.filter((share) => share.enabled)
+      .filter((share) => {
+        // A share with guest access off and no account is one no machine can ever
+        // connect to. Exporting it anyway means the control gets ACCESS_DENIED, which
+        // reads as a password problem and sends an operator looking at credentials
+        // that do not exist. Leaving it out and saying why is diagnosable.
+        if (!share.tncGuestOk && share.tncUser === null) {
+          this.logger?.warn(
+            { share: share.name },
+            'share not exported: guest access is off and no user is set, so no machine could connect',
+          );
+          return false;
+        }
+        return true;
+      })
       .map((share) => ({
         name: share.name,
         // The *cache*, never the mount point. Exporting the CIFS mount would put a TNC's
