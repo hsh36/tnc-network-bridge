@@ -371,7 +371,14 @@ export interface SelfUpdateRequest {
   readonly verb: 'self-update';
   /** A tag or commit, resolved inside the repository — never a URL or a path. */
   readonly targetRef: string;
-  /** Where to return if the new build fails its health gate. Empty disables rollback. */
+  /**
+   * Arms the rollback. Empty disables it.
+   *
+   * The value is advisory: the updater rolls back to the commit that was actually
+   * checked out, which it resolves itself. A caller deriving this from the running
+   * version would name the tag matching that version, and an ordinary install sits
+   * ahead of its tag — rolling back there would be a downgrade, not a recovery.
+   */
   readonly previousRef: string;
   /** Seconds `/health` gets to come back green before the rollback fires. */
   readonly healthTimeoutSeconds: number;

@@ -205,8 +205,11 @@ export class UpdateManager {
       this.invoke({
         verb: 'self-update',
         targetRef: tagFor(target),
-        // Where to return if the new build fails its health gate. The running version
-        // is a tag that exists precisely because this release was installed from it.
+        // Arms the rollback; it does not name its destination. The updater resolves
+        // that from the commit actually checked out, because deriving it from the
+        // running version assumes the checkout is exactly the matching tag — false on
+        // every install-from-main, where rolling back to the tag would undo everything
+        // merged since it. See scripts/self-update.sh.
         previousRef: tagFor(this.currentVersion),
         healthTimeoutSeconds: this.config.get('updates').healthTimeoutS,
       });

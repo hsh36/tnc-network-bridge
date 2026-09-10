@@ -7,7 +7,7 @@
 # kills anything descended from it, so a script running under the service would be
 # killed in the middle of the switch and leave a half-built tree behind.
 #
-#   self-update.sh <target-ref> [previous-ref]
+#   self-update.sh <target-ref> [rollback-if-non-empty]
 #
 # Progress is written to a status file rather than reported over a pipe, for the same
 # reason: the process that asked for the update is gone by the time the interesting
@@ -26,10 +26,26 @@ HEALTH_URL="${TNC_HEALTH_URL:-https://127.0.0.1/api/v1/health}"
 HEALTH_TIMEOUT="${TNC_HEALTH_TIMEOUT:-120}"
 
 TARGET_REF="${1:-}"
-PREVIOUS_REF="${2:-}"
+# Whether a rollback is wanted at all. Empty means no — the very first update on a
+# fresh install has nothing to go back to.
+ROLLBACK_WANTED="${2:-}"
+
+# Where to go back to, resolved here rather than taken from the caller.
+#
+# The caller derives its idea of "the previous version" from the running version
+# string, which assumes the checkout is exactly the tag matching it. That is false on
+# every ordinary install: install.sh does `git reset --hard origin/main`, so a bridge
+# reporting 0.1.0 is usually somewhere ahead of the v0.1.0 tag. Rolling back to the tag
+# would silently undo everything merged since it — a downgrade dressed up as a recovery.
+# The commit actually checked out is the only correct answer, and this is the only
+# place that knows it.
+PREVIOUS_REF=""
+if [ -n "$ROLLBACK_WANTED" ]; then
+  PREVIOUS_REF="$(git -C "${TNC_INSTALL_DIR:-/opt/tnc-bridge}" rev-parse HEAD 2>/dev/null || true)"
+fi
 
 [ -n "$TARGET_REF" ] || {
-  echo "usage: self-update.sh <target-ref> [previous-ref]" >&2
+  echo "usage: self-update.sh <target-ref> [rollback-if-non-empty]" >&2
   exit 2
 }
 
