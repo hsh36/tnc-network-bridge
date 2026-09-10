@@ -1,6 +1,9 @@
 import { hash as argon2Hash, verify as argon2Verify } from '@node-rs/argon2';
 import { createHash, randomBytes } from 'node:crypto';
-import { type ApiToken, type SessionInfo, type TokenScope } from '../../shared';
+import { ADMIN_USERNAME, type ApiToken, type SessionInfo, type TokenScope } from '../../shared';
+
+/** Re-exported so backend callers and tests keep one import site for the account name. */
+export { ADMIN_USERNAME };
 import { type ConfigManager } from '../config/config-manager';
 import { type Db, type DbLogger } from '../config/db';
 import { secretsEqual } from '../config/secrets';
@@ -22,7 +25,7 @@ import { type AuthFailureReason, AuthLogWriter } from '../logging/auth-log';
  * exactly the reasons its frozen failregex expects.
  */
 
-export const ADMIN_USERNAME = 'admin';
+
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const SESSION_COOKIE_BYTES = 32;

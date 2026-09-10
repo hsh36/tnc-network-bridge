@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PRODUCT_NAME } from '../../shared';
+import { ADMIN_USERNAME, PRODUCT_NAME } from '../../shared';
 import { ApiError } from '../lib/api-client';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../hooks/useTranslation';
@@ -17,7 +17,6 @@ export function Login(): JSX.Element {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +25,7 @@ export function Login(): JSX.Element {
     e.preventDefault();
     setError(undefined);
     setSubmitting(true);
-    void login(username, password)
+    void login(ADMIN_USERNAME, password)
       .then(() => {
         const state = location.state as LocationState | null;
         void navigate(state?.from ?? '/', { replace: true });
@@ -52,18 +51,11 @@ export function Login(): JSX.Element {
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Input
-              id="username"
-              label={t('username')}
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-            <Input
               id="password"
               label={t('password')}
               type="password"
               autoComplete="current-password"
+              autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

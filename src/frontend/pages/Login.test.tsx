@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ADMIN_USERNAME } from '../../shared';
 import { ApiError } from '../lib/api-client';
 import { Login } from './Login';
 
@@ -22,7 +23,10 @@ describe('Login', () => {
     loginMock.mockReset();
   });
 
-  it('submits the entered credentials', async () => {
+  it('submits the password against the one account there is', async () => {
+    // There is no user management, so there is no username to ask for. The form takes
+    // a password and pairs it with ADMIN_USERNAME; a field that can only ever hold one
+    // value is a step the operator has to get right for no benefit.
     loginMock.mockResolvedValue(undefined);
     render(
       <MemoryRouter>
@@ -30,12 +34,12 @@ describe('Login', () => {
       </MemoryRouter>,
     );
 
-    await userEvent.clear(screen.getByLabelText('Username'));
-    await userEvent.type(screen.getByLabelText('Username'), 'admin');
+    expect(screen.queryByLabelText('Username')).toBeNull();
+
     await userEvent.type(screen.getByLabelText('Password'), 'Sup3rGeheim!Passwort-2026');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(loginMock).toHaveBeenCalledWith('admin', 'Sup3rGeheim!Passwort-2026');
+    expect(loginMock).toHaveBeenCalledWith(ADMIN_USERNAME, 'Sup3rGeheim!Passwort-2026');
   });
 
   it('shows the server error message when login fails', async () => {

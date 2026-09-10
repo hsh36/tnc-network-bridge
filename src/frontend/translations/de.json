@@ -483,7 +483,8 @@
     "schedule_note": "Automatische Updates können für die Ausführung zu einer bestimmten Zeit pro Woche geplant werden.",
     "update_history": "Update-Verlauf",
     "up_to_date_title": "Aktuell",
-    "up_to_date_body": "Version {version} ist die neueste Ausgabe. Geprüft am {date}."
+    "up_to_date_body": "Version {version} ist die neueste Ausgabe. Geprüft am {date}.",
+    "check_failed_title": "Update-Suche fehlgeschlagen"
   },
   "files": {
     "title": "Datei-Browser",

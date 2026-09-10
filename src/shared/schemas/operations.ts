@@ -43,8 +43,15 @@ export const availableReleaseSchema = z.object({
   notes: z.string(),
   assetUrl: z.string().url(),
   assetSize: z.number().int().nonnegative(),
-  /** Verified before anything is swapped. A mismatch aborts the update. */
-  sha256: sha256Schema,
+  /**
+   * Verified before anything is swapped; a mismatch aborts the update.
+   *
+   * Null when the release carries no published digest — GitHub computes none for the
+   * source tarball it generates. Null is the honest value: inventing one by hashing
+   * the download would make the verify step compare a value against itself and pass
+   * unconditionally, which is worse than admitting there is nothing to check against.
+   */
+  sha256: sha256Schema.nullable(),
 });
 
 export const updateStatusSchema = z.object({

@@ -138,8 +138,10 @@ export function SystemUpdates(): JSX.Element {
         </Card>
       )}
 
-      {/* Update progress */}
-      {status && (
+      {/* Update progress — only while one is actually running. A permanent progress
+          card showing "idle" is noise on a screen an operator visits to find out
+          whether anything is happening. */}
+      {isUpdating && status && (
         <Card>
           <CardHeader title={t('update_progress')} />
           <CardBody>
@@ -166,7 +168,7 @@ export function SystemUpdates(): JSX.Element {
                 that changes on screen is a date. `lastCheckAt` gates it: before the
                 first check there is no basis for the claim.
               */}
-              {status?.lastCheckAt && !status.available ? (
+              {status?.lastCheckAt && !status.available && !status.lastError ? (
                 <div className="rounded-md border border-status-ok/40 bg-status-ok/5 px-4 py-3">
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
                     {t('up_to_date_title')}
@@ -195,9 +197,20 @@ export function SystemUpdates(): JSX.Element {
               >
                 {t('check_updates_button')}
               </Button>
-              {checkError && (
+              {/*
+                A check that reached GitHub and was refused answers 200 with the reason
+                on the status — it is a result, not a server fault. `checkError` only
+                covers the request itself failing, so both have to be rendered or a
+                failed check reads as "up to date".
+              */}
+              {(checkError ?? status?.lastError) && (
                 <div className="rounded-md bg-red-50 p-3 dark:bg-red-950">
-                  <p className="text-sm text-red-700 dark:text-red-200">{checkError}</p>
+                  <p className="text-sm font-medium text-red-700 dark:text-red-200">
+                    {t('check_failed_title')}
+                  </p>
+                  <p className="mt-1 text-sm text-red-700 dark:text-red-200">
+                    {checkError ?? status?.lastError}
+                  </p>
                 </div>
               )}
             </div>

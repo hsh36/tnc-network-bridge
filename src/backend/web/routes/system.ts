@@ -1,7 +1,13 @@
 import { statfsSync } from 'node:fs';
 import { freemem, hostname, loadavg, networkInterfaces, release, totalmem, uptime } from 'node:os';
 import { Router } from 'express';
-import { type NetworkInterface, type SystemInfo, updateHistoryQuerySchema } from '../../../shared';
+import {
+  applyUpdateRequestSchema,
+  type NetworkInterface,
+  type SystemInfo,
+  type UpdateStatus,
+  updateHistoryQuerySchema,
+} from '../../../shared';
 import { type AppContext } from '../context';
 import { ok, requireSessionOrToken, requireSession } from '../middleware';
 
@@ -83,74 +89,84 @@ export function systemRoutes(ctx: AppContext): Router {
     ok(res, info);
   });
 
-  // Update endpoints (T44) — minimal implementation for UI
-  const updateHistory: {
-    id: string;
-    ts: number;
-    fromVersion: string | null;
-    toVersion: string | null;
-    channel: 'stable' | 'beta' | null;
-    result: 'ok' | 'failed' | 'rolled_back';
-    log: string | null;
-  }[] = [];
+  /*
+   * `/update/*` — every one of these delegates to the single UpdateManager on the
+   * context.
+   *
+   * They used to answer from literals: `/update/status` returned `lastCheckAt: null`
+   * unconditionally while `/update/check` returned a fresh timestamp that it then threw
+   * away. The UI polls status, so a finished check left the screen still reading "no
+   * checks performed yet" — the check worked, the reporting did not.
+   */
+  const idleStatus = (): UpdateStatus => ({
+    currentVersion: ctx.version,
+    available: null,
+    phase: 'idle',
+    progressPct: null,
+    lastCheckAt: null,
+    lastError: null,
+    rollbackVersion: null,
+  });
 
   router.get('/update/status', requireSessionOrToken(ctx), (_req, res) => {
-    ok(res, {
-      currentVersion: ctx.version,
-      available: null,
-      phase: 'idle',
-      progressPct: null,
-      lastCheckAt: null,
-      lastError: null,
-      rollbackVersion: null,
-    });
+    ok(res, ctx.updates?.getStatus() ?? idleStatus());
   });
 
-  router.post('/update/check', requireSession(ctx), (_req, res) => {
-    // Placeholder: in T43, this would poll GitHub Releases
-    ok(res, {
-      currentVersion: ctx.version,
-      available: null,
-      phase: 'idle',
-      progressPct: null,
-      lastCheckAt: Math.floor(Date.now() / 1000),
-      lastError: null,
-      rollbackVersion: null,
-    });
+  router.post('/update/check', requireSession(ctx), (_req, res, next) => {
+    if (ctx.updates === undefined) {
+      ok(res, idleStatus());
+      return;
+    }
+    ctx.updates
+      .check()
+      .then((status) => {
+        ok(res, status);
+      })
+      .catch((error: unknown) => {
+        // The check reached a definite negative answer — GitHub was unreachable, or
+        // named a repository that does not exist. That is a result, not a server
+        // fault, and the operator needs to read it: the status now carries the
+        // message and a fresh `lastCheckAt`, so answering 200 with that status tells
+        // the truth where a 500 would only say "something went wrong".
+        ctx.logger?.warn(
+          { error: error instanceof Error ? error.message : String(error) },
+          'update check failed',
+        );
+        if (ctx.updates === undefined) {
+          next(error);
+          return;
+        }
+        ok(res, ctx.updates.getStatus());
+      });
   });
 
-  router.post('/update/apply', requireSession(ctx), (_req, res) => {
-    // Placeholder: in T43, this would download, verify, and apply
-    ctx.events.publish({
-      ts: Date.now(),
-      type: 'update',
-      status: {
-        currentVersion: ctx.version,
-        available: null,
-        phase: 'idle',
-        progressPct: null,
-        lastCheckAt: null,
-        lastError: null,
-        rollbackVersion: null,
-      },
+  router.post('/update/apply', requireSession(ctx), (req, res, next) => {
+    if (ctx.updates === undefined) {
+      next(new Error('Updates are not available on this instance'));
+      return;
+    }
+    const body = applyUpdateRequestSchema.parse(req.body ?? {});
+    // Accepted, not awaited: applying takes minutes and ends in a restart that would
+    // never let the response out. Progress reaches the UI over SSE.
+    void ctx.updates.apply(body.version).catch((error: unknown) => {
+      ctx.logger?.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'update apply failed',
+      );
     });
     ok(res, { accepted: true });
   });
 
-  router.post('/update/rollback', requireSession(ctx), (_req, res) => {
-    // Placeholder: in T43, this would rollback to the previous version
-    ctx.events.publish({
-      ts: Date.now(),
-      type: 'update',
-      status: {
-        currentVersion: ctx.version,
-        available: null,
-        phase: 'idle',
-        progressPct: null,
-        lastCheckAt: null,
-        lastError: null,
-        rollbackVersion: null,
-      },
+  router.post('/update/rollback', requireSession(ctx), (_req, res, next) => {
+    if (ctx.updates === undefined) {
+      next(new Error('Updates are not available on this instance'));
+      return;
+    }
+    void ctx.updates.rollback().catch((error: unknown) => {
+      ctx.logger?.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'update rollback failed',
+      );
     });
     ok(res, { accepted: true });
   });
@@ -159,13 +175,8 @@ export function systemRoutes(ctx: AppContext): Router {
     const query = updateHistoryQuerySchema.parse(req.query);
     const limit = query.limit ?? 50;
     const offset = query.offset ?? 0;
-    const items = updateHistory.slice(offset, offset + limit);
-    ok(res, {
-      items,
-      total: updateHistory.length,
-      offset,
-      limit,
-    });
+    const page = ctx.updates?.getHistory(limit, offset) ?? { items: [], total: 0 };
+    ok(res, { items: page.items, total: page.total, offset, limit });
   });
 
   return router;

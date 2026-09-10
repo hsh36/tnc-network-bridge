@@ -14,6 +14,7 @@ import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
 import { SyncSupervisor } from './sync/supervisor';
+import { UpdateManager } from './system/update-manager';
 import { FirewallService } from './security/firewall-service';
 import { BlobStore } from './versioning/blob-store';
 import { VersionCleanup } from './versioning/cleanup';
@@ -250,6 +251,18 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
     logger,
   });
 
+  // One updater for the process. The `/update/*` routes read their answers from it
+  // rather than from literals, so a check the operator just ran is visible in the very
+  // next status poll.
+  const updates = new UpdateManager({
+    currentVersion: readPackageVersion(),
+    publishEvent: (event) => {
+      events.publish(event);
+    },
+    config: service.config,
+    db: service.db,
+  });
+
   const metrics = createBridgeMetrics();
   const collector = new MetricsCollector({
     db: service.db,
@@ -309,6 +322,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
       audit,
       shareCacheRoot: createShareCacheRootResolver(service.db),
       sync,
+      updates,
       logger,
       certDir: paths.certDir,
       version: readPackageVersion(),

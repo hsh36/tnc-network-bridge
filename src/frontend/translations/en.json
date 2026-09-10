@@ -483,7 +483,8 @@
     "schedule_note": "Automatic updates can be scheduled to run at a specific time each week.",
     "update_history": "Update History",
     "up_to_date_title": "Up to date",
-    "up_to_date_body": "Version {version} is the newest release. Checked {date}."
+    "up_to_date_body": "Version {version} is the newest release. Checked {date}.",
+    "check_failed_title": "Update check failed"
   },
   "files": {
     "title": "File Browser",

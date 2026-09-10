@@ -5,6 +5,16 @@
 
 export const PRODUCT_NAME = 'TNC Network Bridge';
 
+/**
+ * The one account.
+ *
+ * This appliance has no user management and is not getting any: it is administered by
+ * whoever can reach it on the LAN, and that reachability is the access control. The
+ * login form therefore does not ask for a name — asking for the only possible answer is
+ * a field that can only ever be typed wrong.
+ */
+export const ADMIN_USERNAME = 'admin';
+
 /** Every REST route is mounted below this prefix (IMPLEMENTATION_PLAN §5). */
 export const API_BASE_PATH = '/api/v1';
 
