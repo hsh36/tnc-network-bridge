@@ -4,7 +4,7 @@ import { type ShareStatus } from '../../shared';
 import { type ConfigManager } from '../config/config-manager';
 import { type Db, type DbLogger } from '../config/db';
 import { type LockManager } from '../locking/lock-manager';
-import { CifsMountManager } from '../smb/cifs-mount';
+import { CifsMountManager, type MountSpec } from '../smb/cifs-mount';
 import { type VersioningEngine } from '../versioning/versioning-engine';
 
 import { FilesystemSyncPorts } from './filesystem-ports';
@@ -34,6 +34,21 @@ export interface SyncSupervisorOptions {
   readonly logger?: DbLogger | undefined;
   /** Overridable so a test does not have to wait a real scan interval. */
   readonly now?: () => number;
+  /**
+   * Builds the mount for a share.
+   *
+   * Injectable because the real one shells out to `mount.cifs` through sudo: a test of
+   * *when* shares start and stop should not need a server to mount, and a test that
+   * did would be testing the kernel rather than this class.
+   */
+  readonly createMount?: (spec: MountSpec) => ShareMount;
+}
+
+/** The part of {@link CifsMountManager} this class uses. */
+export interface ShareMount {
+  mount(): Promise<void>;
+  unmount(force?: boolean): Promise<void>;
+  on(event: 'state', listener: (change: { online?: boolean }) => void): unknown;
 }
 
 interface RunningShare {
@@ -41,11 +56,12 @@ interface RunningShare {
   readonly name: string;
   /** What the share looked like when this was started, to detect a material change. */
   readonly fingerprint: string;
-  readonly mount: CifsMountManager;
+  readonly mount: ShareMount;
   readonly orchestrator: SyncOrchestrator;
   timer: NodeJS.Timeout | undefined;
   online: boolean;
-  cycling: boolean;
+  /** The cycle currently running, so shutdown can wait for it rather than race it. */
+  inFlight: Promise<void> | undefined;
 }
 
 export class SyncSupervisor {
@@ -143,22 +159,23 @@ export class SyncSupervisor {
       this.store.password(shareId) ??
       this.options.config.getSecret('smb.server.credentials.password');
 
-    const mount = new CifsMountManager({
-      spec: {
-        shareName: share.name,
-        serverUnc: share.serverUnc,
-        smbVersion: share.smbVersion,
-        seal: share.smbSeal,
-        domain: share.smbDomain ?? smb.server.credentials.domain,
-        username: share.smbUser ?? smb.server.credentials.username,
-        password,
-        // The cache is served by Samba as the service account, so the mount has to be
-        // owned by it or the machines get permission denied on files that synced fine.
-        uid: process.getuid?.() ?? 0,
-        gid: process.getgid?.() ?? 0,
-      },
-      ...(logger === undefined ? {} : { logger }),
-    });
+    const spec: MountSpec = {
+      shareName: share.name,
+      serverUnc: share.serverUnc,
+      smbVersion: share.smbVersion,
+      seal: share.smbSeal,
+      domain: share.smbDomain ?? smb.server.credentials.domain,
+      username: share.smbUser ?? smb.server.credentials.username,
+      password,
+      // The cache is served by Samba as the service account, so the mount has to be
+      // owned by it or the machines get permission denied on files that synced fine.
+      uid: process.getuid?.() ?? 0,
+      gid: process.getgid?.() ?? 0,
+    };
+
+    const mount =
+      this.options.createMount?.(spec) ??
+      new CifsMountManager({ spec, ...(logger === undefined ? {} : { logger }) });
 
     const active: RunningShare = {
       shareId,
@@ -182,7 +199,7 @@ export class SyncSupervisor {
       }),
       timer: undefined,
       online: false,
-      cycling: false,
+      inFlight: undefined,
     };
 
     this.running.set(shareId, active);
@@ -227,6 +244,11 @@ export class SyncSupervisor {
     if (active.timer !== undefined) {
       clearInterval(active.timer);
     }
+    // Wait for a cycle that is already running. Clearing the timer only stops the *next*
+    // one; an in-flight cycle would go on reading and writing the database after the
+    // caller believed everything had stopped — which during shutdown means writing to a
+    // handle that is closing underneath it.
+    await active.inFlight;
     try {
       await active.mount.unmount();
     } catch (error) {
@@ -245,12 +267,20 @@ export class SyncSupervisor {
    * second one start on top of it, which on a slow link is the normal case rather than
    * the exception.
    */
-  private async cycle(shareId: number): Promise<void> {
+  private cycle(shareId: number): Promise<void> {
     const active = this.running.get(shareId);
-    if (active === undefined || active.cycling) {
-      return;
+    // Already running: a scan slower than the interval is the normal case on a slow
+    // link, not the exception, and starting a second one on top would double the work
+    // and race itself over the same files.
+    if (active === undefined || active.inFlight !== undefined) {
+      return Promise.resolve();
     }
-    active.cycling = true;
+    const running = this.runCycle(shareId, active);
+    active.inFlight = running;
+    return running;
+  }
+
+  private async runCycle(shareId: number, active: RunningShare): Promise<void> {
     try {
       const result = await active.orchestrator.runCycle();
       this.recordScan(shareId, result.applied > 0 ? 'syncing' : 'idle');
@@ -267,11 +297,14 @@ export class SyncSupervisor {
       );
       this.setStatus(shareId, 'error', messageOf(error));
     } finally {
-      active.cycling = false;
+      active.inFlight = undefined;
     }
   }
 
   private setStatus(shareId: number, status: ShareStatus, lastError?: string): void {
+    if (this.stopped) {
+      return;
+    }
     this.options.db.run(
       'UPDATE shares SET status = @status, last_error = @lastError, updated_at = @now WHERE id = @id',
       { id: shareId, status, lastError: lastError ?? null, now: this.seconds() },
@@ -279,6 +312,9 @@ export class SyncSupervisor {
   }
 
   private recordScan(shareId: number, status: ShareStatus): void {
+    if (this.stopped) {
+      return;
+    }
     this.options.db.run(
       'UPDATE shares SET status = @status, last_scan_at = @now, last_error = NULL WHERE id = @id',
       { id: shareId, status, now: this.seconds() },

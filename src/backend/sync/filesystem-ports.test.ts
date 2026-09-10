@@ -137,6 +137,76 @@ describe('delete', () => {
   });
 });
 
+describe('deleteRemote', () => {
+  it('removes from the server side only', async () => {
+    write(cachePath, 'part.h', 'a');
+    write(mountPoint, 'part.h', 'a');
+
+    await ports().deleteRemote('part.h');
+
+    expect(await ports().statRemote('part.h')).toBeNull();
+    expect(await ports().statLocal('part.h')).not.toBeNull();
+  });
+});
+
+describe('captureVersion', () => {
+  it('hands the versioning engine the side it was told about', async () => {
+    write(cachePath, 'part.h', 'local copy');
+    write(mountPoint, 'part.h', 'server copy');
+    const seen: { relPath: string; sourcePath: string; side: string }[] = [];
+    const versioning = {
+      handleOrchestratorCapture: (
+        _shareId: number,
+        relPath: string,
+        sourcePath: string,
+        capture: { side: string },
+      ) => {
+        seen.push({ relPath, sourcePath, side: capture.side });
+      },
+    } as unknown as ConstructorParameters<typeof FilesystemSyncPorts>[0]['versioning'];
+
+    const p = ports({ versioning });
+    await p.captureVersion('part.h', { side: 'local', reason: 'overwrite' });
+    await p.captureVersion('part.h', { side: 'remote', reason: 'conflict_loser' });
+
+    // The path matters as much as the side: capturing the wrong copy stores the file
+    // that is about to survive rather than the one about to be lost.
+    expect(seen[0]?.sourcePath).toBe(join(cachePath, 'part.h'));
+    expect(seen[1]?.sourcePath).toBe(join(mountPoint, 'part.h'));
+  });
+
+  it('is a no-op when versioning is not configured', async () => {
+    await expect(
+      ports().captureVersion('part.h', { side: 'local', reason: 'delete' }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe('isLocked', () => {
+  it('reports false when there is no lock manager', () => {
+    expect(ports().isLocked('part.h')).toBe(false);
+  });
+
+  it('asks the lock manager about the share it belongs to', () => {
+    const locks = {
+      list: () => ({ items: [{ relPath: 'held.h' }], total: 1 }),
+    } as unknown as ConstructorParameters<typeof FilesystemSyncPorts>[0]['locks'];
+
+    const p = ports({ locks });
+
+    // A file a machine holds open must not be overwritten under it.
+    expect(p.isLocked('held.h')).toBe(true);
+    expect(p.isLocked('free.h')).toBe(false);
+  });
+});
+
+describe('hasCaseCollision', () => {
+  it('reports none without an index to compare against', () => {
+    // Claiming a collision with nothing to compare would stall every path.
+    expect(ports().hasCaseCollision('part.h')).toBe(false);
+  });
+});
+
 describe('isExcluded', () => {
   it('matches the share patterns', () => {
     const p = ports({ excludePatterns: ['**/*.bak', '**/Thumbs.db'] });
