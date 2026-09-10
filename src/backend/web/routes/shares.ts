@@ -180,7 +180,10 @@ export function sharesRoutes(ctx: AppContext): Router {
           `"${share.name}" is not syncing. Enable the share first.`,
         );
       }
-      ok(res, { accepted: true as const, operationId: `${action}-${String(id)}-${String(Date.now())}` });
+      ok(res, {
+        accepted: true as const,
+        operationId: `${action}-${String(id)}-${String(Date.now())}`,
+      });
     } catch (error) {
       throw toHttp(error);
     }
