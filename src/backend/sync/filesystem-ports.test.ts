@@ -163,7 +163,7 @@ describe('captureVersion', () => {
       ) => {
         seen.push({ relPath, sourcePath, side: capture.side });
       },
-    } as unknown as ConstructorParameters<typeof FilesystemSyncPorts>[0]['versioning'];
+    } as unknown as NonNullable<ConstructorParameters<typeof FilesystemSyncPorts>[0]['versioning']>;
 
     const p = ports({ versioning });
     await p.captureVersion('part.h', { side: 'local', reason: 'overwrite' });
@@ -190,7 +190,7 @@ describe('isLocked', () => {
   it('asks the lock manager about the share it belongs to', () => {
     const locks = {
       list: () => ({ items: [{ relPath: 'held.h' }], total: 1 }),
-    } as unknown as ConstructorParameters<typeof FilesystemSyncPorts>[0]['locks'];
+    } as unknown as NonNullable<ConstructorParameters<typeof FilesystemSyncPorts>[0]['locks']>;
 
     const p = ports({ locks });
 
@@ -203,7 +203,7 @@ describe('isLocked', () => {
 describe('hasCaseCollision', () => {
   it('reports none without an index to compare against', () => {
     // Claiming a collision with nothing to compare would stall every path.
-    expect(ports().hasCaseCollision('part.h')).toBe(false);
+    expect(ports().hasCaseCollision()).toBe(false);
   });
 });
 
