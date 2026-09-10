@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   type ConflictMode,
   type DhcpConfig,
@@ -254,17 +254,33 @@ function NetworkSection(): JSX.Element {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { banner, onSaved, onError } = useSaveBanner(t);
 
+  /**
+   * Re-reads the live interface list.
+   *
+   * Called after every apply, not only on mount. The drift banner compares the stored
+   * configuration against the addresses actually on the NIC, and those addresses are
+   * exactly what an apply changes — reading them once meant a successful apply left the
+   * warning on screen next to a green "applied", which is a worse lie than the one the
+   * banner exists to catch.
+   *
+   * A failure here is not fatal: the picker falls back to showing the stored name, so
+   * the section still works on a host whose sysfs cannot be read.
+   */
+  const loadInterfaces = useCallback(
+    () =>
+      api('network.interfaces')
+        .then((data) => setInterfaces(data.interfaces.map((entry) => entry.discovery)))
+        .catch(() => setInterfaces([])),
+    [],
+  );
+
   useEffect(() => {
     void api('config.get', { params: { section: 'network' } }).then((data) => {
       setForm(data as NetworkConfig);
       setSaved(data as NetworkConfig);
     });
-    // A failure here is not fatal: the picker falls back to showing the stored name, so
-    // the section still works on a host whose sysfs cannot be read.
-    void api('network.interfaces')
-      .then((data) => setInterfaces(data.interfaces.map((entry) => entry.discovery)))
-      .catch(() => setInterfaces([]));
-  }, []);
+    void loadInterfaces();
+  }, [loadInterfaces]);
 
   // Dirtiness is per side now, because the buttons are: one zone must not be greyed out
   // because the other has unsaved edits.
@@ -341,9 +357,11 @@ function NetworkSection(): JSX.Element {
         // The LAN side is the one that can cut this connection and waits for its own
         // button, so a half-typed address cannot take the bridge away.
         if (side === 'tnc') {
-          return api('network.apply', { body: { side: 'tnc' } }).then(() => {
-            setNotice({ side: 'tnc', text: t('tnc_applied') });
-          });
+          return api('network.apply', { body: { side: 'tnc' } })
+            .then(loadInterfaces)
+            .then(() => {
+              setNotice({ side: 'tnc', text: t('tnc_applied') });
+            });
         }
         // One button, so saving applies. Splitting them made the operator press two
         // things to do one thing, and left a saved-but-not-applied state that looks
@@ -372,9 +390,10 @@ function NetworkSection(): JSX.Element {
                 : t('lan_pending', { url: result.expectedUrl }),
           });
           // The banner in the layout picks the pending change up on its own poll.
-          return;
+          return undefined;
         }
         setNotice({ side: 'lan', text: t('lan_applied') });
+        return loadInterfaces();
       })
       .catch(onError)
       .finally(() => setApplyingLan(false));

@@ -106,7 +106,13 @@ export async function api<K extends EndpointId>(
   if (a.body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
-  if (def.mutates === true && csrfToken !== undefined) {
+  // Sent for every method that is not GET, which is exactly what `requireCsrf` guards
+  // on the server. It used to key off `mutates`, which conflates two different
+  // questions: `config.testSmb` changes no state and so is not marked mutating, but a
+  // forged cross-site POST to it would make the appliance probe an arbitrary host with
+  // stored credentials — so the server requires the token and the client never sent it.
+  // The Test button failed with "CSRF token is missing" for that reason alone.
+  if (def.method !== 'GET' && csrfToken !== undefined) {
     headers['x-csrf-token'] = csrfToken;
   }
 

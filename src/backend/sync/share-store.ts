@@ -237,6 +237,7 @@ export class ShareStore {
       set('max_file_size_mb', 'maxFileSizeMb', patch.maxFileSizeMb);
     }
     if (patch.tncGuestOk !== undefined) set('tnc_guest_ok', 'tncGuestOk', patch.tncGuestOk ? 1 : 0);
+    if (patch.tncUser !== undefined) set('tnc_user', 'tncUser', patch.tncUser);
     if (patch.readOnly !== undefined) set('read_only', 'readOnly', patch.readOnly ? 1 : 0);
 
     if (assignments.length > 0) {

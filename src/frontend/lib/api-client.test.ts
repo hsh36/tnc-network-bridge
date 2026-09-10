@@ -61,7 +61,7 @@ describe('api()', () => {
     expect(headers['x-csrf-token']).toBe('csrf-value');
   });
 
-  it('omits the CSRF header for a non-mutating endpoint', async () => {
+  it('omits the CSRF header on a GET, which the server does not guard', async () => {
     setCsrfToken('csrf-value');
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse({ ok: true, data: { items: [], total: 0, limit: 50, offset: 0 } }),
@@ -70,6 +70,40 @@ describe('api()', () => {
     const init = vi.mocked(fetch).mock.calls[0]![1]!;
     const headers = init.headers as Record<string, string>;
     expect(headers['x-csrf-token']).toBeUndefined();
+  });
+
+  it('sends the CSRF header on a POST that changes no state', async () => {
+    // The bug behind "CSRF token is missing or does not match the session" on the share
+    // dialog's Test button. The header used to be keyed off `mutates`, which asks a
+    // different question: `config.testSmb` stores nothing and so is not marked
+    // mutating, but a forged cross-site POST would make the appliance probe an
+    // arbitrary host using stored credentials — so the server requires the token.
+    setCsrfToken('csrf-value');
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        ok: true,
+        data: {
+          success: true,
+          dialect: 'SMB3_11',
+          authMethod: null,
+          signing: null,
+          encryption: null,
+          shares: [],
+          freeBytes: null,
+          writable: null,
+          failure: null,
+          message: { de: '', en: '' },
+          remediation: null,
+          durationMs: 1,
+        },
+      }),
+    );
+
+    await api('config.testSmb', { body: { unc: '//server/share' } });
+
+    const init = vi.mocked(fetch).mock.calls[0]![1]!;
+    const headers = init.headers as Record<string, string>;
+    expect(headers['x-csrf-token']).toBe('csrf-value');
   });
 
   it('throws ApiError with the server-provided code and message on failure', async () => {

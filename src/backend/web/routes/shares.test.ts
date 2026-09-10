@@ -336,3 +336,73 @@ describe('POST /shares/:id/:action', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('TNC-side credentials survive a save', () => {
+  /** Creates a share and returns its id. */
+  async function makeShare(
+    agent: ReturnType<typeof request.agent>,
+    csrf: string,
+    body: Record<string, unknown>,
+  ): Promise<number> {
+    const res = await agent
+      .post('/api/v1/shares')
+      .set('x-csrf-token', csrf)
+      .send({ name: 'werkstatt', serverUnc: '//server/cnc', ...body })
+      .expect(201);
+    return (res.body as { data: { id: number } }).data.id;
+  }
+
+  it('keeps the user set at creation', async () => {
+    const { agent, csrf } = await loginAgent();
+    const id = await makeShare(agent, csrf, { tncGuestOk: false, tncUser: 'cnc' });
+
+    const res = await agent.get(`/api/v1/shares/${String(id)}`).expect(200);
+    expect((res.body as { data: { tncUser: string | null } }).data.tncUser).toBe('cnc');
+  });
+
+  it('keeps a user set by editing an existing share', async () => {
+    // The reported bug: the settings dialog saved, closed, and on reopening the user
+    // field was empty again. The column, the schema and the create path all carried it;
+    // the UPDATE statement simply had no assignment for it, so every edit dropped it
+    // silently and reported success.
+    const { agent, csrf } = await loginAgent();
+    const id = await makeShare(agent, csrf, { tncGuestOk: true });
+
+    await agent
+      .patch(`/api/v1/shares/${String(id)}`)
+      .set('x-csrf-token', csrf)
+      .send({ tncGuestOk: false, tncUser: 'cnc', tncPassword: 'geheim' })
+      .expect(200);
+
+    const res = await agent.get(`/api/v1/shares/${String(id)}`).expect(200);
+    expect((res.body as { data: { tncUser: string | null } }).data.tncUser).toBe('cnc');
+  });
+
+  it('lets the user be cleared again', async () => {
+    const { agent, csrf } = await loginAgent();
+    const id = await makeShare(agent, csrf, { tncGuestOk: false, tncUser: 'cnc' });
+
+    await agent
+      .patch(`/api/v1/shares/${String(id)}`)
+      .set('x-csrf-token', csrf)
+      .send({ tncGuestOk: true, tncUser: null })
+      .expect(200);
+
+    const res = await agent.get(`/api/v1/shares/${String(id)}`).expect(200);
+    expect((res.body as { data: { tncUser: string | null } }).data.tncUser).toBeNull();
+  });
+
+  it('never returns the TNC password', async () => {
+    // It is a credential a machine authenticates with; the dialog only ever needs to
+    // know whether one is stored, never what it is.
+    const { agent, csrf } = await loginAgent();
+    const id = await makeShare(agent, csrf, {
+      tncGuestOk: false,
+      tncUser: 'cnc',
+      tncPassword: 'geheim',
+    });
+
+    const res = await agent.get(`/api/v1/shares/${String(id)}`).expect(200);
+    expect(JSON.stringify(res.body)).not.toContain('geheim');
+  });
+});
