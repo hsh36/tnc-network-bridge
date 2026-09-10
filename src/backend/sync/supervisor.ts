@@ -97,8 +97,22 @@ export class SyncSupervisor {
     }
 
     for (const share of desired) {
-      if (!this.running.has(share.id)) {
+      if (this.running.has(share.id)) {
+        continue;
+      }
+      try {
         await this.startShare(share.id);
+      } catch (error) {
+        // One share that cannot start must not take the bridge with it, and must not
+        // stop the others from starting. An unhandled rejection here exited the process
+        // outright: a missing mount directory took down the web interface, which is the
+        // one thing an operator needs in order to fix it.
+        this.options.logger?.error(
+          { shareId: share.id, share: share.name, error: messageOf(error) },
+          'share could not be started; the others continue',
+        );
+        this.running.delete(share.id);
+        this.setStatus(share.id, 'error', messageOf(error));
       }
     }
   }

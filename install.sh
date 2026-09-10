@@ -44,6 +44,9 @@ STATE_DIR="/var/lib/tnc-bridge"
 LOG_DIR="/var/log/tnc-bridge"
 # Parent of every share's cache_path (/srv/tnc/<name>, see 001_init.sql).
 CACHE_DIR="/srv/tnc"
+# Parent of every share's mount_point. The service mounts the server export below here,
+# so it has to exist and be owned by the service account before the first reconcile.
+MOUNT_DIR="/mnt/tnc-server"
 SECRET_KEY="${CONFIG_DIR}/secret.key"
 HELPER_DIR="/usr/local/lib/tnc-bridge"
 HELPER_PATH="${HELPER_DIR}/helper"
@@ -269,7 +272,7 @@ create_runtime_dirs() {
   log_info "Creating runtime directories..."
 
   local dir
-  for dir in "$CONFIG_DIR" "$CONFIG_DIR/tls" "$STATE_DIR" "$LOG_DIR" "$CACHE_DIR"; do
+  for dir in "$CONFIG_DIR" "$CONFIG_DIR/tls" "$STATE_DIR" "$LOG_DIR" "$CACHE_DIR" "$MOUNT_DIR"; do
     sudo install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0750 "$dir" ||
       die "Failed to create $dir"
   done
@@ -430,7 +433,7 @@ LockPersonality=yes
 # that a later tightening of ProtectSystem does not have to rediscover them. The install
 # directory is deliberately not among them — the service reads its own code, never
 # writes it.
-ReadWritePaths=${STATE_DIR} ${LOG_DIR} ${CONFIG_DIR} ${CACHE_DIR}
+ReadWritePaths=${STATE_DIR} ${LOG_DIR} ${CONFIG_DIR} ${CACHE_DIR} ${MOUNT_DIR}
 
 [Install]
 WantedBy=multi-user.target

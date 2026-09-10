@@ -241,6 +241,51 @@ describe('reconcile', () => {
   });
 });
 
+describe('a share that cannot start', () => {
+  it('does not take the other shares with it', async () => {
+    const good = createShare('programs');
+    const bad = createShare('broken');
+    // A mount point that cannot be created, which is what happened on the appliance:
+    // /mnt/tnc-server did not exist and the service account could not make it. A path
+    // *below a file* fails the same way on every platform, unlike an absolute Unix path
+    // that Windows would happily create under the drive root.
+    const blocker = join(roots, 'not-a-directory');
+    writeFileSync(blocker, 'a file where a directory needs to be');
+    db.run('UPDATE shares SET mount_point = @path WHERE id = @id', {
+      id: bad,
+      path: join(blocker, 'mount'),
+    });
+
+    const sync = supervisor();
+    await sync.reconcile();
+
+    // The unhandled rejection used to exit the process outright, taking the web
+    // interface down with it — the one thing an operator needs to fix the cause.
+    expect(sync.activeShareIds()).toEqual([good]);
+    expect(db.pluck<string>('SELECT status FROM shares WHERE id = @id', { id: bad })).toBe('error');
+    await sync.stop();
+  });
+
+  it('records why, so the cause is visible without reading the journal', async () => {
+    const bad = createShare('broken');
+    const blocker = join(roots, 'blocker-file');
+    writeFileSync(blocker, 'a file where a directory needs to be');
+    db.run('UPDATE shares SET mount_point = @path WHERE id = @id', {
+      id: bad,
+      path: join(blocker, 'mount'),
+    });
+
+    const sync = supervisor();
+    await sync.reconcile();
+
+    const lastError = db.pluck<string>('SELECT last_error FROM shares WHERE id = @id', {
+      id: bad,
+    });
+    expect(lastError).toBeTruthy();
+    await sync.stop();
+  });
+});
+
 describe('actions', () => {
   it('refuses an action against a share that is not running', async () => {
     const id = createShare('programs', { enabled: false });
