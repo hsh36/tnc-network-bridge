@@ -165,6 +165,31 @@ describe('startServer', () => {
     expect(boundPort(running)).toBe(port);
   });
 
+  it('shuts down while a stream is open, rather than waiting for it to end', async () => {
+    const { paths } = makeRoot(false);
+    running = await startServer(paths);
+    const port = boundPort(running);
+
+    // A request that is answered but never completed — which is what /events/stream is
+    // by design. `server.close()` waits for every open connection, so one dashboard
+    // left open in a browser hung shutdown until systemd's SIGKILL. On a device that
+    // reboots to apply an update, that makes a normal update look like a crash.
+    const held = new Promise<void>((resolve) => {
+      get({ host: '127.0.0.1', port, path: '/api/v1/status', rejectUnauthorized: false }, (res) => {
+        res.on('data', () => undefined);
+        resolve();
+      }).on('error', () => resolve());
+    });
+    await held;
+
+    const start = Date.now();
+    await running.shutdown('test');
+    running = undefined;
+
+    // Comfortably inside the two-second grace, and nowhere near systemd's 90.
+    expect(Date.now() - start).toBeLessThan(10_000);
+  }, 15_000);
+
   it('is safe to shut down twice', async () => {
     const { paths } = makeRoot(false);
     const server = await startServer(paths);

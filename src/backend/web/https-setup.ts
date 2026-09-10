@@ -335,12 +335,34 @@ export class HttpsServerManager {
     });
   }
 
-  close(): Promise<void> {
+  /**
+   * Stops listening and waits for open connections, but not for ever.
+   *
+   * `server.close()` alone never resolves here. It waits for every existing connection
+   * to end, and this server's whole job includes `/events/stream` — an SSE response that
+   * is *designed* never to end. One dashboard left open in a browser therefore hung
+   * shutdown until systemd's SIGKILL, which on a device that reboots to apply an update
+   * means the update looks like a crash.
+   *
+   * So: stop accepting, drop connections that are idle between requests immediately, and
+   * give whatever is mid-response `graceMs` before cutting it. An SSE client treats that
+   * as a dropped stream and reconnects, which is what it does after any restart anyway.
+   */
+  close(graceMs = DEFAULT_CLOSE_GRACE_MS): Promise<void> {
     return new Promise((resolve, reject) => {
       this.httpsServer.close((err) => (err ? reject(err) : resolve()));
+      this.httpsServer.closeIdleConnections();
+      const force = setTimeout(() => {
+        this.httpsServer.closeAllConnections();
+      }, graceMs);
+      // The timer must not be the reason the process stays alive once close resolves.
+      force.unref();
     });
   }
 }
+
+/** How long a response mid-flight gets before the connection carrying it is cut. */
+export const DEFAULT_CLOSE_GRACE_MS = 2000;
 
 /**
  * The options shape accepted by both `https.createServer` and `Server#setSecureContext`

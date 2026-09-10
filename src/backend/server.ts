@@ -271,10 +271,13 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   // port already taken — and the collector's timer is already running. Cleanup is
   // collected in one list so that a step added later cannot be forgotten by a `catch`
   // three screens further down.
-  const started: (() => void)[] = [() => collector.stop()];
-  const undoStarted = (): void => {
+  // Cleanups may be asynchronous — unmounting a share is — so they are awaited rather
+  // than fired and forgotten. `void sync.stop()` meant shutdown returned while shares
+  // were still mounted, and the process then exited underneath the unmount.
+  const started: (() => void | Promise<void>)[] = [() => collector.stop()];
+  const undoStarted = async (): Promise<void> => {
     while (started.length > 0) {
-      started.pop()?.();
+      await started.pop()?.();
     }
   };
 
@@ -335,7 +338,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
     // point at which an operator can reach the interface to stop it.
     await https.listen(port, options.host);
     void sync.reconcile();
-    started.push(() => void sync.stop());
+    started.push(() => sync.stop());
 
     let stopped = false;
     return {
@@ -348,7 +351,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
           return;
         }
         stopped = true;
-        undoStarted();
+        await undoStarted();
         // Close the listener before draining: draining while still accepting new work is
         // a drain that never finishes on a busy bridge.
         await https.close();
@@ -356,7 +359,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
       },
     };
   } catch (error) {
-    undoStarted();
+    await undoStarted();
     throw error;
   }
 }
