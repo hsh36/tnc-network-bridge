@@ -149,6 +149,16 @@ install_prerequisites() {
   # TNC port. The DHCP server is opt-in in the web UI, and the helper starts it there.
   sudo systemctl disable --now dnsmasq > /dev/null 2>&1 || true
 
+  # Samba, in contrast, is the machine-facing half of the product and must come back on
+  # its own after a reboot. It is safe to enable before it is configured: the service
+  # writes an smb.conf bound to the TNC interface at startup, and until it does, Debian's
+  # stock file binds nothing this bridge exposes.
+  #
+  # nmbd as well as smbd. A TNC on SMB1 finds its server by NetBIOS name broadcast, not
+  # by DNS, so without nmbd the share is reachable by address and invisible by name —
+  # which on a control configured years ago with a name is the same as not working.
+  sudo systemctl enable smbd nmbd > /dev/null 2>&1 || log_warn "Could not enable smbd/nmbd"
+
   log_success "System requirements installed"
 }
 

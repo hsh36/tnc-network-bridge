@@ -12,15 +12,21 @@ import { HttpError } from '../envelope';
 import { ok, requireCsrf, requireSession, requireSessionOrToken } from '../middleware';
 
 /**
- * Bring the running syncs in line with what was just written.
+ * Bring the running syncs *and* the exported shares in line with what was just written.
  *
  * Fire-and-forget on purpose: the caller asked to save a share, and a mount that takes
  * twenty seconds to time out must not hold their save open. Whether a share syncs is
  * decided by its `enabled` column, which is now stored — reconciliation is how that
  * becomes true, not a second thing the operator has to ask for.
+ *
+ * Samba is reconciled here too, and synchronously, because it is cheap: rendering
+ * `smb.conf` is a query and a string, and the helper reloads rather than restarts. A
+ * share that syncs but is not exported is a share no machine can reach, which looks
+ * exactly like the share not working at all.
  */
 function reconcile(ctx: AppContext): void {
   void ctx.sync?.reconcile();
+  ctx.samba?.reconcile();
 }
 
 /**

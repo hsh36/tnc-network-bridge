@@ -13,9 +13,11 @@ import { createBridgeMetrics } from './monitoring/registry';
 import { JobRegistry } from './scheduling/jobs';
 import { Scheduler } from './scheduling/scheduler';
 import { AuditLog, installAuditGuards } from './security/audit-log';
+import { SambaConfigManager } from './smb/samba-config-manager';
 import { SyncSupervisor } from './sync/supervisor';
 import { ManagedSchedules } from './system/managed-schedules';
 import { OsUpdateManager } from './system/os-update-manager';
+import { registerUpdateJobs } from './system/update-jobs';
 import { UpdateManager } from './system/update-manager';
 import { FirewallService } from './security/firewall-service';
 import { BlobStore } from './versioning/blob-store';
@@ -271,6 +273,12 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
 
   const osUpdates = new OsUpdateManager({ config: service.config });
 
+  // The machine-facing half of the bridge. `buildSmbConf` and the `write-samba-config`
+  // verb were both complete and tested, and nothing ever called either — so smbd was
+  // running on whatever Debian shipped, serving none of these shares, and no TNC could
+  // reach a file the sync engine had just fetched.
+  const samba = new SambaConfigManager({ db: service.db, config: service.config, logger });
+
   // The two update schedules are projections of the config sections, not rows an
   // operator maintains by hand. See managed-schedules.ts for why one owner and not two.
   const managedSchedules = new ManagedSchedules({
@@ -280,31 +288,9 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   });
   managedSchedules.reconcile();
 
-  /*
-   * `update` and `os-update` had no handlers, so the scheduler recorded every firing as
-   * `skipped` and an operator watching the schedule history saw a job that never ran.
-   */
-  jobs.register('update', async () => {
-    const status = await updates.check();
-    if (status.available === null) {
-      return { skipped: true, detail: `no update available for ${status.currentVersion}` };
-    }
-    if (!service.config.get('updates').enabled) {
-      return {
-        detail: `found ${status.available.version}, not installing (automatic updates off)`,
-      };
-    }
-    await updates.apply(status.available.version);
-    return { detail: `installing ${status.available.version}` };
-  });
-
-  jobs.register('os-update', () => {
-    if (osUpdates.isRunning()) {
-      return { skipped: true, detail: 'a system update is already running' };
-    }
-    osUpdates.run();
-    return { detail: 'system update started' };
-  });
+  // Both kinds had no handler, so the scheduler recorded every firing as `skipped`.
+  // See update-jobs.ts for what each one decides.
+  registerUpdateJobs(jobs, { updates, osUpdates, config: service.config });
 
   const metrics = createBridgeMetrics();
   const collector = new MetricsCollector({
@@ -365,6 +351,7 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
       audit,
       shareCacheRoot: createShareCacheRootResolver(service.db),
       sync,
+      samba,
       updates,
       osUpdates,
       logger,
@@ -397,6 +384,13 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
     await https.listen(port, options.host);
     void sync.reconcile();
     started.push(() => sync.stop());
+
+    // After the interface binding is settled, so the first render names the NIC the
+    // TNC side is actually on. A restart rather than a reload: smbd reads `interfaces`
+    // and `bind interfaces only` at startup and will not rebind without one.
+    if (samba.reconcile()) {
+      samba.restart();
+    }
 
     let stopped = false;
     return {

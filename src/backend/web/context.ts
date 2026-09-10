@@ -5,6 +5,7 @@ import { type LockManager } from '../locking/lock-manager';
 import { type BridgeMetrics } from '../monitoring/registry';
 import { type Scheduler } from '../scheduling/scheduler';
 import { type AuditLog } from '../security/audit-log';
+import { type SambaConfigManager } from '../smb/samba-config-manager';
 import { type SyncSupervisor } from '../sync/supervisor';
 import { type OsUpdateManager } from '../system/os-update-manager';
 import { type UpdateManager } from '../system/update-manager';
@@ -60,6 +61,12 @@ export interface AppContext {
    * starts a share is the share being enabled.
    */
   readonly sync?: SyncSupervisor;
+  /**
+   * Owner of `smb.conf`. A route asks it to reconcile after changing a share, the same
+   * way it asks the sync supervisor to — a share that exists but is not exported is a
+   * share no machine can reach.
+   */
+  readonly samba?: SambaConfigManager;
   /**
    * Owner of the update state the `/update/*` routes report (T43/T44).
    *
