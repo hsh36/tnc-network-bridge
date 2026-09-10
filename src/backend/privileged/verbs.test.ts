@@ -101,6 +101,12 @@ const VALID_REQUESTS = {
   },
   'service-restart': { verb: 'service-restart', service: 'tnc-bridge', action: 'restart' },
   'apply-update': { verb: 'apply-update', version: 'v0.1.0' },
+  'self-update': {
+    verb: 'self-update',
+    targetRef: 'v0.2.0',
+    previousRef: 'v0.1.0',
+    healthTimeoutSeconds: 120,
+  },
 } as const;
 
 /** Fields a caller controls that must never accept a hostile value. */
@@ -116,11 +122,12 @@ const INJECTABLE_FIELDS: Record<string, readonly string[]> = {
   'install-cert': ['certPem', 'keyPem'],
   'service-restart': ['service', 'action'],
   'apply-update': ['version'],
+  'self-update': ['targetRef', 'previousRef'],
 };
 
 describe('the verb allowlist', () => {
-  it('contains exactly the eleven verbs of ARCHITECTURE §5.4', () => {
-    expect(PRIVILEGED_VERBS).toHaveLength(11);
+  it('contains exactly the twelve verbs of ARCHITECTURE §5.4', () => {
+    expect(PRIVILEGED_VERBS).toHaveLength(12);
     expect([...PRIVILEGED_VERBS]).toEqual([
       'mount-share',
       'unmount-share',
@@ -133,6 +140,7 @@ describe('the verb allowlist', () => {
       'install-cert',
       'service-restart',
       'apply-update',
+      'self-update',
     ]);
   });
 
@@ -179,7 +187,7 @@ describe('every verb accepts its known-good request', () => {
 });
 
 /**
- * The core matrix: 11 verbs × their controllable fields × 13 payloads.
+ * The core matrix: 12 verbs × their controllable fields × 13 payloads.
  *
  * Every combination must throw. A single silent acceptance here is a root compromise,
  * which is why this is exhaustive rather than representative.

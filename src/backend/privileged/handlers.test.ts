@@ -21,6 +21,8 @@ import {
   renderCredentialsFile,
   SAMBA_BACKUP_PATH,
   SAMBA_CONFIG_PATH,
+  SELF_UPDATE_SCRIPT,
+  SELF_UPDATE_UNIT,
 } from './handlers';
 import { type PrivilegedRequest, validateRequest, type ValidateOptions } from './verbs';
 
@@ -837,5 +839,82 @@ describe('apply-update', () => {
       OPTIONS,
     );
     expect(() => execute(bad, h.deps)).toThrow(/SHA256SUMS digest mismatch/);
+  });
+});
+
+describe('self-update', () => {
+  const REQUEST = {
+    verb: 'self-update',
+    targetRef: 'v0.2.0',
+    previousRef: 'v0.1.0',
+    healthTimeoutSeconds: 120,
+  };
+
+  it('runs the updater in a transient unit, not as a child of the helper', () => {
+    // The updater's last act is `systemctl restart tnc-bridge`, and systemd kills the
+    // whole cgroup on restart. A child of this helper — itself a child of the service —
+    // would be killed partway through the switch, leaving a tree that is neither
+    // release. systemd-run is what puts it outside that cgroup.
+    const h = harness();
+    h.fs.files.set(SELF_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+
+    const result = execute(build(REQUEST), h.deps);
+
+    const argv = h.calls[0] ?? [];
+    expect(argv[0]).toBe('/usr/bin/systemdRun');
+    expect(argv).toContain(`--unit=${SELF_UPDATE_UNIT}`);
+    expect(argv).toContain(SELF_UPDATE_SCRIPT);
+    expect(argv).toContain('v0.2.0');
+    expect(argv).toContain('v0.1.0');
+    expect(result.verb).toBe('self-update');
+  });
+
+  it('execs the script itself rather than handing it to a shell', () => {
+    // BINARIES contains no shell on purpose. Passing the script as an argument to one
+    // would put a shell back inside the privilege boundary.
+    const h = harness();
+    h.fs.files.set(SELF_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+
+    execute(build(REQUEST), h.deps);
+
+    const argv = h.calls[0] ?? [];
+    const scriptIndex = argv.indexOf(SELF_UPDATE_SCRIPT);
+    expect(scriptIndex).toBeGreaterThan(0);
+    expect(argv[scriptIndex - 1]).not.toMatch(/sh$/);
+  });
+
+  it('passes the health timeout through to the script', () => {
+    const h = harness();
+    h.fs.files.set(SELF_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+
+    execute(build({ ...REQUEST, healthTimeoutSeconds: 300 }), h.deps);
+
+    expect(h.calls[0]).toContain('--setenv=TNC_HEALTH_TIMEOUT=300');
+  });
+
+  it('refuses when the updater script is not installed', () => {
+    // An install predating the script would otherwise start a unit that fails
+    // instantly, and the operator would see an update that neither ran nor errored.
+    const h = harness();
+    expect(() => execute(build(REQUEST), h.deps)).toThrow(/not found/);
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it('accepts an empty previousRef, because a first update has nothing to go back to', () => {
+    const h = harness();
+    h.fs.files.set(SELF_UPDATE_SCRIPT, '#!/usr/bin/env bash');
+
+    const result = execute(build({ ...REQUEST, previousRef: '' }), h.deps);
+
+    expect(result.detail).toMatchObject({ previousRef: '' });
+  });
+
+  it.each([
+    ['an option', '--upload-pack=evil'],
+    ['a refspec', 'origin/main:evil'],
+    ['a traversal', '../../etc/passwd'],
+    ['a command substitution', '$(id)'],
+  ])('rejects a target ref that is %s', (_label, ref) => {
+    expect(() => build({ ...REQUEST, targetRef: ref })).toThrow();
   });
 });

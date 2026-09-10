@@ -20,6 +20,7 @@ import {
   type ApplyNetworkRequest,
   type ApplyUpdateRequest,
   type Fail2banUnbanRequest,
+  type SelfUpdateRequest,
   type InstallCertRequest,
   type MountShareRequest,
   type PrivilegedRequest,
@@ -55,6 +56,21 @@ export const NFT_RULESET_PATH = `${ROOTS.nftConfig}/tnc-bridge.nft`;
 export const CURRENT_RELEASE_LINK = '/opt/tnc-bridge/current';
 export const NET_REVERT_UNIT = 'tnc-bridge-netrevert';
 export const CHECKSUM_MANIFEST = 'SHA256SUMS';
+
+/** The checked-out working tree `install.sh` creates, and `self-update` rebuilds. */
+export const INSTALL_DIR = '/opt/tnc-bridge';
+
+/** The updater script, shipped in the repository it updates. */
+export const SELF_UPDATE_SCRIPT = `${INSTALL_DIR}/scripts/self-update.sh`;
+
+/**
+ * Transient unit name for the updater.
+ *
+ * Fixed rather than generated: `systemd-run` refuses to start a unit that already
+ * exists, which is exactly the interlock wanted here — a second update cannot be
+ * launched on top of one already running.
+ */
+export const SELF_UPDATE_UNIT = 'tnc-bridge-self-update';
 
 /** The group that owns the TLS private key. The service reads it; nobody else can. */
 export const SERVICE_GROUP = 'tncbridge';
@@ -756,6 +772,57 @@ function applyUpdate(
 }
 
 // ---------------------------------------------------------------------------
+// 12 · self-update
+// ---------------------------------------------------------------------------
+
+/**
+ * Hand the update to systemd and return.
+ *
+ * The updater's last step restarts `tnc-bridge`, and systemd kills a unit's whole
+ * cgroup on restart. A script run as a child of this helper — which is a child of the
+ * service — would therefore be killed partway through its own `systemctl restart`,
+ * leaving a tree that is neither the old release nor the new one. `systemd-run` puts it
+ * in a unit of its own, outside that cgroup, so it survives the restart it causes.
+ *
+ * That also means this handler cannot report the outcome: it returns as soon as the
+ * unit is started. The script reports progress through its status file instead, which
+ * the service reads back after the restart.
+ */
+function selfUpdate(request: SelfUpdateRequest, deps: HandlerDeps, log: CommandLog): HandlerResult {
+  if (!deps.fs.exists(SELF_UPDATE_SCRIPT)) {
+    throw new PrivilegedExecutionError(
+      'self-update',
+      `updater script ${SELF_UPDATE_SCRIPT} not found — reinstall to get it`,
+    );
+  }
+
+  log.exec([
+    deps.resolve('systemdRun'),
+    `--unit=${SELF_UPDATE_UNIT}`,
+    '--collect',
+    '--description=TNC Bridge self-update',
+    `--setenv=TNC_HEALTH_TIMEOUT=${String(request.healthTimeoutSeconds)}`,
+    // The script itself, not an interpreter with the script as an argument. `BINARIES`
+    // deliberately contains no shell — a shell in the allowlist is a shell an attacker
+    // who reaches this boundary can ask for. The kernel reads the shebang; the path is
+    // a constant, root-owned and not writable by the service account.
+    SELF_UPDATE_SCRIPT,
+    request.targetRef,
+    request.previousRef,
+  ]);
+
+  return {
+    verb: 'self-update',
+    commands: log.entries,
+    detail: {
+      targetRef: request.targetRef,
+      previousRef: request.previousRef,
+      unit: SELF_UPDATE_UNIT,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
 
@@ -787,6 +854,8 @@ export function execute(
       return applyNetwork(request, deps, log);
     case 'write-nft-ruleset':
       return writeNftRuleset(request, deps, log);
+    case 'self-update':
+      return selfUpdate(request, deps, log);
     case 'fail2ban-unban':
       return fail2banUnban(request, deps, log);
     case 'install-cert':

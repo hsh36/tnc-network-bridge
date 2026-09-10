@@ -262,6 +262,10 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
     config: service.config,
     db: service.db,
   });
+  // The updater restarts this service, so the outcome of the last update is on disk,
+  // not in memory. Read before anything can serve `/update/status`, or the first poll
+  // after an update reports an idle system that just replaced itself.
+  updates.adoptExternalStatus();
 
   const metrics = createBridgeMetrics();
   const collector = new MetricsCollector({

@@ -34,6 +34,7 @@ export const PRIVILEGED_VERBS = [
   'install-cert',
   'service-restart',
   'apply-update',
+  'self-update',
 ] as const;
 
 export type PrivilegedVerb = (typeof PRIVILEGED_VERBS)[number];
@@ -345,6 +346,28 @@ export interface ApplyUpdateRequest {
   readonly manifestSha256?: string;
 }
 
+/**
+ * Update the checked-out tree to a git ref, rebuild, restart, and roll back on failure.
+ *
+ * Distinct from {@link ApplyUpdateRequest}, which activates a *staged, prebuilt* release
+ * by symlink. This appliance installs by cloning and building on the Pi — `install.sh`
+ * does exactly that — so there is no prebuilt artifact to verify and swap. The two
+ * models are kept apart rather than blended: verifying a manifest that nobody publishes
+ * would be a check that always passes.
+ *
+ * The work runs in a transient systemd unit, not as a child of this helper, because the
+ * last step restarts `tnc-bridge` and would otherwise kill the updater mid-build.
+ */
+export interface SelfUpdateRequest {
+  readonly verb: 'self-update';
+  /** A tag or commit, resolved inside the repository — never a URL or a path. */
+  readonly targetRef: string;
+  /** Where to return if the new build fails its health gate. Empty disables rollback. */
+  readonly previousRef: string;
+  /** Seconds `/health` gets to come back green before the rollback fires. */
+  readonly healthTimeoutSeconds: number;
+}
+
 export type PrivilegedRequest =
   | MountShareRequest
   | UnmountShareRequest
@@ -356,7 +379,8 @@ export type PrivilegedRequest =
   | Fail2banUnbanRequest
   | InstallCertRequest
   | ServiceRestartRequest
-  | ApplyUpdateRequest;
+  | ApplyUpdateRequest
+  | SelfUpdateRequest;
 
 export interface ValidateOptions {
   /** Injected so tests need not depend on the host's real interfaces. */
@@ -568,6 +592,25 @@ export function validateRequest(raw: unknown, options: ValidateOptions = {}): Pr
         ]),
       };
 
+    case 'self-update':
+      return {
+        verb,
+        targetRef: validateGitRef(verb, 'targetRef', input.targetRef),
+        // Empty means "no rollback target" — the very first update on a fresh install
+        // has nothing to go back to, and a fabricated ref would be worse than none.
+        previousRef:
+          input.previousRef === undefined || input.previousRef === ''
+            ? ''
+            : validateGitRef(verb, 'previousRef', input.previousRef),
+        healthTimeoutSeconds: requireInteger(
+          verb,
+          'healthTimeoutSeconds',
+          input.healthTimeoutSeconds,
+          10,
+          900,
+        ),
+      };
+
     case 'apply-update': {
       const version = validateVersion(verb, input.version);
       return {
@@ -594,6 +637,26 @@ function requireCredentialField(verb: string, field: string, value: unknown): st
     throw new PrivilegedValidationError(verb, field, 'contains an unsupported character');
   }
   return text;
+}
+
+/**
+ * A git ref this helper is willing to check out.
+ *
+ * Deliberately narrow. The ref reaches `git checkout` as an argv element, so there is
+ * no shell to escape, but git itself treats a leading `-` as an option and accepts
+ * refspecs like `origin/main:evil`. Restricting to the characters a tag or a commit sha
+ * actually uses removes the whole class rather than blocking the examples of it.
+ */
+export function validateGitRef(verb: string, field: string, value: unknown): string {
+  const ref = requireString(verb, field, value, 200);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(ref) || ref.includes('..')) {
+    throw new PrivilegedValidationError(
+      verb,
+      field,
+      'must be a tag or commit: letters, digits, dot, dash, underscore and slash only',
+    );
+  }
+  return ref;
 }
 
 function validateCidr(verb: string, field: string, value: unknown): string {

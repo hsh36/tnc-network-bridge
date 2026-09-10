@@ -4,9 +4,13 @@ import {
   type UpdateStatus,
   type UpdatePhase,
 } from '../../shared/schemas/operations';
+import { readFileSync, rmSync } from 'node:fs';
+
 import { type Db } from '../config/db';
 import { type ConfigManager } from '../config/config-manager';
-import { fetchLatestRelease, isNewer, type ReleaseInfo } from './github-releases';
+import { invokePrivileged, type HelperInvoker } from '../privileged/client';
+
+import { fetchLatestRelease, isNewer, normaliseVersion, type ReleaseInfo } from './github-releases';
 
 /**
  * The single owner of "what version are we on, and is there a newer one".
@@ -15,11 +19,10 @@ import { fetchLatestRelease, isNewer, type ReleaseInfo } from './github-releases
  * {@link AppContext} — the routes used to answer `/update/status` from a literal, which
  * is why the UI could never show the result of a check it had just run.
  *
- * Applying an update is still {@link apply}'s placeholder walk through the phases. The
- * real installer is `install.sh`, run over the top of itself, and handing it to a
- * process it is about to replace needs the restart-and-health-gate work that is not
- * done yet. `check` is real, because a wrong answer there is a lie on the screen; a
- * placeholder `apply` is at least visibly a placeholder.
+ * Applying is asynchronous in the strongest sense: the updater rebuilds the tree and
+ * restarts this process, so the object that starts an update is not the object that
+ * sees it finish. Progress therefore travels through a file on disk rather than through
+ * this instance, and {@link adoptExternalStatus} picks it up on the next startup.
  */
 
 export interface UpdateManagerOptions {
@@ -31,14 +34,55 @@ export interface UpdateManagerOptions {
   readonly db?: Db;
   /** Injected by tests; production uses the global `fetch`. */
   readonly fetchImpl?: typeof fetch;
+  /** Injected by tests; production calls the real helper over sudo. */
+  readonly invoke?: HelperInvoker;
   /**
-   * Pause between the simulated progress steps of {@link UpdateManager.apply}.
+   * Where the updater script reports progress.
    *
-   * Only meaningful while apply is a placeholder — it exists so the tests that assert
-   * what apply leaves behind do not each spend five seconds watching a fake progress
-   * bar. Delete it along with the simulation.
+   * The updater outlives this process — it restarts it — so its progress cannot come
+   * back over a pipe. It writes here; this reads it back at startup, which is the only
+   * way the outcome of an update survives the restart that update performed.
    */
-  readonly stepDelayMs?: number;
+  readonly statusFile?: string;
+}
+
+/** Where `scripts/self-update.sh` writes its progress. Must match the script. */
+export const DEFAULT_STATUS_FILE = '/var/lib/tnc-bridge/update-status.json';
+
+/**
+ * Releases are tagged `vX.Y.Z`; versions are reported without the `v`.
+ *
+ * The tag is what git is asked to check out, so the conversion happens here rather
+ * than in the helper — the helper's job is to refuse anything that is not a plausible
+ * ref, not to know this project's tagging convention.
+ */
+function tagFor(version: string): string {
+  return version.startsWith('v') ? version : `v${version}`;
+}
+
+const UPDATE_PHASES = new Set<string>([
+  'idle',
+  'checking',
+  'downloading',
+  'verifying',
+  'extracting',
+  'installing',
+  'migrating',
+  'switching',
+  'restarting',
+  'health_gate',
+  'rolling_back',
+  'done',
+  'failed',
+]);
+
+/** The shape `self-update.sh` writes. Everything is re-validated on the way in. */
+interface ExternalStatus {
+  readonly phase: UpdatePhase;
+  readonly progressPct: number | null;
+  readonly target: string;
+  readonly previous: string;
+  readonly error?: string;
 }
 
 interface HistoryRow {
@@ -63,7 +107,8 @@ export class UpdateManager {
   private readonly config: ConfigManager;
   private readonly db: Db | undefined;
   private readonly fetchImpl: typeof fetch | undefined;
-  private readonly stepDelayMs: number;
+  private readonly invoke: HelperInvoker;
+  private readonly statusFile: string;
 
   constructor(options: UpdateManagerOptions) {
     this.currentVersion = options.currentVersion;
@@ -71,7 +116,8 @@ export class UpdateManager {
     this.config = options.config;
     this.db = options.db;
     this.fetchImpl = options.fetchImpl;
-    this.stepDelayMs = options.stepDelayMs ?? 100;
+    this.invoke = options.invoke ?? invokePrivileged;
+    this.statusFile = options.statusFile ?? DEFAULT_STATUS_FILE;
   }
 
   getStatus(): UpdateStatus {
@@ -129,94 +175,131 @@ export class UpdateManager {
     }
   }
 
-  async apply(version?: string): Promise<void> {
+  /**
+   * Hand the update to the privileged helper and return.
+   *
+   * Not awaited to completion, because there is no completion to await here: the
+   * updater rebuilds the tree and restarts this very process, so the promise would be
+   * cut off partway through by definition. What the operator sees afterwards comes
+   * from {@link readStatusFile} — written by the updater, read back by whichever
+   * process is running at the time, including the one that replaces this one.
+   */
+  apply(version?: string): Promise<void> {
+    // Rejections, not throws. Both guards are reachable from a route that attaches a
+    // `.catch`, and a synchronous throw from a function typed `Promise<void>` skips it.
     if (this.phase !== 'idle' && this.phase !== 'done' && this.phase !== 'failed') {
-      throw new Error(`Cannot apply update while ${this.phase}`);
+      return Promise.reject(new Error(`Cannot apply update while ${this.phase}`));
     }
 
     const target = version ?? this.available?.version;
     if (target === undefined) {
-      throw new Error('No update available to apply. Check for updates first.');
+      return Promise.reject(new Error('No update available to apply. Check for updates first.'));
     }
 
-    const from = this.currentVersion;
     this.phase = 'downloading';
     this.progressPct = 0;
     this.lastError = null;
     this.publishStatus();
 
     try {
-      const phases: UpdatePhase[] = [
-        'downloading',
-        'verifying',
-        'extracting',
-        'installing',
-        'migrating',
-        'switching',
-        'restarting',
-        'health_gate',
-      ];
-
-      for (const phase of phases) {
-        this.phase = phase;
-        for (let pct = 0; pct <= 100; pct += 20) {
-          this.progressPct = pct;
-          this.publishStatus();
-          await this.pause();
-        }
-      }
-
-      this.phase = 'done';
-      this.progressPct = 100;
-      this.rollbackVersion = from;
-      this.currentVersion = target;
-      this.available = null;
-      this.publishStatus();
-      this.record({ fromVersion: from, toVersion: target, result: 'ok', log: null });
+      this.invoke({
+        verb: 'self-update',
+        targetRef: tagFor(target),
+        // Where to return if the new build fails its health gate. The running version
+        // is a tag that exists precisely because this release was installed from it.
+        previousRef: tagFor(this.currentVersion),
+        healthTimeoutSeconds: this.config.get('updates').healthTimeoutS,
+      });
+      return Promise.resolve();
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
       this.phase = 'failed';
       this.publishStatus();
       this.record({
-        fromVersion: from,
+        fromVersion: this.currentVersion,
         toVersion: target,
         result: 'failed',
         log: this.lastError,
       });
-      throw error;
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
   }
 
-  async rollback(): Promise<void> {
+  /**
+   * Go back to the release this one replaced.
+   *
+   * The same mechanism as {@link apply} with the refs swapped — there is no separate
+   * "undo" path, because a rollback is just an update to an older tag, and a second
+   * code path is a second thing that can be wrong when it is needed most.
+   */
+  rollback(): Promise<void> {
     const target = this.rollbackVersion;
     if (target === null) {
-      throw new Error('No previous version available for rollback');
+      return Promise.reject(new Error('No previous version available for rollback'));
     }
 
-    const from = this.currentVersion;
     this.phase = 'rolling_back';
     this.progressPct = 0;
+    this.lastError = null;
     this.publishStatus();
 
     try {
-      for (let pct = 0; pct <= 100; pct += 20) {
-        this.progressPct = pct;
-        this.publishStatus();
-        await this.pause();
-      }
-
-      this.phase = 'done';
-      this.progressPct = 100;
-      this.currentVersion = target;
-      this.rollbackVersion = from;
-      this.publishStatus();
-      this.record({ fromVersion: from, toVersion: target, result: 'rolled_back', log: null });
+      this.invoke({
+        verb: 'self-update',
+        targetRef: tagFor(target),
+        // No further fallback: going back from the version we are rolling back to would
+        // be going forward again, into the release that just failed.
+        previousRef: '',
+        healthTimeoutSeconds: this.config.get('updates').healthTimeoutS,
+      });
+      return Promise.resolve();
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
       this.phase = 'failed';
       this.publishStatus();
-      throw error;
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
+  }
+
+  /**
+   * Adopt whatever the updater last wrote, if it concerns an update we do not know about.
+   *
+   * Called once at startup. After a successful update this process *is* the new
+   * release, so a `done` record simply confirms what the version already says; after a
+   * failed one, this is the only place the reason survives — the process that asked for
+   * the update was replaced before it could record anything.
+   */
+  adoptExternalStatus(): void {
+    const external = this.readStatusFile();
+    if (external === null) {
+      return;
+    }
+
+    if (external.error !== undefined && external.error !== '') {
+      this.lastError = external.error;
+    }
+
+    if (external.phase === 'done' || external.phase === 'failed') {
+      this.phase = external.phase;
+      this.progressPct = external.phase === 'done' ? 100 : null;
+      if (external.previous !== '' && external.phase === 'done') {
+        this.rollbackVersion = normaliseVersion(external.previous);
+      }
+      this.record({
+        fromVersion: external.previous === '' ? null : normaliseVersion(external.previous),
+        toVersion: normaliseVersion(external.target),
+        result: external.phase === 'done' ? 'ok' : 'failed',
+        log: external.error ?? null,
+      });
+      // Consumed: leaving it would re-record the same attempt on every restart.
+      this.clearStatusFile();
+      return;
+    }
+
+    // Still running — the service was restarted by the updater and the updater is now
+    // waiting on the health gate that this very startup is about to satisfy.
+    this.phase = external.phase;
+    this.progressPct = external.progressPct;
   }
 
   /** Newest first, so page one is the attempt the operator just made. */
@@ -278,11 +361,51 @@ export class UpdateManager {
     }
   }
 
-  private async pause(): Promise<void> {
-    if (this.stepDelayMs <= 0) {
-      return;
+  /**
+   * The updater's status file, or null when there is nothing usable there.
+   *
+   * Every failure mode — absent, unreadable, truncated mid-write, holding a phase this
+   * build does not know — collapses to null. The file is written by a script this
+   * process cannot supervise, and an update that reports nothing is a far better
+   * outcome than a status page that throws.
+   */
+  private readStatusFile(): ExternalStatus | null {
+    let raw: string;
+    try {
+      raw = readFileSync(this.statusFile, 'utf8');
+    } catch {
+      return null;
     }
-    await new Promise((resolve) => setTimeout(resolve, this.stepDelayMs));
+
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null) {
+        return null;
+      }
+      const record = parsed as Record<string, unknown>;
+      const phase = record.phase;
+      if (typeof phase !== 'string' || !UPDATE_PHASES.has(phase)) {
+        return null;
+      }
+      return {
+        phase: phase as UpdatePhase,
+        progressPct: typeof record.progressPct === 'number' ? record.progressPct : null,
+        target: typeof record.target === 'string' ? record.target : '',
+        previous: typeof record.previous === 'string' ? record.previous : '',
+        ...(typeof record.error === 'string' ? { error: record.error } : {}),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private clearStatusFile(): void {
+    try {
+      rmSync(this.statusFile, { force: true });
+    } catch {
+      // The service account may not own it. Not worth failing a startup over: the
+      // worst case is a duplicate history row after a reinstall.
+    }
   }
 
   private publishStatus(): void {
