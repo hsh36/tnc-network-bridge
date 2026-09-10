@@ -17,6 +17,7 @@ import { ShareStore } from '../../sync/share-store';
 import { BlobStore } from '../../versioning/blob-store';
 import { VersionStore } from '../../versioning/version-store';
 import { createApp } from '../app';
+import { AuthLogWriter } from '../../logging/auth-log';
 import { AuthManager } from '../auth';
 import { type AppContext } from '../context';
 import { EventBus } from '../event-bus';
@@ -33,7 +34,9 @@ function buildContext(): AppContext {
   return {
     db,
     config,
-    auth: new AuthManager({ db, config }),
+    // Without an explicit writer this reaches for /var/log/tnc-bridge, which the
+    // constructor creates eagerly — fine as root, EACCES on a CI runner.
+    auth: new AuthManager({ db, config, authLog: new AuthLogWriter(`${tmpDir()}/auth.log`) }),
     locks: new LockManager({ db, config }),
     conflicts: new ConflictResolver(db),
     events: new EventBus(),

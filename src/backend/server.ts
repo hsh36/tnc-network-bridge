@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { DEFAULT_DB_PATH, DEFAULT_LOG_DIR, bootstrap, type Service } from './index';
 import { DEFAULT_SECRET_KEY_PATH } from './config/secrets';
 import { createShareCacheRootResolver } from './config/share-paths';
+import { AuthLogWriter } from './logging/auth-log';
 import { ConflictResolver } from './locking/conflict-resolver';
 import { LockManager } from './locking/lock-manager';
 import { ScheduleLockWindowManager } from './locking/schedule-windows';
@@ -191,7 +192,17 @@ async function wire(service: Service, args: WireArgs): Promise<RunningServer> {
   installAuditGuards(service.db);
   const audit = new AuditLog(service.db, logger);
 
-  const auth = new AuthManager({ db: service.db, config: service.config, logger });
+  // The auth log has to follow `paths.logDir` like everything else. Left to its own
+  // default it writes to /var/log/tnc-bridge no matter what the caller asked for, so a
+  // test that redirected every other path still tried to create a production directory —
+  // which passes on a developer's Windows box, where the path becomes C:/var/log/...,
+  // and fails on any Linux host that is not root.
+  const auth = new AuthManager({
+    db: service.db,
+    config: service.config,
+    logger,
+    authLog: new AuthLogWriter(join(paths.logDir, 'auth.log')),
+  });
   const locks = new LockManager({ db: service.db, config: service.config, logger });
   const conflicts = new ConflictResolver(service.db, logger);
   const events = new EventBus();

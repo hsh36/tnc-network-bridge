@@ -130,9 +130,20 @@ function linePrefix(event: AuthEventBase): string {
  * unwritable log must not prevent the login attempt from being answered.
  */
 export class AuthLogWriter {
-  constructor(private readonly path: string = DEFAULT_AUTH_LOG_PATH) {
-    mkdirSync(dirname(this.path), { recursive: true });
-  }
+  private directoryReady = false;
+
+  /**
+   * The directory is created on the first write, not here.
+   *
+   * Constructing a logger used to create `/var/log/tnc-bridge` as a side effect, so any
+   * caller that built an `AuthManager` without naming a path touched a production
+   * directory just by existing. That passes on a Windows developer machine — the path
+   * becomes `C:\var\log\...`, which is creatable — and fails with EACCES on any Linux
+   * host that is not root, which is every CI runner. Making it lazy means a writer that
+   * is never written to leaves no trace, and the failure that remains is confined to
+   * the write, where it is already swallowed by design.
+   */
+  constructor(private readonly path: string = DEFAULT_AUTH_LOG_PATH) {}
 
   failure(event: AuthFailureEvent): void {
     this.write(formatAuthFailure(event));
@@ -152,6 +163,10 @@ export class AuthLogWriter {
 
   write(line: string): void {
     try {
+      if (!this.directoryReady) {
+        mkdirSync(dirname(this.path), { recursive: true });
+        this.directoryReady = true;
+      }
       appendFileSync(this.path, `${line}\n`, 'utf8');
     } catch {
       // Intentionally silent. See the class comment.
